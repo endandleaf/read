@@ -1,0 +1,22 @@
+solon.app:
+  name: read
+solon.logging:
+  appender:
+    console:
+      pattern: "%d{yyyy-MM-dd HH:mm:ss} %-5level #${PID:-} %white(---) %-45(%cyan(%.32logger{30}:%L)) %msg%n"
+    file:
+      maxFileSize: "50 MB"
+  logger:
+    root:
+      level: info
+mybatis.db:
+  typeAliases:    #支持包名 或 类名 //支持 ** 和 *
+    - "web.model"
+  #        - "demo4031.*.AppxModel"
+  mappers:        #支持包名 或 类名 或 xml（.xml结尾）//支持 ** 和 *
+    - "web.mapper"
+  #        - "classpath:demo4031/dso/mapper/*.xml"
+solon.config.add: "./conf.yml"
+cache:
+  driverType: "local"
+  defSeconds: 600

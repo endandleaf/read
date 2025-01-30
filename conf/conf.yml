@@ -1,0 +1,10 @@
+solon.dataSources:
+  db:
+    class: "com.zaxxer.hikari.HikariDataSource"
+    driverClassName: org.sqlite.JDBC
+    jdbcUrl: jdbc:sqlite:read.db
+    maxPoolSize: 1
+admin:
+  username: "admin"
+  password: "adminadmin"
+  androidid: "sdsafqefwe"

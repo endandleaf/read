@@ -1,0 +1,92 @@
+package web.controller.api
+
+import org.noear.solon.annotation.Controller
+import org.noear.solon.annotation.Inject
+import org.noear.solon.annotation.Mapping
+import org.noear.solon.annotation.Path
+import org.noear.solon.core.util.DataThrowable
+import org.noear.solon.data.annotation.Cache
+import org.noear.solon.web.cors.annotation.CrossOrigin
+import web.mapper.UsersMapper
+import web.mapper.UsertockenMapper
+import web.model.Users
+import web.model.passsign
+import web.model.Usertocken
+import web.response.*
+
+@Controller
+@Mapping(routepath)
+@CrossOrigin(origins = "*")
+open class UserController:BaseController() {
+
+
+    @Mapping("/login")
+    fun login(username:String? , password:String? , model:String?,@Path v:Int) = run {
+        if (username.isNullOrBlank() || password.isNullOrBlank() )  {
+            throw DataThrowable().data(JsonResponse(false,NOT_BANK))
+        }
+        var user: Users?=usersMapper.getUserByusername(username)
+        if (user == null || !user.password.equals(passsign( password))) {
+            throw DataThrowable().data(JsonResponse(false,PASS_ERROR))
+        }
+
+        var tockens=usertockenMapper.getUsertockens(user.id!!)
+        //登陆设备超过20个自动登出全部
+        if(tockens != null && tockens.size >= 20){
+            usertockenMapper.delUsertockens(user.id!!)
+        }
+        var tocken=Usertocken().create()
+        tocken.userid=user.id
+        tocken.model=model?:""
+        usertockenMapper.insert(tocken)
+
+        JsonResponse(true,"success").Data(mapOf("accessToken" to tocken.id))
+    }
+
+    @Cache(key = "getUserInfo:\${accessToken}", tags = "getUserInfo", seconds = 600)
+    @Mapping("/getUserInfo")
+    open fun getUserInfo( accessToken:String?) = run {
+        var user=getuserbytocken(accessToken).also {
+            if(it == null){
+                throw DataThrowable().data(JsonResponse(false,NEED_LOGIN))
+            }
+        }
+        JsonResponse(true,"success").Data(mapOf("userInfo" to
+                mapOf("username" to user!!.username,"phone" to user.phone,"email" to user.email)
+        ))
+    }
+
+    @Mapping("/changepass")
+    fun changepass( accessToken:String? , password:String?,oldpassword:String ) = run {
+        if ( password.isNullOrBlank() )  {
+            throw DataThrowable().data(JsonResponse(false,NOT_BANK))
+        }
+        if(password.length <6 || password.length > 15){
+            throw DataThrowable().data(JsonResponse(false,PASS_VAIL_ERROR))
+        }
+        var user=getuserbytocken(accessToken).also {
+            if(it == null){
+                throw DataThrowable().data(JsonResponse(false,NOT_BANK))
+            }
+        }!!
+        if (!user.password.equals(passsign( oldpassword))) {
+            throw DataThrowable().data(JsonResponse(false,PASS_ERROR))
+        }
+        usersMapper.changepass(user.id!!,passsign( password))
+
+        JsonResponse(true,"success")
+    }
+
+    @Mapping("/getalltocken")
+    fun getalltocken( accessToken:String?) = run {
+        var user=getuserbytocken(accessToken).also {
+            if(it == null){
+                throw DataThrowable().data(JsonResponse(false,NOT_BANK))
+            }
+        }!!
+
+        var tockens=usertockenMapper.getUsertockens(user.id!!)
+
+        JsonResponse(true,"success").Data(tockens)
+    }
+}
