@@ -23,7 +23,7 @@ object  BookContent {
     private var ma:MutableMap<String, Deferred<String>> = mutableMapOf()
     private val mutex = Mutex()
 
-    fun  getbookcontent(accessToken:String,user: Users, source:BookSource, url:String, index:Int):String= runBlocking{
+    fun  getbookcontent(accessToken:String,user: Users, source:BookSource, url:String, index:Int,type:Int):String= runBlocking{
         var key="url:$url,index:$index"
         var deferred: Deferred<String>? = null
         mutex.withLock {
@@ -31,7 +31,7 @@ object  BookContent {
         }
         if(deferred == null) {
             mutex.withLock {
-                deferred=async{ getBookContent(accessToken,user,source,url,index) }
+                deferred=async{ getBookContent(accessToken,user,source,url,index,type) }
                 ma[key]= deferred!!
             }
         }
@@ -50,7 +50,7 @@ object  BookContent {
         }
     }
 
-    private suspend fun getBookContent(accessToken:String,user: Users, source:BookSource, url:String, index:Int):String {
+    private suspend fun getBookContent(accessToken:String,user: Users, source:BookSource, url:String, index:Int,type:Int):String {
         var chapterlist= getChapterListbycache(url)
         if(chapterlist == null){
             chapterlist= getlist(url,source,user.id!!,accessToken).also{
@@ -65,7 +65,7 @@ object  BookContent {
                 it
             }
         }
-        return webBook.getBookContent(book,chapterlist[index]).also { setBookContentbycache(url,it,index) }
+        return webBook.getBookContent(book,chapterlist[index]).also { if( type != 1) setBookContentbycache(url,it,index) }
     }
 
     private fun getbook(webBook: WBook, url:String): Book?= runBlocking{

@@ -8,10 +8,12 @@ import book.webBook.localBook.LocalBook
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.runBlocking
 import web.controller.api.ReadController
+import web.controller.api.ReadController.Companion.getBookbycache
+import web.controller.api.ReadController.Companion.setBookbycache
 import web.model.BookSource
 import web.model.Booklist
-import web.service.MyCacheService
 import web.util.mapper.mapper
+import kotlin.random.Random
 
 fun updatebook(book: Booklist, source: BookSource,userid:String) = runBlocking{
     var list= getlist(book.bookUrl!! ,source,userid,"")
@@ -38,19 +40,45 @@ fun getlist(url:String):List<BookChapter>{
 }
 
 suspend fun getlist(url:String, source: BookSource,userid:String,accessToken :String):List<BookChapter>{
-    var webBook = WBook(source.json?:"",userid,accessToken, false)
+    val webBook = WBook(source.json?:"",userid,accessToken, false)
+    val book= getBookbycache(url).let {
+        if(it==null){
+            getbook(webBook,url).also { setBookbycache(url,it) }
+        }else{
+            it
+        }
+    }
+    return getChapterList(webBook,book)
+}
+
+suspend fun getChapterList(webBook: WBook,book: Book):List<BookChapter>{
     var re:List<BookChapter> = listOf()
-    var book: Book?=null
     runCatching {
-        book=webBook.getBookInfo(url,canReName = true)
-        re=webBook.getChapterList(book!!)
+        re=webBook.getChapterList(book)
     }.onFailure {
         if(it is ConcurrentException){
-            println("getlist并发原因？？？？")
-            delay(1000)
-            return getlist(url,source,userid,accessToken)
+            println("getlist并发原因？？？？${it.message}")
+            val randomNumber = Random.nextInt(1000, 500).toLong()
+            delay(randomNumber)
+            return getChapterList(webBook,book)
         }
         throw it
     }
     return re
+}
+
+suspend fun  getbook(webBook:WBook, url:String):Book{
+    var book: Book?=null
+    runCatching {
+        book=webBook.getBookInfo(url,canReName = true)
+    }.onFailure {
+        if(it is ConcurrentException){
+            println("getlist并发原因？？？？${it.message}")
+            val randomNumber = Random.nextInt(1000, 500).toLong()
+            delay(randomNumber)
+            return getbook(webBook,url)
+        }
+        throw it
+    }
+    return book!!
 }

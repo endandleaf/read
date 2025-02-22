@@ -77,9 +77,9 @@ object SourceAnalyzer {
                         ?: throw NoStackTraceException("格式不对")
                     bookSourceName = jsonItem.readString("bookSourceName") ?: ""
                     bookSourceGroup = jsonItem.readString("bookSourceGroup")
-                    // loginUrl = jsonItem.readString("loginUrl")
-                    // loginUi = jsonItem.readString("loginUi")
-                    // loginCheckJs = jsonItem.readString("loginCheckJs")
+                    loginUrl = jsonItem.readString("loginUrl")
+                    loginUi = jsonItem.readString("loginUi")
+                    loginCheckJs = jsonItem.readString("loginCheckJs")
                     bookSourceComment = jsonItem.readString("bookSourceComment") ?: ""
                     bookUrlPattern = jsonItem.readString("ruleBookUrlPattern")
                     customOrder = jsonItem.readInt("serialNumber") ?: 0
@@ -168,11 +168,11 @@ object SourceAnalyzer {
                     is String -> sourceAny.loginUrl.toString()
                     else -> JsonPath.parse(sourceAny.loginUrl).readString("url")
                 }
-                // source.loginUi = if (sourceAny.loginUi is List<*>) {
-                //     GSON.toJson(sourceAny.loginUi)
-                // } else {
-                //     sourceAny.loginUi?.toString()
-                // }
+                 source.loginUi = if (sourceAny.loginUi is List<*>) {
+                     GSON.toJson(sourceAny.loginUi)
+                 } else {
+                     sourceAny.loginUi?.toString()
+                 }
                 source.enabledCookieJar=sourceAny.enabledCookieJar
                 source.loginCheckJs = sourceAny.loginCheckJs
                 source.bookSourceComment = sourceAny.bookSourceComment

@@ -34,12 +34,12 @@ class DebugBookSource {
         var update = 0
         var bookSourcelist= Booksource.fromJsonArray(content).getOrNull()
         bookSourcelist?.forEach {
-            if(it.bookSourceUrl.isNotBlank() && it.bookSourceType != 1){
+            //if(it.bookSourceUrl.isNotBlank() && it.bookSourceType != 1){
                 addorupdate(it).let {  (ins,ups)->
                     insert=insert+ins
                     update=update+ups
                 }
-            }
+           // }
         }
         JsonResponse(true,"新增${insert}条书源，更新${update}条书源")
     }

@@ -28,7 +28,7 @@ import java.util.*
 import java.util.zip.ZipEntry
 import java.util.zip.ZipInputStream
 import java.text.SimpleDateFormat
-
+import cn.hutool.core.util.HexUtil
 
 /**
  * js扩展类, 在js中通过java变量调用
@@ -39,6 +39,10 @@ import java.text.SimpleDateFormat
 interface JsExtensions {
 
     fun getSource(): BaseSource?
+
+    fun androidId(): String {
+        return getSource()?.userid?:""
+    }
 
     /**
      * 访问网络,返回String
@@ -183,6 +187,12 @@ interface JsExtensions {
         return startBrowserAwait(url, title)
     }
 
+    fun  toast(str : String){
+        println("toast:$str")
+        Response.toast(str,getSource()?.usertocken?:"")
+    }
+
+
     /**
      * 实现16进制字符串转文件
      * @param content 需要转成文件的16进制字符串
@@ -257,7 +267,24 @@ interface JsExtensions {
         return Base64.decode(str, flags)
     }
 
+    /* HexString 解码为字节数组 */
+    fun hexDecodeToByteArray(hex: String): ByteArray? {
+        return HexUtil.decodeHex(hex)
+    }
+
+    /* hexString 解码为utf8String*/
+    fun hexDecodeToString(hex: String): String? {
+        return HexUtil.decodeHexStr(hex)
+    }
+
+    /* utf8 编码为hexString */
+    fun hexEncodeToString(utf8: String): String? {
+        return HexUtil.encodeHexStr(utf8)
+    }
+
+
     fun base64Encode(str: String): String? {
+        //println(str)
         return EncoderUtils.base64Encode(str, Base64.NO_WRAP)
     }
 

@@ -47,12 +47,12 @@ class BookSourceController {
                 //数组
                 var bookSourcelist= Booksource.fromJsonArray(content).getOrNull()
                 bookSourcelist?.forEach {
-                    if(it.bookSourceUrl.isNotBlank() && it.bookSourceType != 1){
+                   //if(it.bookSourceUrl.isNotBlank() && it.bookSourceType != 1){
                         addorupdate(it).let {  (ins,ups)->
                             insert=insert+ins
                             update=update+ups
                         }
-                    }
+                    //}
                 }
             }else{
                 //单独一个
@@ -60,9 +60,9 @@ class BookSourceController {
                 if (bookSource.bookSourceUrl.isBlank()){
                     throw DataThrowable().data(JsonResponse(false, SOURCE_URL_BANK))
                 }
-                if(bookSource.bookSourceType == 1){
-                    throw DataThrowable().data(JsonResponse(false, SOURCE_TYPE_ERROR))
-                }
+               // if(bookSource.bookSourceType == 1){
+                //    throw DataThrowable().data(JsonResponse(false, SOURCE_TYPE_ERROR))
+               // }
                 addorupdate(bookSource).let {  (ins,ups)->
                     insert=insert+ins
                     update=update+ups

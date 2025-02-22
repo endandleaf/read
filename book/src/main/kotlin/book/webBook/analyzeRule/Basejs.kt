@@ -4,10 +4,6 @@ import book.CookieList
 
 open class Basejs {
 
-    companion object{
-        open var androidId="dasjkjasodkls"
-    }
-
 
 
     fun getCookie(key: String): String? {
@@ -15,7 +11,5 @@ open class Basejs {
         return CookieList.get(key)
     }
 
-    fun androidId(): String {
-        return androidId
-    }
+
 }

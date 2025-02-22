@@ -14,7 +14,6 @@ import org.noear.solon.annotation.Controller
 import org.noear.solon.annotation.Inject
 import org.noear.solon.annotation.Mapping
 import org.noear.solon.core.util.DataThrowable
-import org.noear.solon.data.annotation.CacheRemove
 import org.noear.solon.data.cache.CacheService
 import org.noear.solon.web.cors.annotation.CrossOrigin
 import web.mapper.BooklistMapper
@@ -71,7 +70,7 @@ open class BookController:BaseController() {
             it.printStackTrace()
         }
         if(!re.isEmpty()){
-            cacheService.store(ckey,re,600)
+            cacheService.store(ckey,re,60)
         }
         Gson().toJson(JsonResponse(true).Data(re))
     }
@@ -84,7 +83,7 @@ open class BookController:BaseController() {
     @Mapping("/exploreBook")
     open fun exploreBook( accessToken:String?,bookSourceUrl:String?, page:Int?, ruleFindUrl:String? ) = search(accessToken,bookSourceUrl,page, ruleFindUrl,2)
 
-    @CacheRemove(keys = "getBookshelf:\${accessToken}")
+
     @Mapping("/saveBook")
     open fun saveBook( accessToken:String?,book: SearchBook) = run{
         val user=getuserbytocken(accessToken).also {
@@ -111,7 +110,6 @@ open class BookController:BaseController() {
         return@run JsonResponse(true,SUCCESS)
     }
 
-    @CacheRemove(keys = "getBookshelf:\${accessToken}")
     @Mapping("/deleteBook")
     open fun deleteBook( accessToken:String?, book: SearchBook)=run{
         val user=getuserbytocken(accessToken).also {

@@ -36,7 +36,7 @@ class BookSource {
             }
             return field
         }
-
+    @ColumnType(value = "LONGTEXT")
     var bookSourceComment: String? = null           // 注释
     var lastUpdateTime: Long? = null            // 最后更新时间，用于排序
     //var tag: String? = null

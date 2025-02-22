@@ -6,4 +6,6 @@ interface CookieManager {
      */
     fun getCookie(id:String , url: String): String
 
+    fun removeCookie(id:String , url: String)
+
 }

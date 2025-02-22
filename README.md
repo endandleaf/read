@@ -5,9 +5,8 @@
 有些书源有key验证，这个验证是通过java.getCookie接口获取的这个接口获取的参数可在后台添加。
 
 # 推荐书源
-[晴天](http://api618.qingtian618.site) (需要修改书源地址，再后台添加cookie后使用)
-
-用这个书源清添加域名api618.qingtian618.site,cookie secretKey=你的密钥
+[晴天1.0](http://api618.qingtian618.site)
+[晴天2.0](http://api618.qingtian618.site:5008)
 
 # 后台
 http://ip:8080/admin(阅读后台)
@@ -17,19 +16,21 @@ http://ip:8080/(web阅读)
 web阅读不支持cookie的保存，有些cdn需要验证的可能会出错，app版才支持cookie的保存
 
 # 暂不支持
-阅读不支持书源链接带有\n，不支持登陆
+暂不支持除后台外的任何地方修改添加书源
 
-暂不支持音频的书源
-
-后续会更新的更接近阅读
-
+# 快速部署
+将后端文件上传到root目录，确保root/read/read.jar存在，确保root/read/conf.yml存在（conf.yml中可修改后台管理的账号密码），然后安装docker,
+网上有一键安装脚本可自行百度，docker一键部署命令如下，如需用mysql数据库请自行修改配置文件。
+````
+docker run -tid --name read  -v /root/read:/app -p 8080:8080 --restart=always docker-0.unsee.tech/bitnami/java java -jar /app/read.jar
+````
+如需使用其他端口可修改第一个8080为想要的端口。
 
 # 参考项目
 [reader3](https://github.com/hectorqin/reader)
 
 ![Image text](https://github.com/autobcb/read/blob/main/png/home.png?raw=true)
 ![Image text](https://github.com/autobcb/read/blob/main/png/book.png?raw=true)
-![Image text](https://github.com/autobcb/read/blob/main/png/cookie.png?raw=true)
 ![Image text](https://github.com/autobcb/read/blob/main/png/login.png?raw=true)
 ![Image text](https://github.com/autobcb/read/blob/main/png/home2.png?raw=true)
 ![Image text](https://github.com/autobcb/read/blob/main/png/read.png?raw=true)

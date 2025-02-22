@@ -135,6 +135,7 @@ class CookieStore(val userid:String) : CookieManager {
         if (file.exists()) {
             file.delete()
         }
+        CookieList.manager!!.removeCookie(userid, url)
     }
 
     override fun cookieToMap(cookie: String): MutableMap<String, String> {

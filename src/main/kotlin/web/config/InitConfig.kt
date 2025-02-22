@@ -3,6 +3,7 @@ package web.config
 import book.CookieList
 import book.CookieManager
 import book.app.Response
+import book.app.ToastMessage
 import book.app.WebMessage
 import com.google.gson.Gson
 import com.oracle.svm.core.annotate.Inject
@@ -33,6 +34,10 @@ class InitConfig {
             }
             return cookies
         }
+
+        override fun removeCookie(id: String, url: String) {
+            userCookieMapper.removeCookie(id, url)
+        }
     }
 
 
@@ -62,6 +67,13 @@ class InitConfig {
                 return@runBlocking Response(body = html,url = urlStr, code = 200)
             }
             return@runBlocking Response(body = "",url = urlStr, code = 200)
+        }
+        Response.toast = fun (str : String,tocken:String)  = runBlocking {
+            println(tocken)
+            var socket=ApiWebSocket.get(tocken)
+            if(socket!=null){
+                socket.send(Gson().toJson(ToastMessage(msg = "toast", str=str )))
+            }
         }
     }
 }

@@ -13,12 +13,19 @@ import book.util.help.CookieStore
 import book.util.http.*
 import book.webBook.DebugLog
 import book.webBook.exception.ConcurrentException
+import cn.hutool.core.util.HexUtil
 import com.script.SimpleBindings
 import kotlinx.coroutines.runBlocking
 import okhttp3.MediaType.Companion.toMediaType
+import okhttp3.OkHttpClient
 import okhttp3.RequestBody.Companion.toRequestBody
+import okhttp3.Response
 import java.net.URLEncoder
+import java.util.concurrent.TimeUnit
 import java.util.regex.Pattern
+import kotlin.coroutines.CoroutineContext
+import kotlin.coroutines.EmptyCoroutineContext
+import kotlin.math.max
 
 class AnalyzeUrl(
     val mUrl: String,
@@ -29,6 +36,7 @@ class AnalyzeUrl(
     var baseUrl: String = "",
     private val source: BaseSource? = null,
     private val ruleData: RuleDataInterface? = null,
+    private val readTimeout: Long? = null,
     private val chapter: BookChapter? = null,
     headerMapF: Map<String, String>? = null,
     val needanalyzeUrl :Boolean=true,
@@ -61,6 +69,7 @@ class AnalyzeUrl(
     private var webJs: String? = null
     private val enabledCookieJar = source?.enabledCookieJar ?: false
 
+
     init {
         if(source != null) {
             runCatching {
@@ -78,11 +87,11 @@ class AnalyzeUrl(
 
         //替换参数
         if(needanalyzeUrl)  replaceKeyPageJs()
-        //println(ruleUrl)
+
 
         //处理URL
         if(needanalyzeUrl) analyzeUrl()
-        //println(ruleUrl)
+
     }
 
     private fun analyzeJs() {
@@ -343,7 +352,6 @@ class AnalyzeUrl(
      */
     suspend fun getByteArrayAwait(): ByteArray {
         val concurrentRecord = fetchStart()
-
         @Suppress("RegExpRedundantEscape")
         val dataUriFindResult = dataUriRegex.find(urlNoQuery)
         @Suppress("BlockingMethodInNonBlockingContext")
@@ -378,6 +386,18 @@ class AnalyzeUrl(
             return byteArray
         }
     }
+
+    private fun getByteArrayIfDataUri(): ByteArray? {
+        val dataUriFindResult = dataUriRegex.find(urlNoQuery)
+        if (dataUriFindResult != null) {
+            val dataUriBase64 = dataUriFindResult.groupValues[1]
+            val byteArray = Base64.decode(dataUriBase64, Base64.DEFAULT)
+            return byteArray
+        }
+        return null
+    }
+
+
 
 
     /**

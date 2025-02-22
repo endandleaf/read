@@ -29,9 +29,6 @@ class mapper {
     @Inject
     lateinit var userCookieMapper: UserCookieMapper
 
-    @Inject(value = "\${admin.androidid}", autoRefreshed=true)
-    lateinit var androidid:String
-
     companion object{
         var mapper:mapper?=null
         fun get():mapper{
@@ -43,6 +40,5 @@ class mapper {
     @Bean
     fun init(){
         mapper =this
-        Basejs.androidId=androidid
     }
 }

@@ -5,3 +5,8 @@ data class WebMessage (
     val url: String,
     val title: String,
 )
+
+data class ToastMessage (
+    val msg: String,
+    val str: String,
+)

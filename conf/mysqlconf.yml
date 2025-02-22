@@ -1,0 +1,10 @@
+solon.dataSources:
+  db:
+    class: "com.zaxxer.hikari.HikariDataSource"
+    driverClassName: com.mysql.cj.jdbc.Driver
+    jdbcUrl: jdbc:mysql://127.0.0.1:3306/数据库名?characterEncoding=UTF-8&allowMultiQueries=true&serverTimezone=UTC
+    username: 用户
+    password: 密码
+admin:
+  username: "admin"
+  password: "adminadmin"

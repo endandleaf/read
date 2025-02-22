@@ -75,7 +75,7 @@ object CacheManager {
         runCatching {
             if (v != null && v.isNotBlank()) {
                 val cache = Gson().fromJson<Cache>(v, Cache::class.java)
-                if (System.currentTimeMillis() < cache.deadline){
+                if (System.currentTimeMillis() < cache.deadline || cache.deadline == 0.toLong()){
                     re=cache.value?:""
                 }
             }

@@ -30,9 +30,11 @@ open class LocalBookController:BaseController() {
     @Inject
     lateinit var booklistMapper: BooklistMapper
 
-    @CacheRemove(keys = "getBookshelf:\${accessToken}")
+
     @Mapping("/importBookPreview")
-    open fun importBookPreview(accessToken:String?, file: UploadedFile)=run{
+    open fun importBookPreview(accessToken:String?, file: UploadedFile?)=run{
+        println("importBookPreview")
+        if(file == null) throw DataThrowable().data(JsonResponse(false, NOT_BANK))
         if (file.isEmpty()) {
             throw DataThrowable().data(JsonResponse(false, NOT_BANK))
         }

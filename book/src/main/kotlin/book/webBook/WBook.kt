@@ -6,8 +6,10 @@ import book.model.Book
 import book.model.BookChapter
 import book.model.BookSource
 import book.model.SearchBook
+import book.util.GSON
 import book.util.http.StrResponse
 import book.webBook.analyzeRule.AnalyzeUrl
+import com.google.gson.Gson
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 
@@ -237,6 +239,8 @@ class WBook (val bookSource: BookSource, val debugLog: Boolean = true, var debug
         // bookChapterUrl:String,
         nextChapterUrl: String? = null
     ): String {
+        //println(bookSource.ruleContent?.content)
+        //println(GSON.toJson(bookChapter))
         if (bookSource.getContentRule().content.isNullOrEmpty()) {
             debugger?.log(bookSource.bookSourceUrl, "⇒正文规则为空,使用章节链接: ${bookChapter.url}")
             return bookChapter.url

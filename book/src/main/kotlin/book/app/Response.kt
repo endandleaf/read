@@ -9,6 +9,9 @@ data class Response(
         var startBrowserAwait =fun  (urlStr: String,title: String,tocken:String):Response{
             return Response(body = tocken,url = urlStr, code = 200)
         }
+        var toast =fun  (str: String,tocken:String){
+
+        }
     }
     fun code() =code
     fun body() =body

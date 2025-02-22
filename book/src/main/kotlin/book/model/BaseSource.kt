@@ -81,7 +81,7 @@ interface BaseSource : JsExtensions {
      * 获取用于登录的头部信息
      */
     fun getLoginHeader(): String? {
-        return CacheManager.get("loginHeader_${getKey()}")
+        return CacheManager.get("loginHeader_${getKey()}_userid_${userid}")
     }
 
     fun getLoginHeaderMap(): Map<String, String>? {
@@ -93,11 +93,11 @@ interface BaseSource : JsExtensions {
      * 保存登录头部信息,map格式,访问时自动添加
      */
     fun putLoginHeader(header: String) {
-        CacheManager.put("loginHeader_${getKey()}", header)
+        CacheManager.put("loginHeader_${getKey()}_userid_${userid}", header)
     }
 
     fun removeLoginHeader() {
-        CacheManager.delete("loginHeader_${getKey()}")
+        CacheManager.delete("loginHeader_${getKey()}_userid_${userid}")
     }
 
     /**
@@ -106,13 +106,10 @@ interface BaseSource : JsExtensions {
      */
     fun getLoginInfo(): String? {
         try {
-            val key = AppConst.userAgent.encodeToByteArray(0, 8)
-            val cache = CacheManager.get("userInfo_${getKey()}") ?: return null
-            val encodeBytes = EncoderUtils.base64Decode(cache, Base64.DEFAULT).toByteArray()
-            val decodeBytes = EncoderUtils.decryptAES(encodeBytes, key)
-                ?: return null
-            return String(decodeBytes)
+            val cache = CacheManager.get("userInfo_${getKey()}_userid_${userid}")
+            return cache
         } catch (e: Exception) {
+            e.printStackTrace()
             log("获取登陆信息出错 " + e.localizedMessage)
             return null
         }
@@ -127,19 +124,17 @@ interface BaseSource : JsExtensions {
      */
     fun putLoginInfo(info: String): Boolean {
         return try {
-            val key = (AppConst.userAgent).encodeToByteArray(0, 8)
-            val encodeBytes = EncoderUtils.encryptAES(info.toByteArray(), key)
-            val encodeStr = Base64.encodeToString(encodeBytes, Base64.DEFAULT)
-            CacheManager.put("userInfo_${getKey()}", encodeStr)
+            CacheManager.put("userInfo_${getKey()}_userid_${userid}", info)
             true
         } catch (e: Exception) {
+            e.printStackTrace()
             log("保存登陆信息出错 " + e.localizedMessage)
             false
         }
     }
 
     fun removeLoginInfo() {
-        CacheManager.delete("userInfo_${getKey()}")
+        CacheManager.delete("userInfo_${getKey()}_userid_${userid}")
     }
 
     private fun getCachename():String{
@@ -147,7 +142,7 @@ interface BaseSource : JsExtensions {
     }
 
     fun setVariable(variable: String?) {
-        println("setVariable:${getCachename()}")
+        //println("setVariable:${getCachename()}")
         if (variable != null) {
             CacheManager.put(getCachename(), variable)
         } else {
@@ -156,7 +151,7 @@ interface BaseSource : JsExtensions {
     }
 
     fun getVariable(): String {
-        println("getVariable:${getCachename()}")
+        //println("getVariable:${getCachename()}")
         var s= CacheManager.get(getCachename())
         return s?:""
     }
