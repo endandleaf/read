@@ -22,7 +22,7 @@ web阅读不支持cookie的保存，有些cdn需要验证的可能会出错，ap
 ````
 docker run -tid --name read  -v /root/read:/app -p 8080:8080 --restart=always docker-0.unsee.tech/bitnami/java java -jar /app/read.jar
 ````
-如需使用其他端口可修改第一个8080为想要的端口。
+如需使用其他端口可修改第一个8080为想要的端口。当然/root/read可以换成其他路径，只要确保这个路径下有read.jar和conf.yml。
 
 # 参考项目
 [reader3](https://github.com/hectorqin/reader)
