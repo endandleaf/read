@@ -318,7 +318,7 @@ open class ReadController : BaseController() {
         JsonResponse(true).Data(book)
     }
 
-    @Cache(key = "getBookSources", tags = "getBookSources", seconds = 600)
+    //@Cache(key = "getBookSources", tags = "getBookSources", seconds = 600)
     @Mapping("/getBookSources")
     open fun getBookSources() = run {
         var source = bookSourcemapper.getBookSourcelist(true)

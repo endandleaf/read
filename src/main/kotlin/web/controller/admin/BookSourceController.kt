@@ -143,6 +143,28 @@ class BookSourceController {
         JsonResponse(true)
     }
 
+    @Mapping("/topSource")
+    fun topSource( id: String?)= run{
+        if (id == null || id.isBlank()){
+            throw DataThrowable().data(JsonResponse(false, NOT_BANK))
+        }
+        var bookSource=booksourcemapper.getBookSource(id)
+        if (bookSource == null){
+            throw DataThrowable().data(JsonResponse(false, NOT_IS))
+        }
+        var sources = booksourcemapper.getallBookSourcelist()
+        var order=1
+        for( it in sources!!){
+            if(it.bookSourceUrl == bookSource.bookSourceUrl){
+                booksourcemapper.changeorder(it.bookSourceUrl?:"", 0)
+            }else{
+                booksourcemapper.changeorder(it.bookSourceUrl?:"", order)
+                order++
+            }
+        }
+        JsonResponse(true)
+    }
+
 
 
 

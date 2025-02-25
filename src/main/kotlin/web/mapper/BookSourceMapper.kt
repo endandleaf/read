@@ -10,8 +10,11 @@ interface BookSourceMapper : BaseMapper<BookSource> {
     @Select("SELECT * FROM book_source WHERE book_source_url = #{bookSourceUrl}")
     fun getBookSource(@Param("bookSourceUrl") bookSourceUrl: String): BookSource?
 
-    @Select("SELECT * FROM book_source WHERE enabled= #{enabled} order by createtime asc")
+    @Select("SELECT * FROM book_source WHERE enabled= #{enabled} order by sourceorder asc")
     fun getBookSourcelist(@Param("enabled") enabled: Boolean): List<BookSource>?
+
+    @Select("SELECT * FROM book_source  order by sourceorder asc")
+    fun getallBookSourcelist(): List<BookSource>?
 
 
     @Update("UPDATE book_source set enabled= #{enabled} WHERE book_source_url = #{bookSourceUrl}")
@@ -19,5 +22,9 @@ interface BookSourceMapper : BaseMapper<BookSource> {
 
     @Update("UPDATE book_source set enabled_explore= #{enabled} WHERE book_source_url = #{bookSourceUrl}")
     fun changeenabledExplore(@Param("bookSourceUrl") bookSourceUrl: String,@Param("enabled") enabled: Boolean):Int
+
+    @Update("UPDATE book_source set sourceorder= #{sourceorder} WHERE book_source_url = #{bookSourceUrl}")
+    fun changeorder(@Param("bookSourceUrl") bookSourceUrl: String,@Param("sourceorder") sourceorder: Int):Int
+
 
 }

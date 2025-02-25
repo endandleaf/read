@@ -40,7 +40,7 @@
                     <th lay-data="{field:'enabled', title:'状态',templet: '#enabled'}"></th>
                     <th lay-data="{field:'enabledExplore', title:'发现',templet: '#enabledExplore'}"></th>
                     <th lay-data="{field:'bookSourceComment', title:'备注'}"></th>
-                    <th lay-data="{title:'操作' ,templet: '#tool' , width:180}"></th>
+                    <th lay-data="{title:'操作' ,templet: '#tool' , width:250}"></th>
                 </tr>
                 </thead>
                 <tbody></tbody>
@@ -90,6 +90,7 @@
         {{#  } else { }}
         <a class="layui-btn layui-btn-danger layui-btn-xs" lay-event="stop">禁止</a>
         {{#  } }}
+        <a class="layui-btn layui-btn-xs" lay-event="top">置顶</a>
         <a class="layui-btn layui-btn-danger layui-btn-xs" lay-event="del">删除</a>
     </div>
 </script>
@@ -102,7 +103,7 @@
         var form =layui.form,
             table = layui.table
         var dropdown = layui.dropdown;
-        var where="",order = 'createtime asc'
+        var where="",order = 'sourceorder asc'
         $ = layui.$
 
         var upload = layui.upload;
@@ -129,6 +130,7 @@
             , toolbar: '#toolbar'
             , url:  '/admin/seachbookSource'
             , where: {where: where,order:order}
+            , limits: [10, 30, 50,100,150,200,250,300,350,400]
             , loading :true
         });
         table.on('toolbar(InZDSeach)', function(obj){
@@ -273,6 +275,19 @@
                             obj.del(); // 删除对应行（tr）的DOM结构
                             layer.close(index);
                             layer.msg("删除成功");
+                        }else{
+                            layer.msg(data.errorMsg);
+                            layer.close(index);
+                        }
+                    })
+                });
+            }else  if (obj.event === 'top') {
+                layer.confirm('真的将 ['+ data.bookSourceName +'] 置顶么', function(index){
+                    ajax("POST",'/admin/topSource',{id:data.bookSourceUrl},function (data) {
+                        if (data.isSuccess == true){
+                            layer.close(index);
+                            layer.msg("置顶成功");
+                            shua()
                         }else{
                             layer.msg(data.errorMsg);
                             layer.close(index);

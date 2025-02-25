@@ -18,7 +18,8 @@ class BookSource {
     @PrimaryKey
     var bookSourceUrl: String? = null           // 地址，包括 http/https
     var bookSourceName: String? = null           // 名称
-    var bookSourceGroup: String? = null       // 分组
+    var bookSourceGroup: String? = null
+    var sourceorder: Int? = null
     var bookSourceType: Int? = null         // 类型，0 文本，1 音频
     @ColumnType(value = "LONGTEXT")
     var exploreUrl: String? = null                 // 发现url
