@@ -20,6 +20,7 @@ import web.util.cache.removecache
 import web.util.cache.setcache
 import java.io.File
 import java.net.URLDecoder
+import kotlin.concurrent.thread
 
 @Controller
 @Mapping(routepath)
@@ -72,11 +73,13 @@ open class LocalBookController:BaseController() {
             booklist.latestChapterTime=System.currentTimeMillis()
             booklistMapper.insert(booklist)
         }
-        ReadController.removeChapterListbycache(book.bookUrl)
-        for( i in 0..chapters.size-1){
-            ReadController.removeBookContentbycache(book.bookUrl,i)
+        thread {
+            ReadController.removeChapterListbycache(book.bookUrl)
+            for( i in 0..chapters.size-1){
+                ReadController.removeBookContentbycache(book.bookUrl,i)
+            }
+            ReadController.setChapterListbycache(book.bookUrl,chapters)
         }
-        ReadController.setChapterListbycache(book.bookUrl,chapters)
         return@run JsonResponse(true,SUCCESS).Data(mapOf("books" to book,"chapters" to chapters))
     }
 
