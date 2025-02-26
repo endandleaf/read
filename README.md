@@ -11,7 +11,7 @@ http://ip:8080/admin(阅读后台)
 
 http://ip:8080/(web阅读)
 
-web阅读不支持cookie的保存，有些cdn需要验证的可能会出错，app版才支持cookie的保存
+web阅读不支持cookie的保存，不支持朗读功能，但支持听书类型，有些cdn需要验证的可能会出错，app版才支持cookie的保存
 
 # 暂不支持
 暂不支持除后台外的任何地方修改添加书源

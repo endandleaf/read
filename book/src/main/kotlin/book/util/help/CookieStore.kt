@@ -88,6 +88,9 @@ class CookieStore(val userid:String) : CookieManager {
             key= key.split("\n")[0]
         }
         if (url.contains("http://") || url.contains("https://")) {
+            if (url.contains("#") ) {
+                key=url.split("#")[0]
+            }
             val uri = URI(key)
             key = uri.host
         }
