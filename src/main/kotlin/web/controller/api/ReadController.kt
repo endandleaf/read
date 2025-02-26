@@ -4,27 +4,31 @@ import book.model.Book
 import book.model.BookChapter
 import book.model.BookSource
 import book.webBook.WBook
-import book.webBook.exception.ConcurrentException
 import book.webBook.localBook.LocalBook
 import com.google.gson.Gson
 import com.google.gson.reflect.TypeToken
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.runBlocking
 import org.apache.ibatis.solon.annotation.Db
 import org.noear.solon.annotation.Controller
 import org.noear.solon.annotation.Inject
 import org.noear.solon.annotation.Mapping
+import org.noear.solon.core.handle.Context
 import org.noear.solon.core.util.DataThrowable
 import org.noear.solon.data.annotation.Cache
-import org.noear.solon.data.cache.CacheService
 import org.noear.solon.web.cors.annotation.CrossOrigin
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 import web.mapper.BooklistMapper
 import web.response.*
 import web.service.MyCacheService
+import web.util.SslUtils
 import web.util.read.BookContent
 import web.util.read.getlist
+import java.io.BufferedReader
+import java.io.ByteArrayOutputStream
+import java.io.InputStreamReader
+import java.net.HttpURLConnection
+import java.net.URL
 
 
 @Controller
@@ -340,7 +344,7 @@ open class ReadController : BaseController() {
     }
 
 
-    @Cache(key = "ExploreUrl:\${bookSourceUrl},\${accessToken}", tags = "ExploreUrl", seconds = 600)
+    //@Cache(key = "ExploreUrl:\${bookSourceUrl},\${accessToken}", tags = "ExploreUrl", seconds = 600)
     @Mapping("/getBookSourcesExploreUrl")
     open fun getBookSourcesExploreUrl(accessToken: String?, bookSourceUrl: String?) = runBlocking {
         val user = getuserbytocken(accessToken).also {
@@ -358,6 +362,44 @@ open class ReadController : BaseController() {
         }
         var s = BookSource.fromJson(source.json ?: "").getOrNull()
         JsonResponse(true).Data(mapOf("found" to re, "loginUrl" to s?.loginUrl, "loginUi" to s?.loginUi))
+    }
+
+    @Mapping("/proypng")
+    open fun proypng(ctx: Context, accessToken: String?, url: String?, header: String?) = run {
+        getuserbytocken(accessToken).also {
+            if (it == null) throw DataThrowable().data(JsonResponse(false, NEED_LOGIN))
+        }!!
+        if (url.isNullOrBlank()) throw DataThrowable().data(JsonResponse(false, NOT_BANK))
+        val url = URL(url)
+        SslUtils.ignoreSsl();
+        val connection = url.openConnection() as HttpURLConnection
+        connection.setRequestMethod("GET")
+        runCatching {
+            var json= Gson().fromJson<Map<String, String>>(header, Map::class.java)
+            json.forEach{(k,v)->
+                connection.setRequestProperty(k,v);
+            }
+        }
+        val responseCode = connection.getResponseCode();
+        // 6. 读取响应
+        if (responseCode == HttpURLConnection.HTTP_OK) { // 200表示请求成功
+            val bos = ByteArrayOutputStream() //创建输出流对象
+            connection.getInputStream().use {
+                val b = ByteArray(4096)
+                var len: Int
+                while ((it.read(b).also { len = it }) != -1) {
+                    bos.write(b, 0, len)
+                }
+            }
+            ctx.contentType(connection.getHeaderField("Content-Type"))
+            ctx.output(bos.toByteArray())
+            ctx.flush()
+
+        } else {
+            logger.info("GET请求失败");
+            JsonResponse(isSuccess = false,errorMsg ="GET请求失败")
+        }
+
     }
 
     @Mapping("/getLoginInfo")
