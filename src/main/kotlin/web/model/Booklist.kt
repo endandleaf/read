@@ -2,16 +2,15 @@ package web.model
 
 import book.model.Book
 import book.model.SearchBook
-import org.dromara.autotable.annotation.ColumnType
+import com.baomidou.mybatisplus.annotation.TableId
+import org.dromara.autotable.annotation.*
 import java.util.*
-import org.dromara.autotable.annotation.AutoTable
-import org.dromara.autotable.annotation.PrimaryKey
-import org.dromara.mpe.autotable.annotation.ColumnId
 import web.util.hash.Md5
 
 @AutoTable(value = "booklist")
 class Booklist {
-    @ColumnId
+
+    @TableId
     @PrimaryKey
     var id : String? = null
     var userid : String? = null                    //用户id
@@ -36,7 +35,7 @@ class Booklist {
     var customIntro: String? = null      // 简介内容(用户修改)
     var charset: String? = null                // 自定义字符集名称(仅适用于本地书籍)
     var type: Int? = null                       // @BookType
-    //var group: Int = 0                         // 自定义分组索引号
+    var bookgroup: String? = null                  // 自定义分组索引号
     var latestChapterTitle: String? = null     // 最新章节标题
     var latestChapterTime: Long? = null            // 最新章节标题更新时间
     var lastCheckTime: Long? = null               // 最近一次更新书籍信息的时间
@@ -60,15 +59,15 @@ class Booklist {
         return this
     }
 
-    fun bookto(book: Book):Booklist{
+    fun bookto(book: Book,canchangename:Boolean =true):Booklist{
         this.tocUrl=""
         this.bookUrl = book.bookUrl
         if(book.tocUrl.isNotBlank()) this.tocUrl = book.tocUrl
         this.origin = book.origin
         this.originName = book.originName
         this.originOrder = book.originOrder
-        if(book.name.isNotBlank())  this.name = book.name
-        if(book.author.isNotBlank()) this.author = book.author
+        if(book.name.isNotBlank() && canchangename)  this.name = book.name
+        if(book.author.isNotBlank() && canchangename) this.author = book.author
         if((book.kind?:"").isNotBlank()) this.kind = book.kind
         if((book.customTag?:"").isNotBlank())  this.customTag = book.customTag
         if((book.customCoverUrl?:"").isNotBlank()) this.customCoverUrl = book.customCoverUrl
@@ -76,7 +75,7 @@ class Booklist {
         if((book.intro?:"").isNotBlank()) this.intro = book.intro
         if((book.customIntro?:"").isNotBlank()) this.customIntro = book.customIntro
         if((book.charset?:"").isNotBlank()) this.charset = book.charset
-        this.type = book.type
+        if(canchangename) this.type = book.type
         if((book.wordCount?:"").isNotBlank()) this.wordCount = book.wordCount
         return this
     }

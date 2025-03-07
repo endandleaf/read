@@ -3,6 +3,7 @@ package book.webBook.analyzeRule
 import book.model.BaseSource
 import book.model.Book
 import book.model.BookChapter
+import book.model.Header
 import book.util.*
 import book.util.AppConst.SCRIPT_ENGINE
 import book.util.AppConst.UA_NAME
@@ -14,6 +15,7 @@ import book.util.http.*
 import book.webBook.DebugLog
 import book.webBook.exception.ConcurrentException
 import cn.hutool.core.util.HexUtil
+import com.google.gson.Gson
 import com.script.SimpleBindings
 import kotlinx.coroutines.runBlocking
 import okhttp3.MediaType.Companion.toMediaType
@@ -40,7 +42,7 @@ class AnalyzeUrl(
     private val chapter: BookChapter? = null,
     headerMapF: Map<String, String>? = null,
     val needanalyzeUrl :Boolean=true,
-) :JsExtensions,Basejs() {
+) :JsExtensions {
 
     companion object {
         val paramPattern: Pattern = Pattern.compile("\\s*,\\s*(?=\\{)")
@@ -82,8 +84,13 @@ class AnalyzeUrl(
 
     fun initUrl() {
         ruleUrl = mUrl
+
         //执行@js,<js></js>
         analyzeJs()
+
+
+
+
 
         //替换参数
         if(needanalyzeUrl)  replaceKeyPageJs()
@@ -258,22 +265,28 @@ class AnalyzeUrl(
         return SCRIPT_ENGINE.eval(jsStr, bindings)
     }
 
+    fun put(key: String, value: String): String {
+        chapter?.putVariable(key, value,source?.userid?:"")
+            ?: ruleData?.putVariable(key, value,source?.userid?:"")
+        return value
+    }
+
     private fun setCookie(tag: String?) {
-        println("setCookie tag:$tag")
+       // println("setCookie tag:$tag")
         var userid=""
         if(source != null){
             userid = source.userid?:""
         }
         var store=CookieStore(userid)
         val cookie = store.getCookie(tag ?: url)
-        println("cookie : $cookie")
+        //println("cookie : $cookie")
         if (cookie.isNotEmpty()) {
             val cookieMap = store.cookieToMap(cookie)
             val customCookieMap = store.cookieToMap(headerMap["Cookie"] ?: "")
             customCookieMap.putAll(cookieMap)
             val newCookie = store.mapToCookie(customCookieMap)
             newCookie?.let {
-                println("putcookie : $it,url:${url}")
+                //println("putcookie : $it,url:${url}")
                 headerMap.put("Cookie", it)
             }
         }

@@ -1,0 +1,207 @@
+<#include "header.html">
+
+<div style="margin-left: 8%;margin-right: 8%; margin-top: 40px">
+  <div style="margin-left: 0px">
+    <form class="layui-form" action="">
+      <div class="layui-form-item">
+        <div class="layui-inline"  style="margin-left: 0px">
+          <div class="layui-input-block" style="width: 500px">
+            <input type="text" name="where" style="width: 100%" autocomplete="off" placeholder="搜索条件" class="layui-input">
+          </div>
+        </div>
+        <div class="layui-inline width30">
+          <div class="layui-input-block">
+            <button class="layui-btn" lay-submit="" lay-filter="InZDSeach" style="margin-left: 10px;">搜索</button>
+            <button class="layui-btn" type="button" id="add" style="margin-left: 10px;">添加</button>
+          </div>
+        </div>
+      </div>
+    </form>
+  </div>
+  <div>
+    <div>
+
+      <table lay-filter="InZDSeach" id="InZDSeach">
+        <thead>
+        <tr>
+          <th lay-data="{type: 'checkbox', fixed: 'left'}"></th>
+          <th lay-data="{title:'' , width:50,templet: '#indexTpl'}"></th>
+          <th lay-data="{field:'code', title:'注册码'}"></th>
+          <th lay-data="{field:'createtime', title:'添加时间' }"></th>
+          <th lay-data="{title:'操作' ,templet: '#tool' }"></th>
+        </tr>
+        </thead>
+        <tbody></tbody>
+      </table>
+    </div>
+  </div>
+</div>
+<script type="text/html" id="toolbar">
+  <div class="layui-btn-container">
+    <button class="layui-btn layui-btn-sm" lay-event="alldel">批量删除</button>
+    <button class="layui-btn layui-btn-sm" lay-event="dao">批量导出</button>
+  </div>
+</script>
+<script type="text/html" id="indexTpl">
+  {{d.LAY_INDEX+1}}
+</script>
+
+<script type="text/html" id="tool">
+  <div class="layui-clear-space">
+    <a class="layui-btn layui-btn-danger layui-btn-xs" lay-event="del">删除</a>
+  </div>
+</script>
+
+<script src="/static/layui/layui.js"></script>
+<script src="/static/js/ajax.js"></script>
+<script>
+  var $
+  layui.use(['table','form'], function () {
+    var form =layui.form,
+            table = layui.table
+    $ = layui.$
+    var where="",order = 'createtime DESC'
+    table.init('InZDSeach', {
+      page: true
+      , toolbar: '#toolbar'
+      , url:  '/admin/seachcode'
+      , where: {where: where,order:order}
+      , loading :true
+    });
+
+    form.on('submit(InZDSeach)', function (data) {
+      where = data.field.where;
+      table.reload('InZDSeach', {
+        page: {curr: 1}
+        , where: {where: where}
+      });
+      return false
+    });
+
+    table.on('toolbar(InZDSeach)', function(obj){
+      var id = obj.config.id;
+      var checkStatus = table.checkStatus(id);
+      var othis = lay(this);
+      switch(obj.event){
+        case 'alldel':
+          var data = checkStatus.data;
+          var  ids=[]
+          data.forEach(d => {
+            ids.push(d.code)
+          })
+          console.log(ids)
+          if(ids.length>0){
+            layer.confirm('确认批量删除这些吗？', function(index){
+              ajaxjson('/admin/delcodes',ids,function (data) {
+                if (data.isSuccess == true){
+                  shua()
+                  layer.close(index);
+                  layer.msg("删除成功");
+                }else{
+                  layer.msg(data.errorMsg);
+                  layer.close(index);
+                }
+              })
+            });
+          }else{
+            layer.msg("请选择邀请码");
+          }
+
+          break;
+        case 'dao':
+          var data = checkStatus.data;
+          var  str=""
+          data.forEach(d => {
+            if(str == ""){
+              str=str+d.code
+            }else{
+              str=str+"\n"+d.code
+            }
+
+          })
+          if(str != ""){
+            const stringData = str
+            // dada 表示要转换的字符串数据，type 表示要转换的数据格式
+            const blob = new Blob([stringData], {
+              type: 'text/plain'
+            })
+            // 根据 blob生成 url链接
+            const objectURL = URL.createObjectURL(blob)
+
+            // 创建一个 a 标签Tag
+            const aTag = document.createElement('a')
+            // 设置文件的下载地址
+            aTag.href = objectURL
+            // 设置保存后的文件名称
+            aTag.download = "code"+new Date().getTime()+".txt"
+            // 给 a 标签添加点击事件
+            aTag.click()
+            // 释放一个之前已经存在的、通过调用 URL.createObjectURL() 创建的 URL 对象。
+            // 当你结束使用某个 URL 对象之后，应该通过调用这个方法来让浏览器知道不用在内存中继续保留对这个文件的引用了。
+            URL.revokeObjectURL(objectURL)
+          }else{
+            layer.msg("请选择邀请码");
+          }
+
+          break;
+      };
+    });
+
+    window.shua=function (){
+      table.reload('InZDSeach', {
+        page: {curr: 1}
+        , where: {where: where,order:order}
+      });
+    }
+
+    table.on('tool(InZDSeach)', function (obj) {
+      var data = obj.data;
+      if (obj.event === 'del') {
+        layer.confirm('真的删除 ['+ data.code +'] 么', function(index){
+          ajax("POST",'/admin/delcode',{code:data.code},function (data) {
+            if (data.isSuccess == true){
+              obj.del(); // 删除对应行（tr）的DOM结构
+              layer.close(index);
+              layer.msg("删除成功");
+            }else{
+              layer.msg(data.errorMsg);
+              layer.close(index);
+            }
+          })
+        });
+      }
+
+
+    });
+
+
+    $("#add").click(function () {
+      layer.prompt({
+        formType: 0,
+        value: '',
+        title: '请输入数量',
+        area: ['200px', '50px'] //自定义文本域宽高
+      }, function(value, index, elem){
+        if(isNaN(value)){
+          layer.msg("请填写正确的数字");
+          return;
+        }
+        // alert(value); //得到value
+        ajax("POST",'/admin/addcode',{num:value},function (data) {
+          if (data.isSuccess == true){
+            where=""
+            table.reload('InZDSeach', {
+              page: {curr: 1}
+              , where: {where: where}
+            });
+          }else{
+            layer.msg(data.errorMsg);
+          }
+          layer.close(index);
+        })
+      });
+    })
+  })
+</script>
+</body>
+</html>

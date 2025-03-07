@@ -3,7 +3,6 @@ package book.model
 import book.util.*
 import book.util.help.CacheManager
 import book.util.help.CookieStore
-import book.webBook.analyzeRule.Basejs
 import book.webBook.analyzeRule.JsExtensions
 import com.script.SimpleBindings
 
@@ -151,9 +150,12 @@ interface BaseSource : JsExtensions {
     }
 
     fun getVariable(): String {
-        //println("getVariable:${getCachename()}")
         var s= CacheManager.get(getCachename())
         return s?:""
+    }
+
+    fun getCookie(url:String):String?{
+        return CookieStore(userid?:"").getCookie(url)
     }
 
     /**

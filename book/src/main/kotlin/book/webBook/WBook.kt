@@ -77,7 +77,7 @@ class WBook (val bookSource: BookSource, val debugLog: Boolean = true, var debug
     }
 
     suspend fun searchBook(key: String, page: Int? = 1): List<SearchBook> {
-        val variableBook = SearchBook()
+        val variableBook = SearchBook(origin = sourceUrl)
         return bookSource.searchUrl?.let {searchUrl->
             val analyzeUrl = AnalyzeUrl(
                 mUrl = searchUrl,
@@ -119,7 +119,7 @@ class WBook (val bookSource: BookSource, val debugLog: Boolean = true, var debug
         url: String,
         page: Int? = 1
     ): List<SearchBook> {
-        val variableBook = SearchBook()
+        val variableBook =  SearchBook(origin = sourceUrl)
         val analyzeUrl = AnalyzeUrl(
             mUrl = url,
             page = page,

@@ -1,5 +1,8 @@
 package book.model
 
+import book.util.GSON
+import book.util.fromJsonObject
+import book.util.help.CacheManager
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties
 import com.google.gson.Gson
 import com.google.gson.reflect.TypeToken
@@ -36,18 +39,54 @@ data class SearchBook(
         return false
     }
 
-    override val variableMap: HashMap<String, String> by lazy {
-        Gson().fromJson(variable, object : TypeToken<HashMap<String, String>>() {}.type)?: hashMapOf()
+    override var variableMap: HashMap<String, String> = hashMapOf()
+
+    private fun getCachename(userid:String):String{
+        if(bookUrl == ""){
+            return "variableMap${origin}_userid_${userid}"
+        }
+        return "variableMap${bookUrl}_userid_${userid}"
+    }
+    fun getVariableMapMap(userid:String): HashMap<String, String>? {
+        return GSON.fromJsonObject<HashMap<String, String>>(getvariableMap(userid)).getOrNull()
     }
 
-    override fun putVariable(key: String, value: String?) {
+    fun getvariableMap(userid:String):String?{
+        try {
+            val cache = CacheManager.get(getCachename(userid))
+            return cache
+        } catch (e: Exception) {
+            e.printStackTrace()
+            return null
+        }
+    }
+
+    fun putVariable(info: String,userid: String): Boolean {
+        return try {
+            CacheManager.put(getCachename(userid), info)
+            true
+        } catch (e: Exception) {
+            e.printStackTrace()
+            false
+        }
+    }
+
+    override fun putVariable(key: String, value: String?,userid:String) {
+        variableMap=getVariableMapMap(userid)?:hashMapOf()
         if (value != null) {
             variableMap[key] = value
         } else {
             variableMap.remove(key)
         }
-        variable =  Gson().toJson(variableMap)
+        variable = GSON.toJson(variableMap)
+        putVariable(variable?:"",userid)
     }
+
+    override fun getVariable(key: String, userid: String): String? {
+        variableMap=getVariableMapMap(userid)?:hashMapOf()
+        return  variableMap[key];
+    }
+
 
     fun toBook(): Book {
         return Book(

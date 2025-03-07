@@ -86,6 +86,12 @@ open class ReadController : BaseController() {
             MyCacheService.remove(key)
         }
 
+        fun removeallBookContentbycache(url: String) {
+            MyCacheService.removeBookContentbycache(url)
+        }
+
+
+
         fun getBookbycache(url: String): Book? {
             var key = "getBook:${url}"
             var re: Book? = MyCacheService.get(key, Book::class.java)
@@ -182,17 +188,8 @@ open class ReadController : BaseController() {
     @Mapping("/fetchBook")
     fun fetchBook(url: String?) = runBlocking {
         if (url == null) throw DataThrowable().data(JsonResponse(false, NOT_BANK))
-        var chapters = getChapterListbycache(url);
         removeChapterListbycache(url);
-        if (chapters == null) {
-            for (i in 0..1000) {
-                removeBookContentbycache(url, i)
-            }
-        } else {
-            for (i in 0..chapters.size - 1) {
-                removeBookContentbycache(url, i)
-            }
-        }
+        removeallBookContentbycache(url)
         JsonResponse(true)
     }
 
@@ -284,12 +281,12 @@ open class ReadController : BaseController() {
                 }
             }
             if (new != null) {
-                booklistMapper.updateById(book.bookto(new!!))
+                booklistMapper.updateById(book.bookto(new!!,false))
             } else {
                 throw DataThrowable().data(JsonResponse(false, NO_BOOK))
             }
         }.onSuccess {
-            booklistMapper.updateById(book.bookto(new!!))
+            booklistMapper.updateById(book.bookto(new!!,false))
         }
         //println(Gson().toJson(new))
         JsonResponse(true).Data(book)
@@ -319,7 +316,7 @@ open class ReadController : BaseController() {
                 it.durChapterPos = 0.0
             }
         }
-        JsonResponse(true).Data(book)
+       JsonResponse(true).Data(book)
     }
 
     //@Cache(key = "getBookSources", tags = "getBookSources", seconds = 600)
@@ -366,9 +363,7 @@ open class ReadController : BaseController() {
 
     @Mapping("/proypng")
     open fun proypng(ctx: Context, accessToken: String?, url: String?, header: String?) = run {
-        getuserbytocken(accessToken).also {
-            if (it == null) throw DataThrowable().data(JsonResponse(false, NEED_LOGIN))
-        }!!
+        if (accessToken == null) throw DataThrowable().data(JsonResponse(false, NEED_LOGIN))
         if (url.isNullOrBlank()) throw DataThrowable().data(JsonResponse(false, NOT_BANK))
         val url = URL(url)
         SslUtils.ignoreSsl();

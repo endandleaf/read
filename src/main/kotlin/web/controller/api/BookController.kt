@@ -2,6 +2,7 @@ package web.controller.api
 
 
 
+import book.model.Book
 import book.model.BookChapter
 import book.model.BookSource
 import book.model.SearchBook
@@ -14,16 +15,21 @@ import org.noear.solon.annotation.Controller
 import org.noear.solon.annotation.Inject
 import org.noear.solon.annotation.Mapping
 import org.noear.solon.core.util.DataThrowable
+import org.noear.solon.data.annotation.Tran
 import org.noear.solon.data.cache.CacheService
 import org.noear.solon.web.cors.annotation.CrossOrigin
+import web.controller.api.ReadController.Companion.setBookbycache
+import web.mapper.BookGroupMapper
 import web.mapper.BooklistMapper
 import web.mapper.UserCookieMapper
+import web.model.BookGroup
 import web.model.Booklist
 import web.model.UserCookie
 import web.response.*
 import web.util.read.updatebook
 import java.io.File
 import java.net.URI
+import kotlin.concurrent.thread
 
 @Controller
 @Mapping(routepath)
@@ -40,6 +46,9 @@ open class BookController:BaseController() {
 
     @Inject
     lateinit var cacheService: CacheService
+
+    @Inject
+    lateinit var bookGroupMapper: BookGroupMapper
 
     fun search(accessToken:String?, bookSourceUrl:String?, page:Int?, key:String?,type:Int)=runBlocking{
         val (user,source,jp)=getsourceuser(accessToken,bookSourceUrl)
@@ -84,8 +93,9 @@ open class BookController:BaseController() {
     open fun exploreBook( accessToken:String?,bookSourceUrl:String?, page:Int?, ruleFindUrl:String? ) = search(accessToken,bookSourceUrl,page, ruleFindUrl,2)
 
 
+
     @Mapping("/saveBook")
-    open fun saveBook( accessToken:String?,book: SearchBook) = run{
+    open fun saveBook( accessToken:String?,book: SearchBook) = runBlocking{
         val user=getuserbytocken(accessToken).also {
             if(it == null){
                 throw DataThrowable().data(JsonResponse(false,NEED_LOGIN))
@@ -96,18 +106,60 @@ open class BookController:BaseController() {
                 throw DataThrowable().data(JsonResponse(false,NOT_BANK))
             }
         }
+        val source = getsource(book.origin)
+        var webBook = WBook(source!!.json ?: "", user.id!!, accessToken, false)
         var booktolist=Booklist.tobooklist(book,user.id!!)
-        if (booklistMapper.getbook(user.id!!,booktolist.bookUrl!!) != null){
-            return@run JsonResponse(false,BOOKIS)
+        var new: Book? = null
+        runCatching {
+            new = webBook.getBookInfo(book.bookUrl, canReName = true)
+        }.onFailure {
+            return@runBlocking JsonResponse(false,BOOKSEARCHERROR)
         }
-        booklistMapper.insert(booktolist)
-        Thread{
-            runBlocking {
-                var source=getsource(book.origin)!!
-                updatebook(booktolist, source,user.id!!)
+        setBookbycache(book.bookUrl,new!!);
+        if (booklistMapper.getbook(user.id!!,booktolist.bookUrl!!) != null){
+            return@runBlocking JsonResponse(false,BOOKIS)
+        }
+        booklistMapper.insert(booktolist.bookto(new!!,false))
+        thread {
+            var source=getsource(book.origin)!!
+            updatebook(booktolist, source,user.id!!)
+        }
+        JsonResponse(true,SUCCESS)
+    }
+
+    @Mapping("/refreshBook")
+    open fun refreshBook( accessToken:String?,bookurl: String) = runBlocking{
+        val user=getuserbytocken(accessToken).also {
+            if(it == null){
+                throw DataThrowable().data(JsonResponse(false,NEED_LOGIN))
             }
-        }.start()
-        return@run JsonResponse(true,SUCCESS)
+        }!!
+        if (bookurl.isBlank()){
+            throw DataThrowable().data(JsonResponse(false,NOT_BANK))
+        }
+        var book=booklistMapper.getbook(user.id!!,bookurl!!).also {
+            if(it == null){
+                throw DataThrowable().data(JsonResponse(false,NO_BOOK))
+            }
+        }!!
+        if(book.origin == "loc_book" ){
+            return@runBlocking JsonResponse(true,SUCCESS).Data(book)
+        }
+        val source = getsource(book.origin).also {
+            if (it == null){
+                throw DataThrowable().data(JsonResponse(false,NOT_SOURCE))
+            }
+        }
+        var webBook = WBook(source!!.json ?: "", user.id!!, accessToken, false)
+        var new: Book? = null
+        runCatching {
+            new = webBook.getBookInfo(book.bookUrl!!, canReName = true)
+        }.onFailure {
+            return@runBlocking JsonResponse(false,BOOKSEARCHERROR)
+        }
+        setBookbycache(book.bookUrl!!,new!!);
+        booklistMapper.updateById(book.bookto(new!!,false))
+        JsonResponse(true,SUCCESS).Data(book)
     }
 
     @Mapping("/deleteBook")
@@ -164,6 +216,104 @@ open class BookController:BaseController() {
                 ApiWebSocket.addhtml(key = accessToken?:"",html = html)
             }
         }
+        JsonResponse(true)
+    }
+
+    @Mapping("/getgroup")
+    open fun getgroup( accessToken:String?)=run{
+        val user=getuserbytocken(accessToken).also {
+            if(it == null){
+                throw DataThrowable().data(JsonResponse(false,NEED_LOGIN))
+            }
+        }!!
+        JsonResponse(true).Data(bookGroupMapper.getGroupbyuserid(user.id!!))
+    }
+
+    @Tran
+    @Mapping("/addgroup")
+    open fun addgroup( accessToken:String?,name:String?)=run{
+        val user=getuserbytocken(accessToken).also {
+            if(it == null){
+                throw DataThrowable().data(JsonResponse(false,NEED_LOGIN))
+            }
+        }!!
+        if(name == null){
+            throw DataThrowable().data(JsonResponse(false, NOT_BANK))
+        }
+        if(name == "全部"  || bookGroupMapper.getGroupbyName(user.id!!,name) != null) {
+            throw DataThrowable().data(JsonResponse(isSuccess = false, errorMsg = GROUPIS))
+        }
+        bookGroupMapper.insert(BookGroup().create(user.id!!,name))
+        JsonResponse(true)
+    }
+
+    @Tran
+    @Mapping("/delgroup")
+    open fun delgroup( accessToken:String?,name:String?)=run{
+        val user=getuserbytocken(accessToken).also {
+            if(it == null){
+                throw DataThrowable().data(JsonResponse(false,NEED_LOGIN))
+            }
+        }!!
+        if(name == null){
+            throw DataThrowable().data(JsonResponse(false, NOT_BANK))
+        }
+        var group=bookGroupMapper.getGroupbyName(user.id!!,name).also {
+            if(it == null){
+                throw DataThrowable().data(JsonResponse(false, NOT_IS))
+            }
+        }!!
+        bookGroupMapper.deleteById(group.id!!)
+        booklistMapper.delbookgroup(user.id!!,group.bookgroup!!)
+        JsonResponse(true)
+    }
+
+    @Tran
+    @Mapping("/editgroup")
+    open fun editgroup( accessToken:String?,oldname:String?,newname:String?)=run{
+        val user=getuserbytocken(accessToken).also {
+            if(it == null){
+                throw DataThrowable().data(JsonResponse(false,NEED_LOGIN))
+            }
+        }!!
+        if(oldname == null || newname == null){
+            throw DataThrowable().data(JsonResponse(false, NOT_BANK))
+        }
+        var group=bookGroupMapper.getGroupbyName(user.id!!,oldname).also {
+            if(it == null){
+                throw DataThrowable().data(JsonResponse(false, NOT_IS))
+            }
+        }!!
+        group.bookgroup=newname
+        bookGroupMapper.updateById(group)
+        booklistMapper.upbookgroup(user.id!!,oldname,newname)
+        JsonResponse(true)
+    }
+
+    @Tran
+    @Mapping("/setgroup")
+    open fun setgroup( accessToken:String?,name:String?, url: String?)=run{
+        val user=getuserbytocken(accessToken).also {
+            if(it == null){
+                throw DataThrowable().data(JsonResponse(false,NEED_LOGIN))
+            }
+        }!!
+        if(url == null){
+            throw DataThrowable().data(JsonResponse(false, NOT_BANK))
+        }
+        if(name != null && name != "全部"){
+            bookGroupMapper.getGroupbyName(user.id!!,name).also {
+                if(it == null){
+                    throw DataThrowable().data(JsonResponse(false, NOT_IS))
+                }
+            }!!
+        }
+        var book=booklistMapper.getbook(user.id!!,url).also {
+            if(it == null){
+                throw DataThrowable().data(JsonResponse(false, NOT_IS))
+            }
+        }!!
+        booklistMapper.changebookgroup(book.id!!,name?:"")
         JsonResponse(true)
     }
 

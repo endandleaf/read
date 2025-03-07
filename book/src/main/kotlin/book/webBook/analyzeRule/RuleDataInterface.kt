@@ -4,9 +4,9 @@ interface RuleDataInterface {
 
     val variableMap: HashMap<String, String>
 
-    fun putVariable(key: String, value: String?)
+    fun putVariable(key: String, value: String?,userid:String)
 
-    fun getVariable(key: String): String? {
+    fun getVariable(key: String,userid:String): String? {
         return variableMap[key]
     }
 

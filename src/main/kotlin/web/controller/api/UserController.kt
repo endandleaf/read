@@ -10,9 +10,9 @@ import org.noear.solon.web.cors.annotation.CrossOrigin
 import web.mapper.UsersMapper
 import web.mapper.UsertockenMapper
 import web.model.Users
-import web.model.passsign
 import web.model.Usertocken
 import web.response.*
+import web.util.admin.passsign
 
 @Controller
 @Mapping(routepath)

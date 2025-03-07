@@ -29,6 +29,7 @@ import java.util.zip.ZipEntry
 import java.util.zip.ZipInputStream
 import java.text.SimpleDateFormat
 import cn.hutool.core.util.HexUtil
+import kotlin.concurrent.thread
 
 /**
  * js扩展类, 在js中通过java变量调用
@@ -173,14 +174,13 @@ interface JsExtensions {
 
 
     fun startBrowserAwait(urlStr: String,title: String): Response {
-        println("$urlStr -> $title")
        return Response.startBrowserAwait(urlStr,title,getSource()?.usertocken?:"")
     }
 
     fun startBrowser(url: String, title: String) {
-        Thread{
+        thread {
             startBrowserAwait(url, title)
-        }.start()
+        }
     }
 
     fun startBrowserAwait(url: String, title: String, refetchAfterSuccess: Boolean): Response {
@@ -293,6 +293,7 @@ interface JsExtensions {
     }
 
     fun md5Encode(str: String): String {
+        //println(str)
         return MD5Utils.md5Encode(str)
     }
 
@@ -523,6 +524,7 @@ interface JsExtensions {
         CacheManager.put(key, qTTF)
         return qTTF
     }
+
 
     /**
      * @param text 包含错误字体的内容

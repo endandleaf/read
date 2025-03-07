@@ -3,18 +3,18 @@ package web.model
 
 import com.baomidou.mybatisplus.annotation.FieldFill
 import com.baomidou.mybatisplus.annotation.TableField
+import com.baomidou.mybatisplus.annotation.TableId
 import com.google.gson.Gson
 import org.dromara.autotable.annotation.AutoTable
 import org.dromara.autotable.annotation.ColumnType
 import org.dromara.autotable.annotation.PrimaryKey
-import org.dromara.mpe.autotable.annotation.ColumnId
 import org.noear.snack.annotation.ONodeAttr
 import java.time.LocalDateTime
 import book.model.BookSource as Booksource
 
 @AutoTable(value = "book_source")
 class BookSource {
-    @ColumnId
+    @TableId
     @PrimaryKey
     var bookSourceUrl: String? = null           // 地址，包括 http/https
     var bookSourceName: String? = null           // 名称

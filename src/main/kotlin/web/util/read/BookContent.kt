@@ -18,6 +18,7 @@ import web.controller.api.ReadController.Companion.setBookContentbycache
 import web.controller.api.ReadController.Companion.setBookbycache
 import web.controller.api.ReadController.Companion.setChapterListbycache
 import web.model.Users
+import web.util.mapper.mapper
 
 object  BookContent {
     private var ma:MutableMap<String, Deferred<String>> = mutableMapOf()
@@ -64,6 +65,10 @@ object  BookContent {
             }else{
                 it
             }
+        }
+        var systembook=mapper.get().booklistMapper.getbook(user.id!!,url)
+        if(systembook!=null){
+            book.durChapterIndex=systembook.durChapterIndex?:0
         }
         return webBook.getBookContent(book,chapterlist[index]).also { if( type != 1) setBookContentbycache(url,it,index) }
     }

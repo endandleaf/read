@@ -28,18 +28,26 @@ dependencies {
 
     implementation(platform("org.noear:solon-parent:3.0.5"))
 
-    implementation("org.noear:solon-web")
+    implementation("org.noear:solon-web"){
+        exclude(group = "org.noear", module = "solon-serialization-snack3")
+    }
     implementation("org.noear:solon-view-freemarker")
     implementation("org.noear:solon-logging-logback")
     implementation("org.noear:solon-scheduling-simple")
     implementation("org.jetbrains.kotlin:kotlin-stdlib:2.1.0")
+    implementation("org.noear:solon-serialization-gson")
 
     //数据库
     implementation("com.mysql:mysql-connector-j:9.1.0")
-    implementation("org.xerial:sqlite-jdbc:3.47.1.0")
+    implementation("org.xerial:sqlite-jdbc:3.49.1.0")
     implementation("com.baomidou:mybatis-plus-solon-plugin:3.5.9")
     implementation("com.baomidou:mybatis-plus-jsqlparser-4.9:3.5.9")
-    implementation("org.dromara.mpe:mybatis-plus-ext-autotable-core:3.5.9-EXT812")
+    //implementation("org.dromara.mpe:mybatis-plus-ext-autotable-core:3.5.10.1-EXT822")
+    implementation("org.dromara.autotable:auto-table-core:2.1.4")
+    //implementation("org.dromara.autotable:auto-table-solon-plugin:2.1.4")
+
+
+
     implementation("com.zaxxer:HikariCP:6.2.1")
     runtimeOnly("p6spy:p6spy:3.9.1")
 

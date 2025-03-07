@@ -20,10 +20,10 @@ class CookieStore(val userid:String) : CookieManager {
             if(cookie2.isNotEmpty()){
                 val cookieMap = cookieToMap(cookie)
                 val cookie2Map = cookieToMap(cookie2)
-                cookieMap.putAll(cookie2Map)
-                File(cookiepath+"/" + key).writeText(mapToCookie(cookie2Map)?:"")
+                cookie2Map.putAll(cookieMap)
+                File(cookiepath+"/" + key+"_$userid").writeText(mapToCookie(cookie2Map)?:"")
             }else{
-                File(cookiepath+"/" + key).writeText(cookie)
+                File(cookiepath+"/" + key+"_$userid").writeText(cookie)
             }
         }
     }
@@ -103,7 +103,7 @@ class CookieStore(val userid:String) : CookieManager {
     }
 
     private fun getcookie(url: String): String {
-        var key = geturl(url)
+        var key = geturl(url)+"_$userid"
         try {
             val content = File(cookiepath+"/" + key).readText()
             return content
@@ -114,14 +114,12 @@ class CookieStore(val userid:String) : CookieManager {
 
     override fun getCookie(url: String): String {
         var key = geturl(url)
-        println("surl:${getsurl(key)}")
-        var cookiemap=cookieToMap(CookieList.get(key)) //后台存放的
+       // println("surl:${getsurl(key)}")
         var cookiemap1= cookieToMap(getcookie(key))  //当前域名
         var cookiemap2= cookieToMap(getcookie("."+key))  //上级域名
         var cookiemap3= cookieToMap(getcookie(getsurl(key)))  //下级域名
         cookiemap2.putAll(cookiemap3)
         cookiemap2.putAll(cookiemap1)
-        cookiemap2.putAll(cookiemap)
         if(CookieList.manager != null){
            // println(userid+" "+CookieList.manager!!.getCookie(userid,key)+" "+key)
             var cookiemap4= cookieToMap(CookieList.manager!!.getCookie(userid,key))
@@ -129,7 +127,7 @@ class CookieStore(val userid:String) : CookieManager {
         }else{
             println("用户cookie加载失败")
         }
-        println("getCookie"+mapToCookie(cookiemap2))
+        println("getCookie($url):"+mapToCookie(cookiemap2))
         return mapToCookie(cookiemap2)?:""
     }
 

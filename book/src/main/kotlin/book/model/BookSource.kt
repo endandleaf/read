@@ -4,7 +4,6 @@ import book.model.rule.*
 import book.util.GSON
 import book.util.fromJsonObject
 import book.util.help.SourceAnalyzer
-import book.webBook.analyzeRule.Basejs
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties
 import com.google.gson.Gson
 import com.google.gson.reflect.TypeToken
@@ -42,7 +41,7 @@ class BookSource(
     override var enabledCookieJar: Boolean?=false,
     override var userid: String?="",
     override var usertocken: String?=null,
-) : BaseSource,Basejs() {
+) : BaseSource {
     //    @Ignore
 //    @IgnoredOnParcel
     private var searchRuleV: SearchRule? = null

@@ -158,7 +158,7 @@ class EpubFile(var book: Book) {
         }
         /*获取当前章节文本*/
         epubBook?.let { epubBook ->
-            val nextUrl = chapter.getVariable("nextUrl")
+            val nextUrl = chapter.getVariable("nextUrl","")
             val startFragmentId = chapter.startFragmentId
             val endFragmentId = chapter.endFragmentId
             val elements = Elements()

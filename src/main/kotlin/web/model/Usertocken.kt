@@ -2,16 +2,16 @@ package web.model
 
 import com.baomidou.mybatisplus.annotation.FieldFill
 import com.baomidou.mybatisplus.annotation.TableField
+import com.baomidou.mybatisplus.annotation.TableId
 import org.dromara.autotable.annotation.AutoTable
 import org.dromara.autotable.annotation.PrimaryKey
-import org.dromara.mpe.autotable.annotation.ColumnId
 import org.noear.snack.annotation.ONodeAttr
 import java.time.LocalDateTime
 import java.util.*
 
 @AutoTable(value = "usertocken")
 class Usertocken {
-    @ColumnId
+    @TableId
     @PrimaryKey
     var id : String? =null
     var model: String? =null

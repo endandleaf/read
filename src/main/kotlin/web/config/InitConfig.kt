@@ -11,11 +11,9 @@ import kotlinx.coroutines.runBlocking
 import org.noear.solon.annotation.Bean
 import org.noear.solon.annotation.Configuration
 import web.controller.api.ApiWebSocket
-import web.mapper.CookieMapper
 import web.mapper.UserCookieMapper
 import web.util.cache.checkfile
-import web.util.cookie.Updatecookie
-import web.util.mapper.mapper
+import java.lang.Thread.sleep
 
 @Configuration
 class InitConfig {
@@ -43,10 +41,9 @@ class InitConfig {
 
 
     @Bean
-    fun cookieinit(cookieMapper: CookieMapper,userCookieMapper: UserCookieMapper) {
+    fun cookieinit(userCookieMapper: UserCookieMapper) {
         checkfile()
         CookieList.manager=Cookie(userCookieMapper)
-        Updatecookie(cookieMapper)
         Response.startBrowserAwait=fun (urlStr: String,title: String,tocken:String):Response = runBlocking{
             println(tocken)
             var socket=ApiWebSocket.get(tocken)

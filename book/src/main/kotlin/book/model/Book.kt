@@ -1,6 +1,7 @@
 package book.model
 
 import book.util.*
+import book.util.help.CacheManager
 import book.webBook.localBook.*
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties
 import org.jsoup.Jsoup
@@ -104,18 +105,53 @@ data class Book(
         return bookUrl.hashCode()
     }
 
-    @delegate:Transient
-    override val variableMap: HashMap<String, String> by lazy {
-        GSON.fromJsonObject<HashMap<String, String>>(variable).getOrNull() ?: hashMapOf()
+    private fun getCachename(userid:String):String{
+        return "variableMap${bookUrl}_userid_${userid}"
     }
 
-    override fun putVariable(key: String, value: String?) {
+    override var variableMap: HashMap<String, String> = hashMapOf()
+
+    fun getVariableMapMap(userid:String): HashMap<String, String>? {
+        return GSON.fromJsonObject<HashMap<String, String>>(getvariableMap(userid)).getOrNull()
+    }
+
+    fun getvariableMap(userid:String):String?{
+        try {
+            val cache = CacheManager.get(getCachename(userid))
+            //println("get ${cache}")
+            return cache
+        } catch (e: Exception) {
+            e.printStackTrace()
+            return null
+        }
+    }
+
+    fun putVariable(info: String,userid: String): Boolean {
+        return try {
+            CacheManager.put(getCachename(userid), info)
+            true
+        } catch (e: Exception) {
+            e.printStackTrace()
+            false
+        }
+    }
+
+    override fun putVariable(key: String, value: String?,userid:String) {
+        //println("put key,${key},v :${value}")
+        variableMap=getVariableMapMap(userid)?:hashMapOf()
         if (value != null) {
             variableMap[key] = value
         } else {
             variableMap.remove(key)
         }
+       // println("put ${variable}")
         variable = GSON.toJson(variableMap)
+        putVariable(variable?:"",userid)
+    }
+
+    override fun getVariable(key: String, userid: String): String? {
+        variableMap=getVariableMapMap(userid)?:hashMapOf()
+        return  variableMap[key]?:SearchBook(origin = origin).getVariable(key,userid)
     }
 
     override var infoHtml: String? = null

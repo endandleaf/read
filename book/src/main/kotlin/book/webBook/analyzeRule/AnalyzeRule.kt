@@ -23,7 +23,7 @@ private val log: Logger = LoggerFactory.getLogger(WBook::class.java)
 class AnalyzeRule(
     var ruleData: RuleDataInterface,
     private val source: BaseSource? = null
-):JsExtensions,Basejs() {
+):JsExtensions {
 
 
     val book get() = ruleData as? BaseBook
@@ -612,9 +612,9 @@ class AnalyzeRule(
     }
 
     fun put(key: String, value: String): String {
-        chapter?.putVariable(key, value)
-            ?: book?.putVariable(key, value)
-            ?: ruleData.putVariable(key, value)
+        chapter?.putVariable(key, value,source?.userid?:"")
+            ?: book?.putVariable(key, value,source?.userid?:"")
+            ?: ruleData.putVariable(key, value,source?.userid?:"")
         return value
     }
 
@@ -627,9 +627,9 @@ class AnalyzeRule(
                 return it.title
             }
         }
-        return chapter?.getVariable(key)
-            ?: book?.getVariable(key)
-            ?: ruleData?.getVariable(key)
+        return chapter?.getVariable(key,source?.userid?:"")
+            ?: book?.getVariable(key,source?.userid?:"")
+            ?: ruleData?.getVariable(key,source?.userid?:"")
             ?: ""
     }
 

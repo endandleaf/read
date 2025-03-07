@@ -10,7 +10,11 @@ val NOT_SOURCE = "书源不存在"
 
 val SUCCESS = "success"
 
+val BOOKSEARCHERROR="通过书源获取书本信息失败"
+
 val BOOKIS="书本已在书架"
+
+val GROUPIS="分组已存在"
 
 val NO_BOOK="书本不存在"
 
@@ -43,3 +47,9 @@ val SOURCE_TYPE_ERROR="暂不支持非文本连接"
 val JSON_ERROR="json格式化错误"
 
 val DO_ERROR="导入失败"
+
+val NUM_ERROR="最小不能小于0"
+
+val ADD_ERROR="添加失败"
+
+val CODE_ERROR="邀请码不存在"

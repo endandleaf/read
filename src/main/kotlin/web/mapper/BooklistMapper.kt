@@ -35,7 +35,15 @@ interface BooklistMapper : BaseMapper<Booklist> {
     @Update("UPDATE booklist set type =#{type} WHERE id = #{id}")
     fun changetype(@Param("id") id: String,@Param("type") type: Int):Int
 
+    @Update("UPDATE booklist set bookgroup =#{bookgroup} WHERE id = #{id}")
+    fun changebookgroup(@Param("id") id: String,@Param("bookgroup") bookgroup: String):Int
+
+    @Update("UPDATE booklist set bookgroup = '' WHERE userid = #{id} and bookgroup = #{bookgroup}")
+    fun delbookgroup(@Param("id") id: String,@Param("bookgroup") bookgroup: String):Int
 
     @Delete("Delete  FROM booklist WHERE userid = #{id}")
     fun delUserbooks(@Param("id") id: String): Int
+
+    @Update("UPDATE booklist set bookgroup = #{newbookgroup} WHERE userid = #{id} and bookgroup = #{bookgroup}")
+    fun upbookgroup(@Param("id") id: String,@Param("bookgroup") bookgroup: String,@Param("newbookgroup") newbookgroup: String):Int
 }

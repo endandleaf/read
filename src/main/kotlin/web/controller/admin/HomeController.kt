@@ -36,9 +36,9 @@ class HomeController {
     }
 
     @get:Get
-    @get:Mapping("/cookie")
-    val cookie =ModelAndView("admin/cookie.html").also {
-        it.put("cookie","layui-this")
+    @get:Mapping("/code")
+    val cookie =ModelAndView("admin/code.html").also {
+        it.put("code","layui-this")
     }
 
 }

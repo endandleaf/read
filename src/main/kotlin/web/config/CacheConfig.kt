@@ -1,10 +1,10 @@
 package web.config
 
+import org.noear.solon.annotation.Bean
 import org.noear.solon.annotation.Configuration
 import org.noear.solon.annotation.Inject
 import org.noear.solon.data.cache.CacheService
 import org.noear.solon.data.cache.CacheServiceSupplier
-import org.springframework.context.annotation.Bean
 
 
 @Configuration

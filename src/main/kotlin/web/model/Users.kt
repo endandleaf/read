@@ -1,38 +1,36 @@
 package web.model
 
-import com.baomidou.mybatisplus.annotation.FieldFill
-import com.baomidou.mybatisplus.annotation.TableField
-import com.google.gson.GsonBuilder
+
+import com.baomidou.mybatisplus.annotation.TableId
 import org.dromara.autotable.annotation.AutoTable
 import org.dromara.autotable.annotation.ColumnNotNull
-import org.dromara.autotable.annotation.Index
 import org.dromara.autotable.annotation.PrimaryKey
+import org.dromara.autotable.annotation.TableIndex
 import org.dromara.autotable.annotation.enums.IndexTypeEnum
-import org.dromara.mpe.autotable.annotation.ColumnId
+
 import org.noear.snack.annotation.ONodeAttr
 import web.response.EMAIL_ERROR
 import web.response.NOT_BANK
 import web.response.PASS_VAIL_ERROR
 import web.response.PHONE_ERROR
-import web.util.gson.LocalDateTimeAdapter
-import web.util.hash.Sha256
+import web.util.admin.passsign
 import web.util.validation.isEmail
 import web.util.validation.isPhoneNum
 import java.time.LocalDateTime
 import java.util.*
 
-fun passsign(password: String):String{
-    return Sha256(password)
-}
+
 
 @AutoTable(value = "users")
+@TableIndex(type = IndexTypeEnum.UNIQUE, fields = ["username"])
 class Users {
-    @ColumnId
+
+    @TableId
     @PrimaryKey
     var id : String? =null
 
 
-    @Index(type = IndexTypeEnum.UNIQUE)
+
     @ColumnNotNull
     var username: String? = null
 
@@ -48,6 +46,9 @@ class Users {
 
     var email: String? = null
 
+    var code: String? = null
+
+
     var phone: String? = null
 
     var AllowUpTxt: Boolean? = null
@@ -55,11 +56,11 @@ class Users {
     var comment: String? = null
 
     @ONodeAttr(format = "yyyy-MM-dd HH:mm:ss", timezone = "GMT+8")
-    @TableField(fill = FieldFill.INSERT_UPDATE,value = "updatetime")
+    //@TableField(fill = FieldFill.INSERT_UPDATE,value = "updatetime")
     var updatetime:LocalDateTime? = null
 
     @ONodeAttr(format = "yyyy-MM-dd HH:mm:ss", timezone = "GMT+8")
-    @TableField(fill = FieldFill.INSERT,value = "createtime")
+    //@TableField(fill = FieldFill.INSERT,value = "createtime")
     var createtime: LocalDateTime? = null
 
     fun create():Users{
@@ -100,6 +101,6 @@ class Users {
         return Pair(true,"")
     }
 
-    override fun toString():String = GsonBuilder().registerTypeAdapter(LocalDateTime::class.java, LocalDateTimeAdapter()).create().toJson(this)
+    //override fun toString():String = GsonBuilder().registerTypeAdapter(LocalDateTime::class.java, LocalDateTimeAdapter()).create().toJson(this)
 
 }

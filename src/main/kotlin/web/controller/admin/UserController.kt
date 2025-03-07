@@ -42,7 +42,14 @@ open class UserController {
                 if(!it.username.equals(user.username)){ user.username = it.username }
             }
             //更新用户数据
-            usersMapper.updateById(user.update())
+            user.update().run {
+                if(password.isNullOrBlank()){
+                    usersMapper.updateNoPass(this)
+                }else{
+                    usersMapper.updateHasPass(this)
+                }
+            }
+
         }
 
         JsonResponse(true)

@@ -2,28 +2,34 @@ package web.model
 
 import com.baomidou.mybatisplus.annotation.FieldFill
 import com.baomidou.mybatisplus.annotation.TableField
+import com.baomidou.mybatisplus.annotation.TableId
 import org.dromara.autotable.annotation.AutoTable
 import org.dromara.autotable.annotation.ColumnType
 import org.dromara.autotable.annotation.PrimaryKey
-import org.dromara.mpe.autotable.annotation.ColumnId
 import org.noear.snack.annotation.ONodeAttr
+import web.util.hash.Md5
 import java.time.LocalDateTime
+import java.util.*
 
-@AutoTable(value = "cookie")
-class Cookie {
-    @ColumnId
+@AutoTable(value = "book_group")
+class BookGroup {
+    @TableId
     @PrimaryKey
-    var host : String? = null
+    var id : String? =null
 
-    @ColumnType(value = "MEDIUMTEXT")
-    var value:String? = null
+    var userid : String? =null
+
+    var bookgroup : String? = null
 
     @ONodeAttr(format = "yyyy-MM-dd HH:mm:ss", timezone = "GMT+8")
     @TableField(fill = FieldFill.INSERT,value = "createtime")
     var createtime: LocalDateTime? = null
 
-    fun create():Cookie{
+    fun create(userid:String,bookgroup:String):BookGroup{
+        this.bookgroup=bookgroup
+        this.userid = userid
         this.createtime = LocalDateTime.now()
+        this.id = Md5("$userid${this.bookgroup}")
         return this
     }
 
