@@ -17,4 +17,7 @@ interface UserCookieMapper: BaseMapper<UserCookie> {
 
     @Delete("Delete FROM user_cookie WHERE userid = #{id} and host = #{url}")
     fun removeCookie(@Param("id") id: String, @Param("url") url: String): Int
+
+    @Delete("Delete  FROM user_cookie WHERE userid = #{id}")
+    fun delUsercookies(@Param("id") id: String): Int
 }

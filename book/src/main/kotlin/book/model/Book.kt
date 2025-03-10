@@ -42,9 +42,27 @@ data class Book(
     var originOrder: Int = 0,                   //书源排序
     var useReplaceRule: Boolean = true,         // 正文使用净化替换规则
     var variable: String? = null,                // 自定义书籍变量信息(用于书源规则检索书籍信息)
-    var readConfig: ReadConfig? = null
-): BaseBook  {
+    var readConfig: ReadConfig? = null,
 
+): BaseBook  {
+    override var userid: String = ""
+        set(value) {
+            if (value.isNotBlank() && value != field) {
+                field = value
+                if(variable.isNullOrBlank()){
+                    variable=getvariableMap(value)
+                }else{
+                    runCatching {
+                        var old=GSON.fromJsonObject<HashMap<String, String>>(variable).getOrNull() ?: hashMapOf()
+                        GSON.fromJsonObject<HashMap<String, String>>(getvariableMap(value)).getOrNull() ?: hashMapOf<String, String>().forEach{(k,v)->
+                            old[k] = v
+                        }
+                        variable = GSON.toJson(old)
+                    }
+                }
+
+            }
+        }
 
     companion object {
         const val hTag = 2L
@@ -109,11 +127,11 @@ data class Book(
         return "variableMap${bookUrl}_userid_${userid}"
     }
 
-    override var variableMap: HashMap<String, String> = hashMapOf()
+    override val variableMap: HashMap<String, String>
+        get() {
+            return GSON.fromJsonObject<HashMap<String, String>>(getvariableMap(userid)).getOrNull() ?: hashMapOf()
+        }
 
-    fun getVariableMapMap(userid:String): HashMap<String, String>? {
-        return GSON.fromJsonObject<HashMap<String, String>>(getvariableMap(userid)).getOrNull()
-    }
 
     fun getvariableMap(userid:String):String?{
         try {
@@ -126,7 +144,7 @@ data class Book(
         }
     }
 
-    fun putVariable(info: String,userid: String): Boolean {
+    private fun putVariable(info: String): Boolean {
         return try {
             CacheManager.put(getCachename(userid), info)
             true
@@ -136,23 +154,27 @@ data class Book(
         }
     }
 
-    override fun putVariable(key: String, value: String?,userid:String) {
-        //println("put key,${key},v :${value}")
-        variableMap=getVariableMapMap(userid)?:hashMapOf()
+    override fun putVariable(key: String, value: String?) {
+        if(userid.isBlank()){
+            throw Exception("userid is null")
+        }
+        val variableMap=this.variableMap
         if (value != null) {
             variableMap[key] = value
         } else {
             variableMap.remove(key)
         }
-       // println("put ${variable}")
         variable = GSON.toJson(variableMap)
-        putVariable(variable?:"",userid)
+        putVariable(variable?:"")
     }
 
-    override fun getVariable(key: String, userid: String): String? {
-        variableMap=getVariableMapMap(userid)?:hashMapOf()
-        return  variableMap[key]?:SearchBook(origin = origin).getVariable(key,userid)
+    override fun getVariable(key: String): String? {
+        if (bookUrl == ""){
+            return variableMap[key]
+        }
+        return variableMap[key]?:SearchBook(origin = origin).also { it.userid=userid }.getVariable(key)
     }
+
 
     override var infoHtml: String? = null
 
@@ -254,8 +276,10 @@ data class Book(
             intro = intro,
             tocUrl = tocUrl,
 //                originOrder = originOrder,
-            variable = variable
+           // variable = variable
         ).apply {
+            this. userid = userid
+            this.variable = variable
             this.infoHtml = this@Book.infoHtml
             this.tocHtml = this@Book.tocHtml
         }

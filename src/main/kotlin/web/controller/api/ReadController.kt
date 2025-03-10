@@ -18,11 +18,13 @@ import org.noear.solon.data.annotation.Cache
 import org.noear.solon.web.cors.annotation.CrossOrigin
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
+import web.mapper.BookCacheMapper
 import web.mapper.BooklistMapper
 import web.response.*
 import web.service.MyCacheService
 import web.util.SslUtils
 import web.util.read.BookContent
+import web.util.read.Bookcache
 import web.util.read.getlist
 import java.io.BufferedReader
 import java.io.ByteArrayOutputStream
@@ -39,6 +41,9 @@ open class ReadController : BaseController() {
     @Db("db")
     @Inject
     lateinit var booklistMapper: BooklistMapper
+
+    @Inject
+    lateinit var bookCacheMapper: BookCacheMapper
 
     companion object {
         private val logger: Logger = LoggerFactory.getLogger(BaseController::class.java)
@@ -76,7 +81,7 @@ open class ReadController : BaseController() {
 
         fun setBookContentbycache(url: String, re: String, index: Int) {
             var key = "getBookContent:${url},index:${index}"
-            if (re.length > 1000) {
+            if (re.length > 50) {
                 MyCacheService.set(key, re)
             }
         }
@@ -288,6 +293,11 @@ open class ReadController : BaseController() {
         }.onSuccess {
             booklistMapper.updateById(book.bookto(new!!,false))
         }
+        bookCacheMapper.getCache(user.id!!,book.id!!).also {
+            if(it != null){
+                bookCacheMapper.deleteById(it.id)
+            }
+        }
         //println(Gson().toJson(new))
         JsonResponse(true).Data(book)
     }
@@ -376,7 +386,7 @@ open class ReadController : BaseController() {
             }
         }
         val responseCode = connection.getResponseCode();
-        // 6. 读取响应
+        //  读取响应
         if (responseCode == HttpURLConnection.HTTP_OK) { // 200表示请求成功
             val bos = ByteArrayOutputStream() //创建输出流对象
             connection.getInputStream().use {

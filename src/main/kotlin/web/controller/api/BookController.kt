@@ -9,23 +9,29 @@ import book.model.SearchBook
 import book.webBook.WBook
 import com.google.gson.Gson
 import com.google.gson.reflect.TypeToken
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.runBlocking
 import org.apache.ibatis.solon.annotation.Db
 import org.noear.solon.annotation.Controller
 import org.noear.solon.annotation.Inject
 import org.noear.solon.annotation.Mapping
 import org.noear.solon.core.util.DataThrowable
+import org.noear.solon.data.annotation.Cache
 import org.noear.solon.data.annotation.Tran
 import org.noear.solon.data.cache.CacheService
 import org.noear.solon.web.cors.annotation.CrossOrigin
+import web.controller.api.ReadController.Companion.getBookbycache
 import web.controller.api.ReadController.Companion.setBookbycache
+import web.mapper.BookCacheMapper
 import web.mapper.BookGroupMapper
 import web.mapper.BooklistMapper
 import web.mapper.UserCookieMapper
+import web.model.BookCache
 import web.model.BookGroup
 import web.model.Booklist
 import web.model.UserCookie
 import web.response.*
+import web.util.read.Bookcache
 import web.util.read.updatebook
 import java.io.File
 import java.net.URI
@@ -49,6 +55,9 @@ open class BookController:BaseController() {
 
     @Inject
     lateinit var bookGroupMapper: BookGroupMapper
+
+    @Inject
+    lateinit var bookCacheMapper: BookCacheMapper
 
     fun search(accessToken:String?, bookSourceUrl:String?, page:Int?, key:String?,type:Int)=runBlocking{
         val (user,source,jp)=getsourceuser(accessToken,bookSourceUrl)
@@ -128,16 +137,16 @@ open class BookController:BaseController() {
     }
 
     @Mapping("/refreshBook")
-    open fun refreshBook( accessToken:String?,bookurl: String) = runBlocking{
+    open fun refreshBook( accessToken:String?,bookurl: String?) = runBlocking{
         val user=getuserbytocken(accessToken).also {
             if(it == null){
                 throw DataThrowable().data(JsonResponse(false,NEED_LOGIN))
             }
         }!!
-        if (bookurl.isBlank()){
+        if (bookurl.isNullOrBlank()){
             throw DataThrowable().data(JsonResponse(false,NOT_BANK))
         }
-        var book=booklistMapper.getbook(user.id!!,bookurl!!).also {
+        var book=booklistMapper.getbook(user.id!!,bookurl).also {
             if(it == null){
                 throw DataThrowable().data(JsonResponse(false,NO_BOOK))
             }
@@ -153,17 +162,44 @@ open class BookController:BaseController() {
         var webBook = WBook(source!!.json ?: "", user.id!!, accessToken, false)
         var new: Book? = null
         runCatching {
-            new = webBook.getBookInfo(book.bookUrl!!, canReName = true)
+            new = webBook.getBookInfo(book.bookUrl!!, canReName = true).also {   setBookbycache(book.bookUrl!!,it) }
         }.onFailure {
             return@runBlocking JsonResponse(false,BOOKSEARCHERROR)
         }
-        setBookbycache(book.bookUrl!!,new!!);
         booklistMapper.updateById(book.bookto(new!!,false))
         JsonResponse(true,SUCCESS).Data(book)
     }
 
+    @Cache(key = "getBookinfo:\${accessToken},\${book.bookUrl}", tags = "getBookinfo", seconds = 600)
+    @Mapping("/getBookinfo")
+    open fun getBookinfo( accessToken:String?, book: SearchBook?) = runBlocking{
+        val user=getuserbytocken(accessToken).also {
+            if(it == null){
+                throw DataThrowable().data(JsonResponse(false,NEED_LOGIN))
+            }
+        }!!
+        if (book == null || book.bookUrl.isBlank() || book.origin.isBlank()){
+            throw DataThrowable().data(JsonResponse(false,NOT_BANK))
+        }
+        val source = getsource(book.origin).also {
+            if (it == null){
+                throw DataThrowable().data(JsonResponse(false,NOT_SOURCE))
+            }
+        }
+        val webBook = WBook(source!!.json ?: "", user.id!!, accessToken, false)
+        runCatching {
+            val  new = webBook.getBookInfo(book.bookUrl, canReName = true).also {   setBookbycache(book.bookUrl,it) }
+            val mybook=Booklist.tobooklist(book,user.id!!)
+            mybook.bookto(new,false)
+            JsonResponse(true,SUCCESS).Data(mybook)
+        }.onFailure {
+           JsonResponse(false,BOOKSEARCHERROR)
+        }
+    }
+
+
     @Mapping("/deleteBook")
-    open fun deleteBook( accessToken:String?, book: SearchBook)=run{
+    open fun deleteBook( accessToken:String?, book: SearchBook)= runBlocking{
         val user=getuserbytocken(accessToken).also {
             if(it == null){
                 throw DataThrowable().data(JsonResponse(false,NEED_LOGIN))
@@ -186,7 +222,87 @@ open class BookController:BaseController() {
             }
         }
         booklistMapper.deleteById(booktolist.id!!)
+        bookCacheMapper.getCache(user.id!!,booktolist.id!!).also {
+            if(it != null){
+                bookCacheMapper.deleteById(it.id)
+            }
+        }
        JsonResponse(true,SUCCESS)
+    }
+
+    @Mapping("/getcancache")
+    open fun getcancache( accessToken:String?,  url: String)=run{
+        val user=getuserbytocken(accessToken).also {
+            if(it == null){
+                throw DataThrowable().data(JsonResponse(false,NEED_LOGIN))
+            }
+        }!!
+        var booktolist=booklistMapper.getbook(user.id!!,url).also {
+            if(it == null){
+                throw DataThrowable().data(JsonResponse(false,NOT_BANK))
+            }
+        }!!
+        var cache=bookCacheMapper.getCache(user.id!!,booktolist.id!!)
+        if(cache != null){
+            throw DataThrowable().data(JsonResponse(false))
+        }
+        JsonResponse(true)
+    }
+
+    @Mapping("/getcancachelist")
+    open fun getcancachelist( accessToken:String?)=run{
+        val user=getuserbytocken(accessToken).also {
+            if(it == null){
+                throw DataThrowable().data(JsonResponse(false,NEED_LOGIN))
+            }
+        }!!
+        JsonResponse(true).Data(bookCacheMapper.getlistbyuserid(user.id!!))
+    }
+
+    @Mapping("/addCache")
+    open fun addCache( accessToken:String?, url: String)=run{
+        val user=getuserbytocken(accessToken).also {
+            if(it == null){
+                throw DataThrowable().data(JsonResponse(false,NEED_LOGIN))
+            }
+        }!!
+        var booktolist=booklistMapper.getbook(user.id!!,url).also {
+            if(it == null){
+                throw DataThrowable().data(JsonResponse(false,NOT_BANK))
+            }
+        }!!
+        if (booktolist.origin == "loc_book"){
+            var cache= BookCache().create(user.id!!,booktolist)
+            cache.num=booktolist.totalChapterNum
+            bookCacheMapper.insert(cache)
+            JsonResponse(true)
+        }else{
+            var cache=bookCacheMapper.getCache(user.id!!,booktolist.id!!).let {
+                if(it == null){
+                    BookCache().create(user.id!!,booktolist)
+                }else{
+                    throw DataThrowable().data(JsonResponse(false,CacheIS))
+                }
+            }
+            bookCacheMapper.insert(cache)
+            thread { Bookcache.addcache(cache.id!!) }
+            JsonResponse(true,SUCCESS)
+        }
+    }
+
+    @Mapping("/delCache")
+    open fun delCache( accessToken:String?, id: String)=run{
+        val user=getuserbytocken(accessToken).also {
+            if(it == null){
+                throw DataThrowable().data(JsonResponse(false,NEED_LOGIN))
+            }
+        }!!
+        var cache=bookCacheMapper.selectById(id)
+        if (cache == null || cache.userid != user.id){
+            throw DataThrowable().data(JsonResponse(false,NOT_IS))
+        }
+        bookCacheMapper.deleteById(cache.id!!)
+        JsonResponse(true,SUCCESS)
     }
 
     @Mapping("/saveCookies")

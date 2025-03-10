@@ -5,9 +5,7 @@ import org.apache.ibatis.solon.annotation.Db
 import org.noear.solon.annotation.Bean
 import org.noear.solon.annotation.Configuration
 import org.noear.solon.annotation.Inject
-import web.mapper.BookSourceMapper
-import web.mapper.BooklistMapper
-import web.mapper.UserCookieMapper
+import web.mapper.*
 import web.model.UserCookie
 
 @Configuration
@@ -24,6 +22,14 @@ class mapper {
     @Db("db")
     @Inject
     lateinit var userCookieMapper: UserCookieMapper
+
+    @Db("db")
+    @Inject
+    lateinit var usersMapper: UsersMapper
+
+    @Db("db")
+    @Inject
+    lateinit var bookCacheMapper: BookCacheMapper
 
     companion object{
         var mapper:mapper?=null

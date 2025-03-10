@@ -27,6 +27,11 @@ fun updatebook(book: Booklist, source: BookSource,userid:String) = runBlocking{
             ReadController.removeChapterListbycache(book.bookUrl?:"")
             ReadController.setChapterListbycache(book.bookUrl?:"",list)
             mapper.get().booklistMapper.updatetime(book.id!!,latestChapterTitle,latestChapterTime,lastCheckTime,lastCheckCount, totalChapterNum )
+            mapper.get().bookCacheMapper.getCache(book.userid!!,book.id!!).let {
+                if(it!=null){
+                    mapper.get().bookCacheMapper.updatetime(it.id!!,totalChapterNum)
+                }
+            }
         }else{
             mapper.get().booklistMapper.updatetimefail(book.id!!,lastCheckTime,lastCheckCount)
         }

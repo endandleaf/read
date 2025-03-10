@@ -11,6 +11,7 @@ import org.noear.solon.annotation.Mapping
 import org.noear.solon.net.annotation.ServerEndpoint
 import org.noear.solon.net.websocket.WebSocket
 import org.noear.solon.net.websocket.listener.SimpleWebSocketListener
+import org.slf4j.LoggerFactory
 import web.mapper.UsersMapper
 import web.mapper.UsertockenMapper
 import java.io.IOException
@@ -20,19 +21,21 @@ import java.io.IOException
 @Controller
 @ServerEndpoint(routepath+"/ws")
 class ApiWebSocket : SimpleWebSocketListener() {
+
     class WebMsg{
         val semaphore = Semaphore(1)
         var html=""
     }
 
     companion object{
+        val logger = LoggerFactory.getLogger(ApiWebSocket::class.java)
         private var ma:MutableMap<String,WebSocket> = mutableMapOf()
         private var malock:MutableMap<String,WebMsg> = mutableMapOf()
 
         private val mutex = Mutex()
         suspend fun add(key:String, value:WebSocket){
             mutex.withLock {
-                println("WebSocket Adding $key")
+                logger.info("WebSocket Adding $key")
                 ma[key]=value
             }
         }
@@ -50,17 +53,17 @@ class ApiWebSocket : SimpleWebSocketListener() {
         suspend fun lock(key:String){
             var webMsg = WebMsg()
             mutex.withLock {
-                println("WebSocket lock $key")
+                logger.info("WebSocket lock $key")
                 webMsg.semaphore.acquire()
                 malock[key]=webMsg
             }
             webMsg.semaphore.acquire()
-            println("WebSocket endlock $key")
+            logger.info("WebSocket endlock $key")
         }
 
         suspend fun gethtml(key:String):String{
             var html=""
-            println("WebSocket gethtml $key")
+            logger.info("WebSocket gethtml $key")
             mutex.withLock {
                 var webMsg = malock[key]
                 if(webMsg!=null){
@@ -72,7 +75,7 @@ class ApiWebSocket : SimpleWebSocketListener() {
         }
 
         suspend fun addhtml(key:String,html:String){
-            println("WebSocket addhtml $key")
+            logger.info("WebSocket addhtml $key")
             mutex.withLock {
                 var webMsg = malock[key]
                 if(webMsg!=null){
@@ -93,7 +96,7 @@ class ApiWebSocket : SimpleWebSocketListener() {
 
     override fun onOpen(socket: WebSocket) {
         val accessToken: String = socket.param("id")
-        println("websocket Open $accessToken")
+        logger.info("websocket Open $accessToken")
         if (accessToken == null || accessToken.isBlank()) {
             socket.close()
             return
@@ -101,14 +104,14 @@ class ApiWebSocket : SimpleWebSocketListener() {
 
         var tocken=usertockenMapper.selectById(accessToken)
         if (tocken == null) {
-            println("websocket tocken is null")
+            logger.info("websocket tocken is null")
             socket.close()
             return
         }
 
         var user=usersMapper.selectById(tocken.userid)
         if (user == null) {
-            println("websocket user is null")
+            logger.info("websocket user is null")
             socket.close()
             return
         }

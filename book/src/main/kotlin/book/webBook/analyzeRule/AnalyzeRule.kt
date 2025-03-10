@@ -29,6 +29,12 @@ class AnalyzeRule(
     val book get() = ruleData as? BaseBook
 
     var chapter: BookChapter? = null
+        set(value) {
+            if(source != null){
+                field?.userid=source.userid?:""
+            }
+            field = value
+        }
     var nextChapterUrl: String? = null
     var content: Any? = null
         private set
@@ -46,6 +52,13 @@ class AnalyzeRule(
     private var objectChangedXP = false
     private var objectChangedJS = false
     private var objectChangedJP = false
+
+    init {
+        if(source != null){
+            ruleData.userid=source.userid?:""
+            book?.userid=source.userid?:""
+        }
+    }
 
     @JvmOverloads
     fun setContent(content: Any?, baseUrl: String? = null): AnalyzeRule {
@@ -612,9 +625,9 @@ class AnalyzeRule(
     }
 
     fun put(key: String, value: String): String {
-        chapter?.putVariable(key, value,source?.userid?:"")
-            ?: book?.putVariable(key, value,source?.userid?:"")
-            ?: ruleData.putVariable(key, value,source?.userid?:"")
+        chapter?.putVariable(key, value)
+            ?: book?.putVariable(key, value)
+            ?: ruleData.putVariable(key, value)
         return value
     }
 
@@ -627,9 +640,9 @@ class AnalyzeRule(
                 return it.title
             }
         }
-        return chapter?.getVariable(key,source?.userid?:"")
-            ?: book?.getVariable(key,source?.userid?:"")
-            ?: ruleData?.getVariable(key,source?.userid?:"")
+        return chapter?.getVariable(key)
+            ?: book?.getVariable(key)
+            ?: ruleData?.getVariable(key)
             ?: ""
     }
 
@@ -640,6 +653,9 @@ class AnalyzeRule(
         var userid=""
         if(source != null){
             userid = source.userid?:""
+            chapter?.userid = userid
+            ruleData?.userid = userid
+            book?.userid = userid
         }
         var jsStr=jsStr.replace("const","let")
         val bindings = SimpleBindings()
@@ -657,6 +673,7 @@ class AnalyzeRule(
         if (source != null && (source.jsLib?:"").isNotBlank()){
             jsStr=source.jsLib+"\n"+jsStr
         }
+       // println(jsStr)
         return SCRIPT_ENGINE.eval(jsStr, bindings)
     }
 

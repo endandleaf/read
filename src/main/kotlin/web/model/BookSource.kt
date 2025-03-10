@@ -55,7 +55,7 @@ class BookSource {
         this.bookSourceType = bookSource.bookSourceType
         this.bookSourceUrl = bookSource.bookSourceUrl
         this.exploreUrl = bookSource.exploreUrl
-        this.enabled = bookSource.enabled
+        this.enabled = true
         this.enabledExplore = bookSource.enabledExplore
         this.bookSourceComment = bookSource.bookSourceComment
         this.lastUpdateTime = bookSource.lastUpdateTime

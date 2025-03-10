@@ -4,12 +4,10 @@ import com.baomidou.mybatisplus.annotation.FieldFill
 import com.baomidou.mybatisplus.annotation.TableField
 import com.baomidou.mybatisplus.annotation.TableId
 import org.dromara.autotable.annotation.AutoTable
-import org.dromara.autotable.annotation.ColumnType
 import org.dromara.autotable.annotation.PrimaryKey
 import org.noear.snack.annotation.ONodeAttr
 import web.util.hash.Md5
 import java.time.LocalDateTime
-import java.util.*
 
 @AutoTable(value = "book_group")
 class BookGroup {

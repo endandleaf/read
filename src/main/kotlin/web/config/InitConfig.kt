@@ -10,13 +10,17 @@ import com.oracle.svm.core.annotate.Inject
 import kotlinx.coroutines.runBlocking
 import org.noear.solon.annotation.Bean
 import org.noear.solon.annotation.Configuration
+import org.slf4j.LoggerFactory
 import web.controller.api.ApiWebSocket
 import web.mapper.UserCookieMapper
 import web.util.cache.checkfile
 import java.lang.Thread.sleep
+import kotlin.concurrent.thread
 
 @Configuration
 class InitConfig {
+
+    val logger = LoggerFactory.getLogger(InitConfig::class.java)
 
     class Cookie(val userCookieMapper: UserCookieMapper) : CookieManager {
         override fun getCookie(id: String, url: String): String {
@@ -48,27 +52,29 @@ class InitConfig {
             println(tocken)
             var socket=ApiWebSocket.get(tocken)
             if(socket!=null){
+                logger.info("startBrowser ,url: $urlStr ,title: $title, tocken: $tocken ")
                 socket.send(Gson().toJson(WebMessage(msg = "startBrowser", url = urlStr,title=title )))
                 var z=false
-                Thread{
+                thread {
                     for(i in 0.. 2){
-                        Thread.sleep(1000*60)
+                        sleep(1000*60)
                         if(z) break
                     }
                     if(!z){
-                       runBlocking {  ApiWebSocket.addhtml(tocken,"") }
+                        runBlocking {  ApiWebSocket.addhtml(tocken,"") }
                     }
-                }.start()
+                }
                 ApiWebSocket.lock(tocken).let {  z=true }
                 val html=ApiWebSocket.gethtml(tocken)
                 return@runBlocking Response(body = html,url = urlStr, code = 200)
             }
             return@runBlocking Response(body = "",url = urlStr, code = 200)
         }
+
         Response.toast = fun (str : String,tocken:String)  = runBlocking {
-            println(tocken)
             var socket=ApiWebSocket.get(tocken)
             if(socket!=null){
+                logger.info("toast:$str")
                 socket.send(Gson().toJson(ToastMessage(msg = "toast", str=str )))
             }
         }

@@ -23,8 +23,26 @@ data class SearchBook(
     var tocUrl: String = "",                    // 目录页Url (toc=table of Contents)
     var time: Long = 0,
     var variable: String? = null,
-    var originOrder: Int = 0
+    var originOrder: Int = 0,
 ) : BaseBook {
+    override var userid: String = ""
+        set(value) {
+            if (value.isNotBlank() && value != field) {
+                field = value
+                if(variable.isNullOrBlank()){
+                    variable=getvariableMap(value)
+                }else{
+                   runCatching {
+                        var old=GSON.fromJsonObject<HashMap<String, String>>(variable).getOrNull() ?: hashMapOf()
+                        GSON.fromJsonObject<HashMap<String, String>>(getvariableMap(value)).getOrNull() ?: hashMapOf<String, String>().forEach{(k,v)->
+                            old[k] = v
+                        }
+                        variable = GSON.toJson(old)
+                    }
+                }
+
+            }
+        }
 
     override var infoHtml: String? = null
 
@@ -39,7 +57,10 @@ data class SearchBook(
         return false
     }
 
-    override var variableMap: HashMap<String, String> = hashMapOf()
+    override val variableMap: HashMap<String, String>
+        get() {
+            return GSON.fromJsonObject<HashMap<String, String>>(getvariableMap(userid)).getOrNull() ?: hashMapOf()
+        }
 
     private fun getCachename(userid:String):String{
         if(bookUrl == ""){
@@ -47,9 +68,8 @@ data class SearchBook(
         }
         return "variableMap${bookUrl}_userid_${userid}"
     }
-    fun getVariableMapMap(userid:String): HashMap<String, String>? {
-        return GSON.fromJsonObject<HashMap<String, String>>(getvariableMap(userid)).getOrNull()
-    }
+
+
 
     fun getvariableMap(userid:String):String?{
         try {
@@ -61,7 +81,9 @@ data class SearchBook(
         }
     }
 
-    fun putVariable(info: String,userid: String): Boolean {
+
+
+    private fun putVariable(info: String): Boolean {
         return try {
             CacheManager.put(getCachename(userid), info)
             true
@@ -71,20 +93,25 @@ data class SearchBook(
         }
     }
 
-    override fun putVariable(key: String, value: String?,userid:String) {
-        variableMap=getVariableMapMap(userid)?:hashMapOf()
+    override fun putVariable(key: String, value: String?) {
+        if(userid.isBlank()){
+            throw Exception("userid is null")
+        }
+        val variableMap=this.variableMap
         if (value != null) {
             variableMap[key] = value
         } else {
             variableMap.remove(key)
         }
         variable = GSON.toJson(variableMap)
-        putVariable(variable?:"",userid)
+        putVariable(variable?:"")
     }
 
-    override fun getVariable(key: String, userid: String): String? {
-        variableMap=getVariableMapMap(userid)?:hashMapOf()
-        return  variableMap[key];
+    override fun getVariable(key: String): String? {
+        if (bookUrl == ""){
+            return variableMap[key]
+        }
+        return variableMap[key]?:SearchBook(origin = origin).also { it.userid=userid }.getVariable(key)
     }
 
 
@@ -103,8 +130,9 @@ data class SearchBook(
             intro = intro,
             tocUrl = tocUrl,
 //            originOrder = originOrder,
-            variable = variable
         ).apply {
+            this. userid = userid
+            this.variable = variable
             this.infoHtml = this@SearchBook.infoHtml
             this.tocUrl = this@SearchBook.tocUrl
         }

@@ -14,6 +14,8 @@ val BOOKSEARCHERROR="通过书源获取书本信息失败"
 
 val BOOKIS="书本已在书架"
 
+val CacheIS="当前书本已在缓存进程中"
+
 val GROUPIS="分组已存在"
 
 val NO_BOOK="书本不存在"

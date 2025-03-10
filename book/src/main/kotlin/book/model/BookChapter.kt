@@ -20,17 +20,37 @@ data class BookChapter(
     var end: Long? = null,               // 章节终止位置
     var startFragmentId: String? = null,  //EPUB书籍当前章节的fragmentId
     var endFragmentId: String? = null,    //EPUB书籍下一章节的fragmentId
-    var variable: String? = null        //变量
+    var variable: String? = null ,       //变量
 ): RuleDataInterface {
+
+    override var userid: String = ""
+        set(value) {
+            if (value.isNotBlank() && value != field) {
+                field = value
+                if(variable.isNullOrBlank()){
+                    variable=getvariableMap(value)
+                }else{
+                    runCatching {
+                        var old=GSON.fromJsonObject<HashMap<String, String>>(variable).getOrNull() ?: hashMapOf()
+                        GSON.fromJsonObject<HashMap<String, String>>(getvariableMap(value)).getOrNull() ?: hashMapOf<String, String>().forEach{(k,v)->
+                            old[k] = v
+                        }
+                        variable = GSON.toJson(old)
+                    }
+                }
+
+            }
+        }
+
     private fun getCachename(userid:String):String{
         return "BookChaptervariableMap${bookUrl}_userid_${userid}"
     }
 
-    override var variableMap: HashMap<String, String> = hashMapOf()
+    override val variableMap: HashMap<String, String>
+        get() {
+            return GSON.fromJsonObject<HashMap<String, String>>(getvariableMap(userid)).getOrNull() ?: hashMapOf()
+        }
 
-    fun getVariableMapMap(userid:String): HashMap<String, String>? {
-        return GSON.fromJsonObject<HashMap<String, String>>(getvariableMap(userid)).getOrNull()
-    }
 
     fun getvariableMap(userid:String):String?{
         try {
@@ -42,7 +62,8 @@ data class BookChapter(
         }
     }
 
-    fun putVariable(info: String,userid: String): Boolean {
+
+    private fun putVariable(info: String): Boolean {
         return try {
             CacheManager.put(getCachename(userid), info)
             true
@@ -52,21 +73,20 @@ data class BookChapter(
         }
     }
 
-    override fun putVariable(key: String, value: String?,userid:String) {
-        variableMap=getVariableMapMap(userid)?:hashMapOf()
+    override fun putVariable(key: String, value: String?) {
+        if(userid.isBlank()){
+            throw Exception("userid is null")
+        }
+        val variableMap=this.variableMap
         if (value != null) {
             variableMap[key] = value
         } else {
             variableMap.remove(key)
         }
         variable = GSON.toJson(variableMap)
-        putVariable(variable?:"",userid)
+        putVariable(variable?:"")
     }
 
-    override fun getVariable(key: String, userid: String): String? {
-        variableMap=getVariableMapMap(userid)?:hashMapOf()
-        return  variableMap[key];
-    }
 
     override fun hashCode() = url.hashCode()
 

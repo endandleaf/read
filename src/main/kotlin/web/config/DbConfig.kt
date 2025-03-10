@@ -18,7 +18,7 @@ import web.mapper.UsersMapper
 open class DbConfig {
     companion object{
         private val models= arrayOf(Booklist::class.java,BookSource::class.java
-         ,Usertocken::class.java,UserCookie::class.java,Code::class.java,Users::class.java,BookGroup::class.java)
+         ,Usertocken::class.java,UserCookie::class.java,Code::class.java,Users::class.java,BookGroup::class.java,BookCache::class.java)
     }
 
     @Bean

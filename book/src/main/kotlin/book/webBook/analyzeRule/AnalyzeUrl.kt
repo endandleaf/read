@@ -83,14 +83,16 @@ class AnalyzeUrl(
 
 
     fun initUrl() {
+        if ( chapter != null ) {
+            if(source != null){
+                chapter.userid=source.userid?:""
+                ruleData?.userid=source.userid?:""
+            }
+        }
         ruleUrl = mUrl
 
         //执行@js,<js></js>
         analyzeJs()
-
-
-
-
 
         //替换参数
         if(needanalyzeUrl)  replaceKeyPageJs()
@@ -98,6 +100,8 @@ class AnalyzeUrl(
 
         //处理URL
         if(needanalyzeUrl) analyzeUrl()
+
+        //println("ruleUrl:$ruleUrl")
 
     }
 
@@ -245,6 +249,8 @@ class AnalyzeUrl(
         var userid=""
         if(source != null){
             userid = source.userid?:""
+            chapter?.userid = userid
+            ruleData?.userid = userid
         }
         var jsStr=jsStr.replace("const","let")
         val bindings = SimpleBindings()
@@ -262,12 +268,13 @@ class AnalyzeUrl(
         if (source != null && (source.jsLib?:"").isNotBlank()){
             jsStr=source.jsLib+"\n"+jsStr
         }
+       // println(jsStr)
         return SCRIPT_ENGINE.eval(jsStr, bindings)
     }
 
     fun put(key: String, value: String): String {
-        chapter?.putVariable(key, value,source?.userid?:"")
-            ?: ruleData?.putVariable(key, value,source?.userid?:"")
+        chapter?.putVariable(key, value)
+            ?: ruleData?.putVariable(key, value)
         return value
     }
 
