@@ -6,10 +6,7 @@ import org.noear.solon.annotation.Bean
 import org.noear.solon.annotation.Configuration
 import org.noear.solon.annotation.Inject
 import org.noear.solon.data.cache.CacheService
-import web.util.cache.cachepath
-import web.util.cache.getcache
-import web.util.cache.removecache
-import web.util.cache.setcache
+import web.util.cache.*
 import web.util.hash.Md5
 import java.io.File
 import java.lang.reflect.Type
@@ -60,18 +57,18 @@ class MyCacheService() {
 
         private var my: MyCacheService?=null
 
-        fun set(key: String, obj: Any) {
-            setcache(key,anytoString(obj))
-            my!!.cacheService.store(key,obj,999999999)
+        fun set(key: String, obj: Any,userid:String) {
+            setcache(key,anytoString(obj),userid)
+            my!!.cacheService.store(getsystemkeyname(key, userid),obj,999999999)
         }
 
-        fun <T : Any?> get(key: String?, type: Class<T>?): T? {
-            var ret:T?=my!!.cacheService.get(key,type)
+        fun <T : Any?> get(key: String, type: Class<T>?,userid:String): T? {
+            var ret:T?=my!!.cacheService.get(getsystemkeyname(key, userid),type)
             if(ret == null){
-                var re=getcache(key!!)
+                val re=getcache(key,userid)
                 if(re!=null && re != ""){
                     runCatching {
-                        ret = StringtoAny(re!!,type)
+                        ret = StringtoAny(re,type)
                     }.onFailure {
                         println(it.printStackTrace())
                     }
@@ -80,13 +77,13 @@ class MyCacheService() {
             return ret
         }
 
-        open fun <T> get(key: String?, type: Type?): T?{
-            var ret:T?=my!!.cacheService.get(key,type)
+        fun <T> get(key: String, type: Type?,userid:String): T?{
+            var ret:T?=my!!.cacheService.get(getsystemkeyname(key, userid),type)
             if(ret == null){
-                var re=getcache(key!!)
+                val re=getcache(key,userid)
                 if(re!=null && re != ""){
                     runCatching {
-                        ret = StringtoAny(re!!,type)
+                        ret = StringtoAny(re,type)
                     }.onFailure {
                         println(it.printStackTrace())
                     }
@@ -95,15 +92,19 @@ class MyCacheService() {
             return ret
         }
 
+        private  fun  getsystemkeyname(key: String,userid:String):String{
+            return  Md5("key:$key,userid:$userid")
+        }
 
-        fun remove(key: String) {
-            removecache(key)
+        fun remove(key: String,userid:String) {
+            removecache(getsystemkeyname(key, userid),userid)
             my!!.cacheService.remove(key)
         }
 
-        fun removeBookContentbycache(url: String) {
+        fun removeBookContentbycache(url: String,userid:String) {
             var files=mutableListOf<String>()
-            File(cachepath).walk().maxDepth(1).forEach {
+            checkfile("$cachepath/$userid")
+            File("$cachepath/$userid").walk().maxDepth(1).forEach {
                 if(it.isFile){
                     files.add(it.name)
                 }
@@ -113,7 +114,7 @@ class MyCacheService() {
                 var key= Md5(okey)
                 if(files.contains(key)){
                     println("remove $okey")
-                    remove(okey);
+                    remove(okey,userid);
                 }
             }
         }

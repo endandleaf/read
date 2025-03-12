@@ -94,8 +94,8 @@ data class SearchBook(
     }
 
     override fun putVariable(key: String, value: String?) {
-        if(userid.isBlank()){
-            throw Exception("userid is null")
+        if(userid.isEmpty()){
+           return
         }
         val variableMap=this.variableMap
         if (value != null) {

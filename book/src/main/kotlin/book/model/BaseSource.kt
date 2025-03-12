@@ -4,8 +4,10 @@ import book.util.*
 import book.util.help.CacheManager
 import book.util.help.CookieStore
 import book.webBook.analyzeRule.JsExtensions
-import com.script.SimpleBindings
-
+import com.script.ScriptBindings
+import com.script.buildScriptBindings
+import com.script.rhino.RhinoScriptEngine
+import org.mozilla.javascript.Scriptable
 
 /**
  * 可在js里调用,source.xxx()
@@ -162,19 +164,25 @@ interface BaseSource : JsExtensions {
      * 执行JS
      */
     @Throws(Exception::class)
-    fun evalJS(jsStr: String, bindingsConfig: SimpleBindings.() -> Unit = {}): Any? {
-        var jsStr=jsStr.replace("const","let")
-        val bindings = SimpleBindings()
-        bindings.apply(bindingsConfig)
-        bindings["java"] = this
-        bindings["source"] = this
-        bindings["baseUrl"] = getKey()
-        bindings["cookie"] = CookieStore(userid?:"")
-        bindings["cache"] = CacheManager
-        if ( (this.jsLib?:"").isNotBlank()){
-            jsStr=this.jsLib+"\n"+jsStr
+    fun evalJS(jsStr: String, bindingsConfig: ScriptBindings.() -> Unit = {}): Any? {
+        val bindings = buildScriptBindings { bindings ->
+            bindings.apply(bindingsConfig)
+            bindings["java"] = this
+            bindings["source"] = this
+            bindings["baseUrl"] = getKey()
+            bindings["cookie"] =  CookieStore(userid?:"")
+            bindings["cache"] = CacheManager
+            binding(bindings)
         }
-        return AppConst.SCRIPT_ENGINE.eval(jsStr, bindings)
+        val scope = RhinoScriptEngine.getRuntimeScope(bindings)
+        getShareScope()?.let {
+            scope.prototype = it
+        }
+        return RhinoScriptEngine.eval(jsStr, scope)
+    }
+
+    fun getShareScope(): Scriptable? {
+        return SharedJsScope.getScope(jsLib)
     }
 
 }

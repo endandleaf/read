@@ -3,9 +3,7 @@ package book.webBook.analyzeRule
 import book.model.BaseSource
 import book.model.Book
 import book.model.BookChapter
-import book.model.Header
 import book.util.*
-import book.util.AppConst.SCRIPT_ENGINE
 import book.util.AppConst.UA_NAME
 import book.util.AppPattern.JS_PATTERN
 import book.util.AppPattern.dataUriRegex
@@ -14,20 +12,18 @@ import book.util.help.CookieStore
 import book.util.http.*
 import book.webBook.DebugLog
 import book.webBook.exception.ConcurrentException
-import cn.hutool.core.util.HexUtil
-import com.google.gson.Gson
-import com.script.SimpleBindings
+import com.script.buildScriptBindings
 import kotlinx.coroutines.runBlocking
 import okhttp3.MediaType.Companion.toMediaType
-import okhttp3.OkHttpClient
 import okhttp3.RequestBody.Companion.toRequestBody
-import okhttp3.Response
 import java.net.URLEncoder
-import java.util.concurrent.TimeUnit
 import java.util.regex.Pattern
+import com.script.rhino.RhinoScriptEngine
+import kotlin.coroutines.ContinuationInterceptor
 import kotlin.coroutines.CoroutineContext
 import kotlin.coroutines.EmptyCoroutineContext
-import kotlin.math.max
+import book.webBook.util.JsBase64
+
 
 class AnalyzeUrl(
     val mUrl: String,
@@ -40,6 +36,7 @@ class AnalyzeUrl(
     private val ruleData: RuleDataInterface? = null,
     private val readTimeout: Long? = null,
     private val chapter: BookChapter? = null,
+    private var coroutineContext: CoroutineContext = EmptyCoroutineContext,
     headerMapF: Map<String, String>? = null,
     val needanalyzeUrl :Boolean=true,
 ) :JsExtensions {
@@ -83,6 +80,8 @@ class AnalyzeUrl(
 
 
     fun initUrl() {
+
+        coroutineContext = coroutineContext.minusKey(ContinuationInterceptor)
         if ( chapter != null ) {
             if(source != null){
                 chapter.userid=source.userid?:""
@@ -252,24 +251,25 @@ class AnalyzeUrl(
             chapter?.userid = userid
             ruleData?.userid = userid
         }
-        var jsStr=jsStr.replace("const","let")
-        val bindings = SimpleBindings()
-        bindings["java"] = this
-        bindings["baseUrl"] = baseUrl
-        bindings["cookie"] = CookieStore(userid)
-        bindings["cache"] = CacheManager
-        bindings["page"] = page
-        bindings["key"] = key
-        bindings["speakText"] = speakText
-        bindings["speakSpeed"] = speakSpeed
-        bindings["book"] = ruleData as? Book
-        bindings["source"] = source
-        bindings["result"] = result
-        if (source != null && (source.jsLib?:"").isNotBlank()){
-            jsStr=source.jsLib+"\n"+jsStr
+        val bindings = buildScriptBindings { bindings ->
+            bindings["java"] = this
+            bindings["baseUrl"] = baseUrl
+            bindings["cookie"] = CookieStore(userid)
+            bindings["cache"] = CacheManager
+            bindings["page"] = page
+            bindings["key"] = key
+            bindings["speakText"] = speakText
+            bindings["speakSpeed"] = speakSpeed
+            bindings["book"] = ruleData as? Book
+            bindings["source"] = source
+            bindings["result"] = result
+            binding(bindings)
         }
-       // println(jsStr)
-        return SCRIPT_ENGINE.eval(jsStr, bindings)
+        val scope = RhinoScriptEngine.getRuntimeScope(bindings)
+        source?.getShareScope()?.let {
+            scope.prototype = it
+        }
+        return RhinoScriptEngine.eval(jsStr, scope, coroutineContext)
     }
 
     fun put(key: String, value: String): String {

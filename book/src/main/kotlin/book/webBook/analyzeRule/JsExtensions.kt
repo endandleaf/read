@@ -11,6 +11,7 @@ import book.util.help.CookieStore
 import book.util.http.*
 import book.webBook.Debug
 import book.webBook.exception.NoStackTraceException
+import book.webBook.util.JsBase64
 import cn.hutool.crypto.digest.DigestUtil
 import cn.hutool.crypto.symmetric.AES
 import cn.hutool.crypto.symmetric.DESede
@@ -29,6 +30,7 @@ import java.util.zip.ZipEntry
 import java.util.zip.ZipInputStream
 import java.text.SimpleDateFormat
 import cn.hutool.core.util.HexUtil
+import com.script.ScriptBindings
 import kotlin.concurrent.thread
 
 /**
@@ -43,6 +45,10 @@ interface JsExtensions {
 
     fun androidId(): String {
         return getSource()?.userid?:""
+    }
+
+    fun binding(bindings: ScriptBindings){
+        bindings["Base64"] = JsBase64
     }
 
     /**

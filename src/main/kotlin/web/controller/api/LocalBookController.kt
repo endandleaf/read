@@ -74,9 +74,9 @@ open class LocalBookController:BaseController() {
             booklistMapper.insert(booklist)
         }
         thread {
-            ReadController.removeChapterListbycache(book.bookUrl)
-            ReadController.removeallBookContentbycache(book.bookUrl)
-            ReadController.setChapterListbycache(book.bookUrl,chapters)
+            ReadController.removeChapterListbycache(book.bookUrl,user.id!!)
+            ReadController.removeallBookContentbycache(book.bookUrl,user.id!!)
+            ReadController.setChapterListbycache(book.bookUrl,chapters,user.id!!)
         }
         return@run JsonResponse(true,SUCCESS).Data(mapOf("books" to book,"chapters" to chapters))
     }

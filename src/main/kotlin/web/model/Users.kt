@@ -53,6 +53,9 @@ class Users {
 
     var AllowUpTxt: Boolean? = null
 
+    var AllowCache: Boolean? = null
+
+
     var comment: String? = null
 
     @ONodeAttr(format = "yyyy-MM-dd HH:mm:ss", timezone = "GMT+8")

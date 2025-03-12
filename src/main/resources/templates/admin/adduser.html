@@ -49,6 +49,15 @@
                </select>
              </div>
         </div>
+        <div class="layui-form-item">
+            <label class="layui-form-label">缓存书本</label>
+            <div class="layui-input-block">
+                <select name="AllowCache" lay-filter="al2">
+                    <option value="1">允许</option>
+                    <option value="0">不允许</option>
+                </select>
+            </div>
+        </div>
         <div class="layui-form-item" >
             <label class="layui-form-label">备注</label>
             <div class="layui-input-block">
@@ -76,6 +85,8 @@
 
         if(oid == null || oid == "null"){
             oid = ""
+            var data={"AllowCache":0,"AllowUpTxt":0}
+            form.val("formTest",data);
         }
         if ( oid != ""){
             $("#p1").remove()
@@ -86,6 +97,12 @@
                         data.data.AllowUpTxt = 1
                     }else {
                         data.data.AllowUpTxt = 0
+                    }
+
+                    if(data.data.AllowCache){
+                        data.data.AllowCache = 1
+                    }else {
+                        data.data.AllowCache = 0
                     }
                     //console.log(data.data)
                     form.val("formTest",data.data);

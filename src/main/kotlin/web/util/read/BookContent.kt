@@ -53,16 +53,16 @@ object  BookContent {
     }
 
     private suspend fun getBookContent(accessToken:String,user: Users, source:BookSource, url:String, index:Int,type:Int):String {
-        var chapterlist= getChapterListbycache(url)
+        var chapterlist= getChapterListbycache(url,user.id!!)
         if(chapterlist == null){
             chapterlist= getlist(url,source,user.id!!,accessToken).also{
-                setChapterListbycache(url,it)
+                setChapterListbycache(url,it,user.id!!)
             }
         }
         var webBook = WBook(source.json?:"",user.id!!,accessToken, false)
-        var book= getBookbycache(url).let {
+        var book= getBookbycache(url,user.id!!).let {
             if(it==null){
-                getbook(webBook,url)!!.also { setBookbycache(url,it) }
+                getbook(webBook,url)!!.also { setBookbycache(url,it,user.id!!) }
             }else{
                 it
             }
@@ -71,7 +71,7 @@ object  BookContent {
         if(systembook!=null){
             book.durChapterIndex=systembook.durChapterIndex?:0
         }
-        return webBook.getBookContent(book,chapterlist[index]).also { if( type != 1) setBookContentbycache(url,it,index) }
+        return webBook.getBookContent(book,chapterlist[index]).also { if( type != 1) setBookContentbycache(url,it,index,user.id!!) }
     }
 
     private fun getbook(webBook: WBook, url:String): Book?= runBlocking{

@@ -28,7 +28,7 @@ val PASS_VAIL_ERROR="密码长度请在6位到15位之间"
 
 val EMAIL_ERROR="邮箱格式不正确"
 
-val PHONE_ERROR="邮箱格式不正确"
+val PHONE_ERROR="手机号不正确"
 
 val USER_IS="用户名已存在"
 
@@ -55,3 +55,5 @@ val NUM_ERROR="最小不能小于0"
 val ADD_ERROR="添加失败"
 
 val CODE_ERROR="邀请码不存在"
+
+val CAN_NOT="无权限"

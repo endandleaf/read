@@ -64,15 +64,10 @@ open class UserController {
             }
             //更新用户数据
             user.update().run {
-                if(password.isNullOrBlank()){
-                    usersMapper.updateNoPass(this)
-                }else{
-                    usersMapper.updateHasPass(this)
-                }
+                usersMapper.updateinfo(this)
             }
 
         }
-
         JsonResponse(true)
     }
 
@@ -94,7 +89,7 @@ open class UserController {
     fun seachusers(where:String? , order:String? ,@Param(defaultValue = "1") page:Int,@Param(defaultValue = "20") limit:Int) = run  {
         var queryWrapper: QueryWrapper<Users> = QueryWrapper()
         if(where != null && where.isNotBlank()){
-            queryWrapper.like("username",where).or().like("email",where).or().like("phone",where)
+            queryWrapper.like("code",where).or().like("username",where).or().like("email",where).or().like("phone",where)
         }
         PageByAjax(usersMapper,queryWrapper,page,limit,order).apply {
             (data as List<Users>).forEach({

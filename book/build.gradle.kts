@@ -2,7 +2,7 @@ plugins {
     kotlin("jvm")
 }
 
-val kotlin_version: String ="2.0.21"
+val kotlin_version: String ="1.9.22"
 group = "read"
 version = "1.0-SNAPSHOT"
 
@@ -12,7 +12,7 @@ repositories {
 
 dependencies {
     implementation("org.jetbrains.kotlin:kotlin-stdlib-jdk8:$kotlin_version")
-    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.9.0")
+    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.7.3")
 
     // 规则相关
     implementation("org.jsoup:jsoup:1.14.1")
@@ -39,7 +39,8 @@ dependencies {
     implementation("cn.hutool:hutool-crypto:5.8.0.M1")
 
     //js
-    implementation(files("src/lib/rhino-1.7.13-1.jar"))
+   // implementation(files("src/lib/rhino-1.7.14.jar"))
+    implementation("org.mozilla:rhino:1.8.0")
     implementation(files("src/lib/xmlpull-1.1.3.1.jar"))
 
     testImplementation(kotlin("test"))

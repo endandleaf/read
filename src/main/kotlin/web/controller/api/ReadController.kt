@@ -31,6 +31,7 @@ import java.io.ByteArrayOutputStream
 import java.io.InputStreamReader
 import java.net.HttpURLConnection
 import java.net.URL
+import kotlin.concurrent.thread
 
 
 @Controller
@@ -48,67 +49,67 @@ open class ReadController : BaseController() {
     companion object {
         private val logger: Logger = LoggerFactory.getLogger(BaseController::class.java)
 
-        fun getChapterListbycache(url: String): List<BookChapter>? {
+        fun getChapterListbycache(url: String,userid:String): List<BookChapter>? {
             var key = "getChapterList:${url}"
             val type = object : TypeToken<List<BookChapter>?>() {}.type
-            var re: List<BookChapter>? = MyCacheService.get(key, type)
+            var re: List<BookChapter>? = MyCacheService.get(key, type,userid)
             if (re != null) {
                 logger.info("检测到目录缓存：${url}")
             }
             return re
         }
 
-        fun removeChapterListbycache(url: String) {
+        fun removeChapterListbycache(url: String,userid:String) {
             var key = "getChapterList:${url}"
-            MyCacheService.remove(key)
+            MyCacheService.remove(key,userid)
         }
 
-        fun setChapterListbycache(url: String, re: List<BookChapter>) {
+        fun setChapterListbycache(url: String, re: List<BookChapter>,userid:String) {
             var key = "getChapterList:${url}"
             if (re.size > 1) {
-                MyCacheService.set(key, re)
+                MyCacheService.set(key, re,userid)
             }
         }
 
-        fun getBookContentbycache(url: String, index: Int): String? {
+        fun getBookContentbycache(url: String, index: Int,userid:String): String? {
             var key = "getBookContent:${url},index:${index}"
-            var re: String? = MyCacheService.get(key, String::class.java)
+            var re: String? = MyCacheService.get(key, String::class.java,userid)
             if (re != null && re.isNotEmpty()) {
                 logger.info("检测到正文缓存：${url}")
             }
             return re
         }
 
-        fun setBookContentbycache(url: String, re: String, index: Int) {
+        fun setBookContentbycache(url: String, re: String, index: Int,userid:String) {
             var key = "getBookContent:${url},index:${index}"
             if (re.length > 50) {
-                MyCacheService.set(key, re)
+                MyCacheService.set(key, re,userid)
             }
         }
 
-        fun removeBookContentbycache(url: String, index: Int) {
+        fun removeBookContentbycache(url: String, index: Int,userid:String) {
             var key = "getBookContent:${url},index:${index}"
-            MyCacheService.remove(key)
+            MyCacheService.remove(key,userid)
         }
 
-        fun removeallBookContentbycache(url: String) {
-            MyCacheService.removeBookContentbycache(url)
+        fun removeallBookContentbycache(url: String,userid:String) {
+            MyCacheService.removeBookContentbycache(url,userid)
         }
 
 
 
-        fun getBookbycache(url: String): Book? {
+        fun getBookbycache(url: String,userid:String): Book? {
             var key = "getBook:${url}"
-            var re: Book? = MyCacheService.get(key, Book::class.java)
+            var re: Book? = MyCacheService.get(key, Book::class.java,userid)
             if (re != null) {
                 logger.info("检测到书本缓存：${url}")
             }
             return re
         }
 
-        fun setBookbycache(url: String, book: Book) {
+        fun setBookbycache(url: String, book: Book,userid:String) {
             var key = "getBook:${url}"
-            MyCacheService.set(key, book)
+            MyCacheService.set(key, book,userid)
         }
     }
 
@@ -119,14 +120,14 @@ open class ReadController : BaseController() {
         var user = getuserbytocken(accessToken).also {
             if (it == null) throw DataThrowable().data(JsonResponse(false, NEED_LOGIN))
         }
-        getChapterListbycache(url)?.let {
+        getChapterListbycache(url,user!!.id!!)?.let {
             logger.info("目录缓存使用成功")
             throw DataThrowable().data(JsonResponse(true).Data(it))
         }
         logger.info("书本：${url}，查询目录")
         when {
             bookSourceUrl == "loc_book" -> getlist(url).let {
-                setChapterListbycache(url, it)
+                setChapterListbycache(url, it,user.id!!)
                 JsonResponse(true).Data(it)
             }
 
@@ -136,7 +137,7 @@ open class ReadController : BaseController() {
                     throw DataThrowable().data(jp)
                 }
                 getlist(url, source!!, user!!.id!!, accessToken ?: "").let {
-                    setChapterListbycache(url, it)
+                    setChapterListbycache(url, it,user.id!!)
                     JsonResponse(true).Data(it)
                 }
             }
@@ -149,8 +150,11 @@ open class ReadController : BaseController() {
         accessToken: String?, bookSourceUrl: String?, url: String?, index: Int?, type: Int?
     ) = runBlocking {
         if (url == null) throw DataThrowable().data(JsonResponse(false, NOT_BANK))
+        var user = getuserbytocken(accessToken).also {
+            if (it == null) throw DataThrowable().data(JsonResponse(false, NEED_LOGIN))
+        }
         if (type != 1) {
-            var txt = getBookContentbycache(url, index ?: 0)
+            var txt = getBookContentbycache(url, index ?: 0,user!!.id!!)
             if (txt != null && txt.isNotEmpty()) {
                 logger.info("正文缓存使用成功")
                 throw DataThrowable().data(JsonResponse(true).Data(txt))
@@ -159,15 +163,15 @@ open class ReadController : BaseController() {
         logger.info("书本：${url}，查询：${index}")
         when {
             bookSourceUrl == "loc_book" -> {
-                var chapterlist = getChapterListbycache(url)
+                var chapterlist = getChapterListbycache(url,user!!.id!!)
                 if (chapterlist == null) {
                     chapterlist = getlist(url).also {
-                        setChapterListbycache(url, it)
+                        setChapterListbycache(url, it,user!!.id!!)
                     }
                 }
                 val book = Book.initLocalBook(url, url, "")
                 LocalBook.getContent(book, chapterlist[index ?: 0]).toString().let {
-                    setBookContentbycache(url, it, index ?: 0)
+                    setBookContentbycache(url, it, index ?: 0,user!!.id!!)
                     JsonResponse(true).Data(it)
                 }
             }
@@ -184,17 +188,23 @@ open class ReadController : BaseController() {
     }
 
     @Mapping("/fetchBookContent")
-    fun fetchBookContent(url: String?, index: Int?) = runBlocking {
+    fun fetchBookContent(accessToken: String?,url: String?, index: Int?) = runBlocking {
         if (url == null) throw DataThrowable().data(JsonResponse(false, NOT_BANK))
-        removeBookContentbycache(url, index ?: 0)
+        var user = getuserbytocken(accessToken).also {
+            if (it == null) throw DataThrowable().data(JsonResponse(false, NEED_LOGIN))
+        }
+        removeBookContentbycache(url, index ?: 0,user!!.id!!)
         JsonResponse(true)
     }
 
     @Mapping("/fetchBook")
-    fun fetchBook(url: String?) = runBlocking {
+    fun fetchBook(accessToken: String?,url: String?) = runBlocking {
         if (url == null) throw DataThrowable().data(JsonResponse(false, NOT_BANK))
-        removeChapterListbycache(url);
-        removeallBookContentbycache(url)
+        var user = getuserbytocken(accessToken).also {
+            if (it == null) throw DataThrowable().data(JsonResponse(false, NEED_LOGIN))
+        }
+        removeChapterListbycache(url,user!!.id!!);
+        removeallBookContentbycache(url,user!!.id!!)
         JsonResponse(true)
     }
 
@@ -214,7 +224,7 @@ open class ReadController : BaseController() {
         s.add((index ?: 0).toString())
         read = s.joinToString(",")
         if (book.origin == "loc_book") {
-            var list: List<BookChapter> = getChapterListbycache(url!!) ?: getlist(url!!)
+            var list: List<BookChapter> = getChapterListbycache(url!!,user!!.id!!) ?: getlist(url!!)
             booklistMapper.updatepos(
                 book.id!!,
                 list[index ?: 0].title,
@@ -226,7 +236,7 @@ open class ReadController : BaseController() {
         } else {
             var source = bookSourcemapper.getBookSource(book.origin!!)
             var list: List<BookChapter> =
-                getChapterListbycache(url!!) ?: getlist(url!!, source!!, user!!.id!!, accessToken ?: "")
+                getChapterListbycache(url!!,user!!.id!!) ?: getlist(url!!, source!!, user!!.id!!, accessToken ?: "")
             booklistMapper.updatepos(
                 book.id!!,
                 list[index ?: 0].title,
@@ -493,7 +503,7 @@ open class ReadController : BaseController() {
         bookSource.userid = user.id
         bookSource.usertocken = accessToken
         var js =bookSource.jsLib+"\n" + bookSource.loginUrl + "\n$action"
-        bookSource.evalJS(js)
+        thread {  bookSource.evalJS(js) }
         JsonResponse(true)
     }
 

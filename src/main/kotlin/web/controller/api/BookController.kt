@@ -124,7 +124,7 @@ open class BookController:BaseController() {
         }.onFailure {
             return@runBlocking JsonResponse(false,BOOKSEARCHERROR)
         }
-        setBookbycache(book.bookUrl,new!!);
+        setBookbycache(book.bookUrl,new!!,user!!.id!!);
         if (booklistMapper.getbook(user.id!!,booktolist.bookUrl!!) != null){
             return@runBlocking JsonResponse(false,BOOKIS)
         }
@@ -162,7 +162,7 @@ open class BookController:BaseController() {
         var webBook = WBook(source!!.json ?: "", user.id!!, accessToken, false)
         var new: Book? = null
         runCatching {
-            new = webBook.getBookInfo(book.bookUrl!!, canReName = true).also {   setBookbycache(book.bookUrl!!,it) }
+            new = webBook.getBookInfo(book.bookUrl!!, canReName = true).also {   setBookbycache(book.bookUrl!!,it,user!!.id!!) }
         }.onFailure {
             return@runBlocking JsonResponse(false,BOOKSEARCHERROR)
         }
@@ -188,7 +188,7 @@ open class BookController:BaseController() {
         }
         val webBook = WBook(source!!.json ?: "", user.id!!, accessToken, false)
         runCatching {
-            val  new = webBook.getBookInfo(book.bookUrl, canReName = true).also {   setBookbycache(book.bookUrl,it) }
+            val  new = webBook.getBookInfo(book.bookUrl, canReName = true).also {   setBookbycache(book.bookUrl,it,user!!.id!!) }
             val mybook=Booklist.tobooklist(book,user.id!!)
             mybook.bookto(new,false)
             JsonResponse(true,SUCCESS).Data(mybook)
@@ -266,6 +266,9 @@ open class BookController:BaseController() {
                 throw DataThrowable().data(JsonResponse(false,NEED_LOGIN))
             }
         }!!
+        if(!(user.AllowCache?:false)){
+            throw DataThrowable().data(JsonResponse(false,CAN_NOT))
+        }
         var booktolist=booklistMapper.getbook(user.id!!,url).also {
             if(it == null){
                 throw DataThrowable().data(JsonResponse(false,NOT_BANK))
@@ -327,10 +330,21 @@ open class BookController:BaseController() {
                 userCookieMapper.insert(c)
             }
         }
-        if(html != null && html.isNotEmpty()){
-            runBlocking {
-                ApiWebSocket.addhtml(key = accessToken?:"",html = html)
+        runBlocking {
+            ApiWebSocket.addhtml(key = accessToken?:"",html = html?:"")
+        }
+        JsonResponse(true)
+    }
+
+    @Mapping("/noCookies")
+    open fun noCookies( accessToken:String?)=run{
+        val user=getuserbytocken(accessToken).also {
+            if(it == null){
+                throw DataThrowable().data(JsonResponse(false,NEED_LOGIN))
             }
+        }!!
+        runBlocking {
+            ApiWebSocket.addhtml(key = accessToken?:"",html = "")
         }
         JsonResponse(true)
     }

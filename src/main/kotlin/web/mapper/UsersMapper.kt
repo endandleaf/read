@@ -23,11 +23,14 @@ interface  UsersMapper : BaseMapper<Users> {
     @Delete("Delete booklist,users,usertocken  FROM booklist,users,usertocken WHERE booklist.userid = #{id} and usertocken.userid = #{id} and users.id = #{id}")
     fun delUserall(@Param("id") id: String): Int
 
-    @Update("UPDATE users set email = #{user.email}  , phone = #{user.phone} , updatetime = #{user.updatetime} , allow_up_txt = #{user.AllowUpTxt} , comment = #{user.comment}    WHERE id = #{user.id}")
-    fun updateNoPass(@Param("user") user: Users):Int
+    @Update("<script>  UPDATE users set email = #{user.email}  , phone = #{user.phone} , updatetime = #{user.updatetime} ," +
+            "<if test=\"user.password != null\">" +
+            "password = #{user.password}," +
+            "</if> " +
+            "allow_up_txt = #{user.AllowUpTxt} , comment = #{user.comment}  ,allow_cache = #{user.AllowCache} " +
+            "WHERE id = #{user.id}</script>")
+    fun updateinfo(@Param("user") user: Users):Int
 
-    @Update("UPDATE users set password = #{user.password}, email = #{user.email}  , phone = #{user.phone} , updatetime = #{user.updatetime} , allow_up_txt = #{user.AllowUpTxt} , comment = #{user.comment}    WHERE id = #{user.id}")
-    fun updateHasPass(@Param("user") user: Users):Int
 
     @Delete("DROP TABLE users")
     fun Drop(): Int

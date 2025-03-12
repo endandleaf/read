@@ -4,12 +4,14 @@ import book.model.BaseBook
 import book.model.BaseSource
 import book.model.BookChapter
 import book.util.*
-import book.util.AppConst.SCRIPT_ENGINE
 import book.util.AppPattern.JS_PATTERN
 import book.util.help.CacheManager
 import book.util.help.CookieStore
 import book.webBook.WBook
+import book.webBook.util.JsBase64
 import com.script.SimpleBindings
+import com.script.buildScriptBindings
+import com.script.rhino.RhinoScriptEngine
 import kotlinx.coroutines.runBlocking
 import org.jsoup.nodes.Entities
 import org.mozilla.javascript.NativeObject
@@ -18,6 +20,9 @@ import org.slf4j.LoggerFactory
 import java.net.URL
 import java.util.ArrayList
 import java.util.regex.Pattern
+import kotlin.coroutines.ContinuationInterceptor
+import kotlin.coroutines.CoroutineContext
+import kotlin.coroutines.EmptyCoroutineContext
 
 private val log: Logger = LoggerFactory.getLogger(WBook::class.java)
 class AnalyzeRule(
@@ -53,10 +58,19 @@ class AnalyzeRule(
     private var objectChangedJS = false
     private var objectChangedJP = false
 
+    private var coroutineContext: CoroutineContext = EmptyCoroutineContext
+
+    fun setCoroutineContext(context: CoroutineContext): AnalyzeRule {
+        coroutineContext = context.minusKey(ContinuationInterceptor)
+        return this
+    }
+
     init {
         if(source != null){
-            ruleData.userid=source.userid?:""
-            book?.userid=source.userid?:""
+            val userid = source.userid?:""
+            chapter?.userid = userid
+            ruleData.userid = userid
+            book?.userid = userid
         }
     }
 
@@ -654,27 +668,28 @@ class AnalyzeRule(
         if(source != null){
             userid = source.userid?:""
             chapter?.userid = userid
-            ruleData?.userid = userid
+            ruleData.userid = userid
             book?.userid = userid
         }
-        var jsStr=jsStr.replace("const","let")
-        val bindings = SimpleBindings()
-        bindings["java"] = this
-        bindings["cookie"] = CookieStore(userid)
-        bindings["cache"] = CacheManager
-        bindings["source"] = source
-        bindings["book"] = book
-        bindings["result"] = result
-        bindings["baseUrl"] = baseUrl
-        bindings["chapter"] = chapter
-        bindings["title"] = chapter?.title
-        bindings["src"] = content
-        bindings["nextChapterUrl"] = nextChapterUrl
-        if (source != null && (source.jsLib?:"").isNotBlank()){
-            jsStr=source.jsLib+"\n"+jsStr
+        val bindings = buildScriptBindings { bindings ->
+            bindings["java"] = this
+            bindings["cookie"] =  CookieStore(userid)
+            bindings["cache"] = CacheManager
+            bindings["source"] = source
+            bindings["book"] = book
+            bindings["result"] = result
+            bindings["baseUrl"] = baseUrl
+            bindings["chapter"] = chapter
+            bindings["title"] = chapter?.title
+            bindings["src"] = content
+            bindings["nextChapterUrl"] = nextChapterUrl
+            binding(bindings)
         }
-       // println(jsStr)
-        return SCRIPT_ENGINE.eval(jsStr, bindings)
+        val scope = RhinoScriptEngine.getRuntimeScope(bindings)
+        source?.getShareScope()?.let {
+            scope.prototype = it
+        }
+        return RhinoScriptEngine.eval(jsStr, scope, coroutineContext)
     }
 
     override fun getSource(): BaseSource? {
