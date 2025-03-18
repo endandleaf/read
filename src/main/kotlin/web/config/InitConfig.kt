@@ -6,7 +6,6 @@ import book.app.Response
 import book.app.ToastMessage
 import book.app.WebMessage
 import com.google.gson.Gson
-import com.oracle.svm.core.annotate.Inject
 import kotlinx.coroutines.runBlocking
 import org.noear.solon.annotation.Bean
 import org.noear.solon.annotation.Configuration

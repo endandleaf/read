@@ -15,6 +15,9 @@ data class BookChapter(
     var bookUrl: String = "",           // 书籍地址
     var index: Int = 0,                 // 章节序号
     var resourceUrl: String? = null,    // 音频真实URL
+    var wordCount: String? = null,      // 本章节字数
+    var isPay: Boolean = false,         // 是否已购买
+    var isVip: Boolean = false,         // 是否VIP
     var tag: String? = null,            //
     var start: Long? = null,            // 章节起始位置
     var end: Long? = null,               // 章节终止位置

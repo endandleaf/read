@@ -35,6 +35,7 @@
           <th lay-data="{field:'email', title:'邮箱'}"></th>
           <th lay-data="{field:'phone', title:'电话'}"></th>
           <th lay-data="{field:'code', title:'邀请码'}"></th>
+          <th lay-data="{field:'source', title:'书源',templet: '#source'}"></th>
           <th lay-data="{field:'allowUpTxt', title:'txt',templet: '#allowUpTxt'}"></th>
           <th lay-data="{field:'AllowCache', title:'缓存',templet: '#AllowCache'}"></th>
           <th lay-data="{field:'comment', title:'备注'}"></th>
@@ -48,6 +49,14 @@
     </div>
   </div>
 </div>
+
+<script type="text/html" id="source">
+  {{#  if(d.source == 0){ }}
+  <span class="layui-badge layui-bg-gray">不允许</span>
+  {{#  } else if(d.source == 1) { }}
+  <span class="layui-badge layui-bg-blue">允许</span>
+  {{#  } }}
+</script>
 
 <script type="text/html" id="AllowCache">
   {{#  if(!d.AllowCache){ }}

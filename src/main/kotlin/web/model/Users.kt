@@ -48,6 +48,7 @@ class Users {
 
     var code: String? = null
 
+    var source: Int = 0
 
     var phone: String? = null
 

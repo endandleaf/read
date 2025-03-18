@@ -15,6 +15,7 @@ import org.noear.solon.annotation.Mapping
 import org.noear.solon.core.handle.Context
 import org.noear.solon.core.util.DataThrowable
 import org.noear.solon.data.annotation.Cache
+import org.noear.solon.data.annotation.CacheRemove
 import org.noear.solon.web.cors.annotation.CrossOrigin
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
@@ -202,9 +203,19 @@ open class ReadController : BaseController() {
         if (url == null) throw DataThrowable().data(JsonResponse(false, NOT_BANK))
         var user = getuserbytocken(accessToken).also {
             if (it == null) throw DataThrowable().data(JsonResponse(false, NEED_LOGIN))
+        }!!
+        var booktolist=booklistMapper.getbook(user.id!!,url).also {
+            if(it == null){
+                throw DataThrowable().data(JsonResponse(false,NOT_BANK))
+            }
+        }!!
+        removeChapterListbycache(url,user.id!!);
+        removeallBookContentbycache(url,user.id!!)
+        bookCacheMapper.getCache(user.id!!,booktolist.id!!).also {
+            if(it != null){
+                bookCacheMapper.deleteById(it.id)
+            }
         }
-        removeChapterListbycache(url,user!!.id!!);
-        removeallBookContentbycache(url,user!!.id!!)
         JsonResponse(true)
     }
 
@@ -361,7 +372,7 @@ open class ReadController : BaseController() {
     }
 
 
-    //@Cache(key = "ExploreUrl:\${bookSourceUrl},\${accessToken}", tags = "ExploreUrl", seconds = 600)
+    @Cache(key = "ExploreUrl:\${bookSourceUrl},\${accessToken}", tags = "search\${accessToken}", seconds = 600)
     @Mapping("/getBookSourcesExploreUrl")
     open fun getBookSourcesExploreUrl(accessToken: String?, bookSourceUrl: String?) = runBlocking {
         val user = getuserbytocken(accessToken).also {
@@ -455,6 +466,7 @@ open class ReadController : BaseController() {
         JsonResponse(true).Data(info)
     }
 
+     @CacheRemove(tags = "search\${accessToken}")
     @Mapping("/setVariable")
     open fun setVariable(accessToken: String?, bookSourceUrl: String?, info: String?) = run {
         val user = getuserbytocken(accessToken).also {
@@ -472,6 +484,7 @@ open class ReadController : BaseController() {
         JsonResponse(true)
     }
 
+     @CacheRemove(tags = "search\${accessToken}")
     @Mapping("/putLoginInfo")
     open fun putLoginInfo(accessToken: String?, bookSourceUrl: String?, info: String?) = run {
         val user = getuserbytocken(accessToken).also {
@@ -489,6 +502,7 @@ open class ReadController : BaseController() {
         JsonResponse(true)
     }
 
+    @CacheRemove(tags = "search\${accessToken}")
     @Mapping("/action")
     open fun action(accessToken: String?, bookSourceUrl: String?, action: String?) = run {
         val user = getuserbytocken(accessToken).also {

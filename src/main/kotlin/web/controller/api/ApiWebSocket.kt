@@ -1,5 +1,7 @@
 package web.controller.api
 
+import book.app.ToastMessage
+import com.google.gson.Gson
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.Semaphore
@@ -105,6 +107,7 @@ class ApiWebSocket : SimpleWebSocketListener() {
         var tocken=usertockenMapper.selectById(accessToken)
         if (tocken == null) {
             logger.info("websocket tocken is null")
+            socket.send(Gson().toJson(ToastMessage(msg = "logout", str="logout" )))
             socket.close()
             return
         }
@@ -112,6 +115,7 @@ class ApiWebSocket : SimpleWebSocketListener() {
         var user=usersMapper.selectById(tocken.userid)
         if (user == null) {
             logger.info("websocket user is null")
+            socket.send(Gson().toJson(ToastMessage(msg = "logout", str="logout" )))
             socket.close()
             return
         }

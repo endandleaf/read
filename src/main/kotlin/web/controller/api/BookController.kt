@@ -17,6 +17,7 @@ import org.noear.solon.annotation.Inject
 import org.noear.solon.annotation.Mapping
 import org.noear.solon.core.util.DataThrowable
 import org.noear.solon.data.annotation.Cache
+import org.noear.solon.data.annotation.CacheRemove
 import org.noear.solon.data.annotation.Tran
 import org.noear.solon.data.cache.CacheService
 import org.noear.solon.web.cors.annotation.CrossOrigin
@@ -64,12 +65,13 @@ open class BookController:BaseController() {
         if(jp != null){
             throw DataThrowable().data(jp)
         }
-        var ckey="bookSourceUrl:$bookSourceUrl,page:$page,key:$key"
+        /*var ckey="bookSourceUrl:$bookSourceUrl,page:$page,key:$key"
         var ret:List<SearchBook>? = cacheService.get(ckey,object : TypeToken<List<SearchBook>?>() {}.type)
         if(ret!=null){
             logger.info("获取到缓存$key")
             return@runBlocking   Gson().toJson(JsonResponse(true).Data(ret))
-        }
+        }*/
+
         var webBook = WBook(source!!.json?:"",user!!.id!!,accessToken, false)
         var re:List<SearchBook>  = arrayListOf()
         runCatching {
@@ -86,18 +88,19 @@ open class BookController:BaseController() {
             }
         }.onFailure {
             it.printStackTrace()
+            throw it
         }
-        if(!re.isEmpty()){
-            cacheService.store(ckey,re,60)
+        if(re.size == 0 &&( page == 1 || page == 0)){
+            throw DataThrowable().data(JsonResponse(false,"search is empty"))
         }
         Gson().toJson(JsonResponse(true).Data(re))
     }
 
-    //@Cache(key = "searchBook:\${accessToken},\${bookSourceUrl},\${page},\${key}", tags = "searchBook", seconds = 600)
+    @Cache(key = "searchBook:\${accessToken},\${bookSourceUrl},\${page},\${key}", tags = "search\${accessToken}", seconds = 600)
     @Mapping("/searchBook")
     open fun searchBook(accessToken:String?, bookSourceUrl:String?, page:Int?, key:String? )= search(accessToken,bookSourceUrl,page, key,1)
 
-    //@Cache(key = "exploreBook:\${accessToken},\${bookSourceUrl},\${page},\${ruleFindUrl}", tags = "exploreBook", seconds = 60)
+    @Cache(key = "exploreBook:\${accessToken},\${bookSourceUrl},\${page},\${ruleFindUrl}", tags = "search\${accessToken}", seconds = 60)
     @Mapping("/exploreBook")
     open fun exploreBook( accessToken:String?,bookSourceUrl:String?, page:Int?, ruleFindUrl:String? ) = search(accessToken,bookSourceUrl,page, ruleFindUrl,2)
 
@@ -116,6 +119,7 @@ open class BookController:BaseController() {
             }
         }
         val source = getsource(book.origin)
+        if(source == null){ throw DataThrowable().data(JsonResponse(false,NOT_SOURCE))}
         var webBook = WBook(source!!.json ?: "", user.id!!, accessToken, false)
         var booktolist=Booklist.tobooklist(book,user.id!!)
         var new: Book? = null
@@ -170,7 +174,7 @@ open class BookController:BaseController() {
         JsonResponse(true,SUCCESS).Data(book)
     }
 
-    @Cache(key = "getBookinfo:\${accessToken},\${book.bookUrl}", tags = "getBookinfo", seconds = 600)
+    @Cache(key = "getBookinfo:\${accessToken},\${book.bookUrl},\${book.name},\${book.author}", tags = "search\${accessToken}", seconds = 600)
     @Mapping("/getBookinfo")
     open fun getBookinfo( accessToken:String?, book: SearchBook?) = runBlocking{
         val user=getuserbytocken(accessToken).also {
@@ -237,6 +241,9 @@ open class BookController:BaseController() {
                 throw DataThrowable().data(JsonResponse(false,NEED_LOGIN))
             }
         }!!
+        if(!(user.AllowCache?:false)){
+            throw DataThrowable().data(JsonResponse(false,CAN_NOT))
+        }
         var booktolist=booklistMapper.getbook(user.id!!,url).also {
             if(it == null){
                 throw DataThrowable().data(JsonResponse(false,NOT_BANK))
@@ -277,6 +284,11 @@ open class BookController:BaseController() {
         if (booktolist.origin == "loc_book"){
             var cache= BookCache().create(user.id!!,booktolist)
             cache.num=booktolist.totalChapterNum
+            var list:MutableSet<String> = mutableSetOf()
+            for(i in 0..((booktolist.totalChapterNum?:1)-1)){
+                list.add(i.toString())
+            }
+            cache.cacheindex= list.joinToString(",")
             bookCacheMapper.insert(cache)
             JsonResponse(true)
         }else{
@@ -308,6 +320,7 @@ open class BookController:BaseController() {
         JsonResponse(true,SUCCESS)
     }
 
+    @CacheRemove(tags = "search\${accessToken}")
     @Mapping("/saveCookies")
     open fun saveCookies( accessToken:String?, url: String,cookie:String, html: String?)=run{
         val user=getuserbytocken(accessToken).also {
@@ -335,6 +348,7 @@ open class BookController:BaseController() {
         }
         JsonResponse(true)
     }
+
 
     @Mapping("/noCookies")
     open fun noCookies( accessToken:String?)=run{

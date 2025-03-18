@@ -164,6 +164,8 @@ object BookChapterList {
             val nameRule = analyzeRule.splitSourceRule(tocRule.chapterName)
             val urlRule = analyzeRule.splitSourceRule(tocRule.chapterUrl)
             val vipRule = analyzeRule.splitSourceRule(tocRule.isVip)
+            val payRule = analyzeRule.splitSourceRule(tocRule.isPay)
+            val wordCount = analyzeRule.splitSourceRule(tocRule.wordCount)
             val upTimeRule = analyzeRule.splitSourceRule(tocRule.updateTime)
             val isVolumeRule = analyzeRule.splitSourceRule(tocRule.isVolume)
             elements.forEachIndexed { index, item ->
@@ -173,6 +175,7 @@ object BookChapterList {
                 bookChapter.title = analyzeRule.getString(nameRule)
                 bookChapter.url = analyzeRule.getString(urlRule)
                 bookChapter.tag = analyzeRule.getString(upTimeRule)
+                bookChapter.wordCount= analyzeRule.getString(wordCount)
                 val isVolume = analyzeRule.getString(isVolumeRule)
                 bookChapter.isVolume = false
                 if (isVolume.isTrue()) {
@@ -189,9 +192,12 @@ object BookChapterList {
                 }
                 if (bookChapter.title.isNotEmpty()) {
                     var isVip = analyzeRule.getString(vipRule)
+                    bookChapter.isVip= isVip.isTrue()
                     if (isVip.isTrue()) {
                         bookChapter.title = "\uD83D\uDD12" + bookChapter.title
                     }
+                    var isPay = analyzeRule.getString(payRule)
+                    bookChapter.isPay= isPay.isTrue()
                     chapterList.add(bookChapter)
                 }
             }
