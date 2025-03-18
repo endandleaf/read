@@ -12,6 +12,9 @@ web端不支持cookie的保存，不支持朗读功能，但支持听书类型�
 # cookies
 web端不支持webview所以不支持保存cookies，windows端用的js获取的cookies所以不支持httponly的cookie
 
+# 推荐书源
+[晴天](http://api.qingtian618.cn:9999/)
+
 # 热键(web端和windows支持)
 esc键返回 左右键翻页
 F11 无边框 F12恢复边框(仅windows支持)
