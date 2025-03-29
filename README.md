@@ -90,3 +90,10 @@ function Decode(str){
 ![Image text](https://github.com/autobcb/read/blob/main/png/faxian.png?raw=true)
 ![Image text](https://github.com/autobcb/read/blob/main/png/search.png?raw=true)
 ![Image text](https://github.com/autobcb/read/blob/main/png/read.png?raw=true)
+
+![Image text](https://github.com/autobcb/read/blob/main/png/home3.jpg?raw=true)
+![Image text](https://github.com/autobcb/read/blob/main/png/found.jpg?raw=true)
+![Image text](https://github.com/autobcb/read/blob/main/png/my.jpg?raw=true)
+![Image text](https://github.com/autobcb/read/blob/main/png/editsource.jpg?raw=true)
+![Image text](https://github.com/autobcb/read/blob/main/png/source.jpg?raw=true)
+![Image text](https://github.com/autobcb/read/blob/main/png/sourcelogin.jpg?raw=true)
