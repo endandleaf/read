@@ -7,6 +7,7 @@ import org.dromara.autotable.annotation.AutoTable
 import org.dromara.autotable.annotation.ColumnType
 import org.dromara.autotable.annotation.PrimaryKey
 import org.noear.snack.annotation.ONodeAttr
+import web.util.hash.Md5
 import java.time.LocalDateTime
 import java.util.*
 
@@ -27,10 +28,11 @@ class UserCookie {
     @TableField(fill = FieldFill.INSERT,value = "createtime")
     var createtime: LocalDateTime? = null
 
-    fun create(userid:String):UserCookie{
-        this.id = UUID.randomUUID().toString()
+    fun create(userid:String,host:String):UserCookie{
+        this.id = Md5("$userid,$host")
         this.userid = userid
         this.createtime = LocalDateTime.now()
+        this.host = host
         return this
     }
 

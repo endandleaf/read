@@ -8,8 +8,6 @@ import book.util.AppPattern.JS_PATTERN
 import book.util.help.CacheManager
 import book.util.help.CookieStore
 import book.webBook.WBook
-import book.webBook.util.JsBase64
-import com.script.SimpleBindings
 import com.script.buildScriptBindings
 import com.script.rhino.RhinoScriptEngine
 import kotlinx.coroutines.runBlocking
@@ -26,7 +24,7 @@ import kotlin.coroutines.EmptyCoroutineContext
 
 private val log: Logger = LoggerFactory.getLogger(WBook::class.java)
 class AnalyzeRule(
-    var ruleData: RuleDataInterface,
+    var ruleData: RuleDataInterface? =null,
     private val source: BaseSource? = null
 ):JsExtensions {
 
@@ -69,7 +67,7 @@ class AnalyzeRule(
         if(source != null){
             val userid = source.userid?:""
             chapter?.userid = userid
-            ruleData.userid = userid
+            ruleData?.userid = userid
             book?.userid = userid
         }
     }
@@ -639,9 +637,17 @@ class AnalyzeRule(
     }
 
     fun put(key: String, value: String): String {
+        //println("put2 key:$key,value:$value")
+        if(source != null){
+            val userid = source.userid?:""
+            chapter?.userid = userid
+            book?.userid = userid
+            ruleData?.userid = userid
+        }
         chapter?.putVariable(key, value)
             ?: book?.putVariable(key, value)
-            ?: ruleData.putVariable(key, value)
+            ?: ruleData?.putVariable(key, value)
+            ?: source?.put(key, value)
         return value
     }
 
@@ -654,9 +660,16 @@ class AnalyzeRule(
                 return it.title
             }
         }
-        return chapter?.getVariable(key)
-            ?: book?.getVariable(key)
-            ?: ruleData?.getVariable(key)
+        if(source != null){
+            val userid = source.userid?:""
+            chapter?.userid = userid
+            book?.userid = userid
+            ruleData?.userid = userid
+        }
+        return chapter?.getVariable(key)?.takeIf { it.isNotEmpty() }
+            ?: book?.getVariable(key)?.takeIf { it.isNotEmpty() }
+            ?: ruleData?.getVariable(key)?.takeIf { it.isNotEmpty() }
+            ?:source?.get(key)?.takeIf { it.isNotEmpty() }
             ?: ""
     }
 
@@ -668,12 +681,12 @@ class AnalyzeRule(
         if(source != null){
             userid = source.userid?:""
             chapter?.userid = userid
-            ruleData.userid = userid
+            ruleData?.userid = userid
             book?.userid = userid
         }
         val bindings = buildScriptBindings { bindings ->
             bindings["java"] = this
-            bindings["cookie"] =  CookieStore(userid)
+            bindings["cookie"] =  CookieStore(userid,source?.getKey())
             bindings["cache"] = CacheManager
             bindings["source"] = source
             bindings["book"] = book

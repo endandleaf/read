@@ -1,9 +1,12 @@
 package book.model
 
 import book.model.rule.*
+import book.util.AppPattern.JS_PATTERN
 import book.util.GSON
+import book.util.fromJsonArray
 import book.util.fromJsonObject
 import book.util.help.SourceAnalyzer
+import book.util.isJsonArray
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties
 import com.google.gson.Gson
 import com.google.gson.reflect.TypeToken
@@ -41,6 +44,7 @@ class BookSource(
     override var enabledCookieJar: Boolean?=false,
     override var userid: String?="",
     override var usertocken: String?=null,
+    var variableComment:String?=null,
 ) : BaseSource {
     //    @Ignore
 //    @IgnoredOnParcel
@@ -96,6 +100,44 @@ class BookSource(
 
     fun getContentRule(): ContentRule {
         return ruleContent ?: ContentRule()
+    }
+
+    fun  exploreKinds():String{
+        val exploreUrl = exploreUrl
+        if (exploreUrl.isNullOrBlank()) {
+            return ""
+        }
+        var list = mutableListOf<Any>()
+        var ruleStr:String = exploreUrl
+        runCatching {
+            val jsMatcher = JS_PATTERN.matcher(ruleStr)
+            if (jsMatcher.find()) {
+                val jsEval =evalJS(jsMatcher.group(2) ?: jsMatcher.group(1))
+                ruleStr=jsEval.toString().trim()
+            }
+
+            if (ruleStr.isJsonArray()) {
+                GSON.fromJsonArray<Any?>(ruleStr).getOrNull()?.forEach{
+                    if(it != null){
+                        list.add(it)
+                    }
+                }
+
+            } else {
+                ruleStr.split("(&&|\n)+".toRegex()).forEach { kindStr ->
+                    val kindCfg = kindStr.split("::")
+                    var kind = mapOf(
+                        "title" to kindCfg.first(),
+                        "url" to kindCfg.getOrNull(1)
+                    )
+                    list.add(kind)
+                }
+            }
+            ruleStr= GSON.toJson(list).trim()
+        }.onFailure {
+           it.printStackTrace()
+        }
+        return ruleStr
     }
 
     fun equal(source: BookSource): Boolean {

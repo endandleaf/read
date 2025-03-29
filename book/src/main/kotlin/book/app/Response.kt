@@ -6,8 +6,11 @@ data class Response(
     val body: String=""
 ) {
     companion object {
-        var startBrowserAwait =fun  (urlStr: String,title: String,tocken:String):Response{
+        var startBrowserAwait =fun  (urlStr: String,title: String,tocken:String,hide:Boolean,header:String):Response{
             return Response(body = tocken,url = urlStr, code = 200)
+        }
+        var webview =fun  (html: String?, url: String?, js: String?,tocken:String,header:String):Response{
+            return Response(body = html?:"",url = url?:"", code = 200)
         }
         var toast =fun  (str: String,tocken:String){
 

@@ -1,0 +1,2 @@
+#keytool -genkeypair -alias mykey -keyalg RSA -keystore mykeystore.jks -validity 365
+jarsigner -keystore /Users/q9uo11/mykeystore.jks -storepass 123456 -keypass 123456 build/libs/solon-read-1.0-SNAPSHOT.jar mykey

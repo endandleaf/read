@@ -16,6 +16,7 @@ import web.model.BookSource
 import web.response.*
 import web.util.page.PageByAjax
 import java.io.EOFException
+import java.util.*
 import book.model.BookSource as Booksource
 
 
@@ -178,9 +179,11 @@ class BookSourceController {
                 if(it.createtime != null){
                     source.createtime=it.createtime
                 }
+                bookSource.lastUpdateTime= Date().time
                 update=insert+booksourcemapper.updateById(source)
             }else{
-                bookSource.enabled=true
+                source.enabled=true
+                source.sourceorder=9999
                 insert=update+booksourcemapper.insert(source)
             }
         }

@@ -97,8 +97,8 @@ class MyCacheService() {
         }
 
         fun remove(key: String,userid:String) {
-            removecache(getsystemkeyname(key, userid),userid)
-            my!!.cacheService.remove(key)
+            removecache(key,userid)
+            my!!.cacheService.remove(getsystemkeyname(key, userid))
         }
 
         fun removeBookContentbycache(url: String,userid:String) {

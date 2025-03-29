@@ -64,6 +64,7 @@ class Booklist {
         this.bookUrl = book.bookUrl
         if(book.tocUrl.isNotBlank()) this.tocUrl = book.tocUrl
         this.origin = book.origin
+        this.type = book.type
         this.originName = book.originName
         this.originOrder = book.originOrder
         if(book.name.isNotBlank() && canchangename)  this.name = book.name

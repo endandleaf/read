@@ -8,6 +8,7 @@ import org.noear.solon.data.annotation.Tran
 import web.mapper.CodeMapper
 import web.model.Code
 import web.response.*
+import web.util.admin.getcodes
 import web.util.page.PageByAjax
 import java.util.*
 
@@ -36,10 +37,15 @@ open class CodeController {
         if(num <= 0){
             throw DataThrowable().data(JsonResponse(isSuccess = false, errorMsg = NUM_ERROR))
         }
-        var date=  Date().time
+        /*var date=  Date().time
         for(i in 1..num){
             val randoms = (100000..999999).random()
             var code=Code().create("$date$randoms")
+            codeMapper.insert(code)
+        }*/
+        val codes=getcodes(num)
+        for(c in codes){
+            val code=Code().create(c)
             codeMapper.insert(code)
         }
         JsonResponse(true)

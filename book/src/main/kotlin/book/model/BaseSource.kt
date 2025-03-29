@@ -41,23 +41,33 @@ interface BaseSource : JsExtensions {
         return when {
             loginJs == null -> null
             loginJs.startsWith("@js:") -> loginJs.substring(4)
-            loginJs.startsWith("<js>") ->
-                loginJs.substring(4, loginJs.lastIndexOf("<"))
+            loginJs.startsWith("<js>") -> loginJs.substring(4, loginJs.lastIndexOf("<"))
             else -> loginJs
         }
     }
-
+    /**
+     * 调用login函数 实现登录请求
+     */
     fun login() {
-        getLoginJs()?.let {
-            evalJS(it)
+        val loginJs = getLoginJs()
+        if (!loginJs.isNullOrBlank()) {
+            val js = """$loginJs
+                if(typeof login=='function'){
+                    login.apply(this);
+                } else {
+                    throw('Function login not implements!!!')
+                }
+            """.trimIndent()
+            evalJS(js)
         }
     }
 
     /**
      * 解析header规则
      */
-    fun getHeaderMap(hasLoginHeader: Boolean = false) = HashMap<String, String>().apply {
-        this[AppConst.UA_NAME] = AppConst.userAgent
+    fun getHeaderMap(hasLoginHeader: Boolean = false,needua: Boolean = true) = HashMap<String, String>().apply {
+
+        //this[AppConst.UA_NAME] = AppConst.userAgent
         header?.let {
             GSON.fromJsonObject<Map<String, String>>(
                 when {
@@ -70,6 +80,9 @@ interface BaseSource : JsExtensions {
             ).getOrNull()?.let { map ->
                 putAll(map)
             }
+        }
+        if (!has(AppConst.UA_NAME, true) && needua) {
+            put(AppConst.UA_NAME, AppConst.userAgent)
         }
         if (hasLoginHeader) {
             getLoginHeaderMap()?.let {
@@ -156,9 +169,6 @@ interface BaseSource : JsExtensions {
         return s?:""
     }
 
-    fun getCookie(url:String):String?{
-        return CookieStore(userid?:"").getCookie(url)
-    }
 
     /**
      * 执行JS
@@ -170,7 +180,7 @@ interface BaseSource : JsExtensions {
             bindings["java"] = this
             bindings["source"] = this
             bindings["baseUrl"] = getKey()
-            bindings["cookie"] =  CookieStore(userid?:"")
+            bindings["cookie"] =  CookieStore(userid?:"",getKey())
             bindings["cache"] = CacheManager
             binding(bindings)
         }
@@ -183,6 +193,21 @@ interface BaseSource : JsExtensions {
 
     fun getShareScope(): Scriptable? {
         return SharedJsScope.getScope(jsLib)
+    }
+
+    /**
+     * 保存数据
+     */
+    fun put(key: String, value: String): String {
+        CacheManager.put("getv_${getKey()}_${key}_userid_${userid}", value)
+        return value
+    }
+
+    /**
+     * 获取保存的数据
+     */
+    fun get(key: String): String {
+        return CacheManager.get("getv_${getKey()}_${key}_userid_${userid}") ?: ""
     }
 
 }

@@ -2,15 +2,43 @@
 package book.util.help
 
 import book.CookieList
+import book.util.MD5Utils
 import book.util.TextUtils
 import java.io.File
 import java.io.FileNotFoundException
 import java.net.URI
 
 // TODO 处理cookie
-class CookieStore(val userid:String) : CookieManager {
+class CookieStore(val userid:String,key: String?) : CookieManager {
 
     private val cookiepath="cookie"
+    private  val mykey= MD5Utils.md5Encode(key?:"test")
+
+    init {
+        checkfile("$cookiepath/$userid")
+        checkfile("$cookiepath/$userid/$mykey")
+    }
+
+    fun checkfile(path:String){
+        val file = File(path)
+        if (!file.exists()){
+            file.mkdirs()
+        }else{
+            if (!file.isDirectory){
+                file.delete()
+                val file = File(path)
+                file.mkdirs()
+            }
+        }
+    }
+
+    fun clear(){
+        val file = File("$cookiepath/$userid/$mykey")
+        if(file.exists()){
+            file.deleteRecursively()
+        }
+    }
+
 
     override fun setCookie(url: String, cookie: String?) {
         println("setCookie url:$url, cookie:$cookie")
@@ -21,9 +49,9 @@ class CookieStore(val userid:String) : CookieManager {
                 val cookieMap = cookieToMap(cookie)
                 val cookie2Map = cookieToMap(cookie2)
                 cookie2Map.putAll(cookieMap)
-                File(cookiepath+"/" + key+"_$userid").writeText(mapToCookie(cookie2Map)?:"")
+                File("$cookiepath/$userid/$mykey/$key").writeText(mapToCookie(cookie2Map)?:"")
             }else{
-                File(cookiepath+"/" + key+"_$userid").writeText(cookie)
+                File("$cookiepath/$userid/$mykey/$key").writeText(cookie)
             }
         }
     }
@@ -34,7 +62,7 @@ class CookieStore(val userid:String) : CookieManager {
             var domain = ""
             var keys : MutableList<String> = mutableListOf()
             for((k,v) in cookieMap){
-                when(k.toLowerCase()){
+                when(k.lowercase()){
                     "domain"->{
                         domain = v
                         keys.add(k)
@@ -103,9 +131,10 @@ class CookieStore(val userid:String) : CookieManager {
     }
 
     private fun getcookie(url: String): String {
-        var key = geturl(url)+"_$userid"
+        var key = geturl(url)
+
         try {
-            val content = File(cookiepath+"/" + key).readText()
+            val content =  File("$cookiepath/$userid/$mykey/$key").readText()
             return content
         }catch (e: Exception){
             return ""
@@ -150,8 +179,9 @@ class CookieStore(val userid:String) : CookieManager {
             if (pairs.size == 1) {
                 continue
             }
-            val key = pairs[0].trim { it <= ' ' }
-            val value = pairs[1]
+            val pos = pair.indexOf('=')
+            val value =if (pos != -1 && pos+1 != pair.length ) pair.substring(pos+1, pair.length) else ""
+            val key = if (pos != -1 && pos != 0 ) pair.substring(0, pos) else ""
             if (value.isNotBlank() || value.trim { it <= ' ' } == "null") {
                 cookieMap[key] = value.trim { it <= ' ' }
             }
@@ -174,10 +204,6 @@ class CookieStore(val userid:String) : CookieManager {
             }
         }
         return builder.deleteCharAt(builder.lastIndexOf(";")).toString()
-    }
-
-    fun clear() {
-        // appDb.cookieDao.deleteOkHttp()
     }
 
 }

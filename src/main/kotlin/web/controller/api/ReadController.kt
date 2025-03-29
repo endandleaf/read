@@ -3,6 +3,9 @@ package web.controller.api
 import book.model.Book
 import book.model.BookChapter
 import book.model.BookSource
+import book.util.GSON
+import book.util.fromJsonArray
+import book.util.fromJsonObject
 import book.webBook.WBook
 import book.webBook.localBook.LocalBook
 import com.google.gson.Gson
@@ -12,10 +15,12 @@ import org.apache.ibatis.solon.annotation.Db
 import org.noear.solon.annotation.Controller
 import org.noear.solon.annotation.Inject
 import org.noear.solon.annotation.Mapping
+import org.noear.solon.annotation.Path
 import org.noear.solon.core.handle.Context
 import org.noear.solon.core.util.DataThrowable
 import org.noear.solon.data.annotation.Cache
 import org.noear.solon.data.annotation.CacheRemove
+import org.noear.solon.data.cache.CacheService
 import org.noear.solon.web.cors.annotation.CrossOrigin
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
@@ -24,6 +29,7 @@ import web.mapper.BooklistMapper
 import web.response.*
 import web.service.MyCacheService
 import web.util.SslUtils
+import web.util.mapper.mapper
 import web.util.read.BookContent
 import web.util.read.Bookcache
 import web.util.read.getlist
@@ -47,6 +53,9 @@ open class ReadController : BaseController() {
     @Inject
     lateinit var bookCacheMapper: BookCacheMapper
 
+    @Inject
+    lateinit var cacheService: CacheService
+
     companion object {
         private val logger: Logger = LoggerFactory.getLogger(BaseController::class.java)
 
@@ -54,8 +63,13 @@ open class ReadController : BaseController() {
             var key = "getChapterList:${url}"
             val type = object : TypeToken<List<BookChapter>?>() {}.type
             var re: List<BookChapter>? = MyCacheService.get(key, type,userid)
-            if (re != null) {
+            if (re != null && re.size > 0) {
                 logger.info("检测到目录缓存：${url}")
+                var lastCheckTime= re[0].lastCheckTime?:0
+                if(System.currentTimeMillis() - lastCheckTime > 24*60*60*1000){
+                    logger.info("目录缓存过期：${url}")
+                    re=null;
+                }
             }
             return re
         }
@@ -67,7 +81,8 @@ open class ReadController : BaseController() {
 
         fun setChapterListbycache(url: String, re: List<BookChapter>,userid:String) {
             var key = "getChapterList:${url}"
-            if (re.size > 1) {
+            if (re.size > 0) {
+                re[0].lastCheckTime= System.currentTimeMillis()
                 MyCacheService.set(key, re,userid)
             }
         }
@@ -76,7 +91,7 @@ open class ReadController : BaseController() {
             var key = "getBookContent:${url},index:${index}"
             var re: String? = MyCacheService.get(key, String::class.java,userid)
             if (re != null && re.isNotEmpty()) {
-                logger.info("检测到正文缓存：${url}")
+                //logger.info("检测到正文缓存：${url},index:${index}")
             }
             return re
         }
@@ -84,12 +99,14 @@ open class ReadController : BaseController() {
         fun setBookContentbycache(url: String, re: String, index: Int,userid:String) {
             var key = "getBookContent:${url},index:${index}"
             if (re.length > 50) {
+                logger.info("添加缓存${key}")
                 MyCacheService.set(key, re,userid)
             }
         }
 
         fun removeBookContentbycache(url: String, index: Int,userid:String) {
             var key = "getBookContent:${url},index:${index}"
+            logger.info("删除缓存${key}")
             MyCacheService.remove(key,userid)
         }
 
@@ -97,6 +114,10 @@ open class ReadController : BaseController() {
             MyCacheService.removeBookContentbycache(url,userid)
         }
 
+        fun removeBookcache(url: String,userid:String) {
+            var key = "getBook:${url}"
+            MyCacheService.remove(key,userid)
+        }
 
 
         fun getBookbycache(url: String,userid:String): Book? {
@@ -139,6 +160,26 @@ open class ReadController : BaseController() {
                 }
                 getlist(url, source!!, user!!.id!!, accessToken ?: "").let {
                     setChapterListbycache(url, it,user.id!!)
+                    runCatching {
+                        var book = booklistMapper.getbook(user.id!!, url)
+                        if(book != null) {
+                            val lastCheckTime=System.currentTimeMillis()
+                            val lastCheckCount=it.size
+                            if (it.size != book.totalChapterNum ){
+                                val totalChapterNum=it.size
+                                val latestChapterTitle=it[it.size-1].title
+                                val latestChapterTime=System.currentTimeMillis()
+                                booklistMapper.updatetime(book.id!!,latestChapterTitle,latestChapterTime,lastCheckTime,lastCheckCount, totalChapterNum )
+                                bookCacheMapper.getCache(book.userid!!,book.id!!).let {
+                                    if(it!=null){
+                                       bookCacheMapper.updatetime(it.id!!,totalChapterNum)
+                                    }
+                                }
+                            }else{
+                               booklistMapper.updatetimefail(book.id!!,lastCheckTime,lastCheckCount)
+                            }
+                        }
+                    }
                     JsonResponse(true).Data(it)
                 }
             }
@@ -209,6 +250,7 @@ open class ReadController : BaseController() {
                 throw DataThrowable().data(JsonResponse(false,NOT_BANK))
             }
         }!!
+        removeBookcache(url,user.id!!)
         removeChapterListbycache(url,user.id!!);
         removeallBookContentbycache(url,user.id!!)
         bookCacheMapper.getCache(user.id!!,booktolist.id!!).also {
@@ -228,7 +270,11 @@ open class ReadController : BaseController() {
         var book = booklistMapper.getbook(user.id!!, url.also {
             if (it == null) throw DataThrowable().data(JsonResponse(false, NOT_BANK))
         }!!).also {
-            if (it == null) throw DataThrowable().data(JsonResponse(false, NO_BOOK))
+            if (it == null) {
+                //println("添加阅读进度到内存${url}")
+                cacheService.store("indexuerid:${user.id},bookurl:${url}",index,10*30);
+                throw DataThrowable().data(JsonResponse(true))
+            }
         }!!
         var read = book.readchapter ?: ""
         var s = read.split(",").toMutableSet()
@@ -319,13 +365,17 @@ open class ReadController : BaseController() {
                 bookCacheMapper.deleteById(it.id)
             }
         }
-        //println(Gson().toJson(new))
         JsonResponse(true).Data(book)
     }
 
    // @Cache(key = "getBookshelf:\${accessToken}", tags = "getBookshelf", seconds = 20)
     @Mapping("/getBookshelf")
-    open fun getBookshelf(accessToken: String?) = run {
+    open fun getBookshelf(accessToken: String?,@Path v:Int) = run {
+       if(v < 2){
+           throw DataThrowable().data(JsonResponse(false,NEED_LOGIN))
+       }else  if(v > 2){
+           throw DataThrowable().data(JsonResponse(false,NEED_LOGIN))
+       }
         val user = getuserbytocken(accessToken).also {
             if (it == null) throw DataThrowable().data(JsonResponse(false, NEED_LOGIN))
         }!!
@@ -352,19 +402,41 @@ open class ReadController : BaseController() {
 
     //@Cache(key = "getBookSources", tags = "getBookSources", seconds = 600)
     @Mapping("/getBookSources")
-    open fun getBookSources() = run {
-        var source = bookSourcemapper.getBookSourcelist(true)
+    open fun getBookSources(accessToken: String?,isall: String?,@Path v:Int ) = run {
+        if(v < 2){
+            throw DataThrowable().data(JsonResponse(false,NEED_LOGIN))
+        }else  if(v > 2){
+            throw DataThrowable().data(JsonResponse(false,NEED_LOGIN))
+        }
+        val user = getuserbytocken(accessToken).also {
+            if (it == null) throw DataThrowable().data(JsonResponse(false, NEED_LOGIN))
+        }!!
+        var source: List<web.model.BookSource>? = null
+        if(isall != null && isall == "1" && user.source == 1){
+            source=bookSourcemapper.getallBookSourcelist()
+        }else{
+            source=bookSourcemapper.getBookSourcelist(true)
+        }
         var list: MutableList<Map<String, Any?>> = mutableListOf()
         source?.forEach {
-            var source=BookSource.fromJson(it.json?:"").getOrNull()
+            val source=BookSource.fromJson(it.json?:"").getOrNull()
+            var loginUi=source?.loginUi;
+            if(loginUi != null && loginUi.isNotEmpty()){
+                kotlin.runCatching {
+                    val r=GSON.fromJsonArray<Any>(loginUi).getOrNull()
+                    loginUi= GSON.toJson(r)
+                }
+            }
+
             list.add(
                 mapOf(
                     "bookSourceGroup" to source?.bookSourceGroup,
                     "loginUrl" to source?.loginUrl,
-                    "loginUi" to source?.loginUi,
+                    "loginUi" to loginUi,
                     "bookSourceName" to it.bookSourceName,
                     "bookSourceUrl" to it.bookSourceUrl,
-                    "enabledExplore" to it.enabledExplore
+                    "enabledExplore" to it.enabledExplore,
+                    "enabled" to it.enabled
                 )
             )
         }
@@ -383,13 +455,9 @@ open class ReadController : BaseController() {
         }).also {
             if (it == null) throw DataThrowable().data(JsonResponse(false, NOT_SOURCE))
         }
-        var re = source!!.exploreUrl
-        if ((source!!.exploreUrl ?: "").contains("<js>") || (source!!.exploreUrl ?: "").contains("@js")) {
-            var webBook = WBook(source!!.json ?: "", user!!.id!!, accessToken, false)
-            re = webBook.getexploreUrl()
-        }
-        var s = BookSource.fromJson(source.json ?: "").getOrNull()
-        JsonResponse(true).Data(mapOf("found" to re, "loginUrl" to s?.loginUrl, "loginUi" to s?.loginUi))
+        val booksource = BookSource.fromJson(source!!.json ?: "").getOrNull()
+        booksource?.userid=user.id
+        JsonResponse(true).Data(mapOf("found" to booksource?.exploreKinds(), "loginUrl" to booksource?.loginUrl, "loginUi" to booksource?.loginUi))
     }
 
     @Mapping("/proypng")
@@ -462,7 +530,6 @@ open class ReadController : BaseController() {
         bookSource.userid = user.id
         bookSource.usertocken = accessToken
         var info = bookSource.getVariable()
-        println(info)
         JsonResponse(true).Data(info)
     }
 
@@ -499,6 +566,7 @@ open class ReadController : BaseController() {
         bookSource.userid = user.id
         bookSource.usertocken = accessToken
         bookSource.putLoginInfo(info ?: "{}")
+        kotlin.runCatching { bookSource.login() }
         JsonResponse(true)
     }
 
@@ -516,7 +584,7 @@ open class ReadController : BaseController() {
         var bookSource = BookSource.fromJson(source!!.json ?: "").getOrNull()!!
         bookSource.userid = user.id
         bookSource.usertocken = accessToken
-        var js =bookSource.jsLib+"\n" + bookSource.loginUrl + "\n$action"
+        var js =bookSource.loginUrl + "\n$action"
         thread {  bookSource.evalJS(js) }
         JsonResponse(true)
     }

@@ -41,6 +41,17 @@ object BookContent {
         val analyzeRule = AnalyzeRule(book, bookSource).setContent(body, baseUrl)
         analyzeRule.setRedirectUrl(redirectUrl)
         analyzeRule.nextChapterUrl = mNextChapterUrl
+        val titleRule = contentRule.title
+        if (!titleRule.isNullOrBlank()) {
+            val title = analyzeRule.runCatching {
+                getString(titleRule)
+            }.onFailure {
+                Debug.log(bookSource.bookSourceUrl, "获取标题出错, ${it.localizedMessage}")
+            }.getOrNull()
+            if (!title.isNullOrBlank()) {
+                bookChapter.title = title
+            }
+        }
         var contentData = analyzeContent(
             book, baseUrl, redirectUrl, body, contentRule, bookChapter, bookSource, mNextChapterUrl
         )
@@ -52,13 +63,14 @@ object BookContent {
                     && NetworkUtils.getAbsoluteURL(redirectUrl, nextUrl)
                     == NetworkUtils.getAbsoluteURL(redirectUrl, mNextChapterUrl)
                 ) break
+
                 nextUrlList.add(nextUrl)
                 val res = AnalyzeUrl(
                     mUrl = nextUrl,
                     source = bookSource,
                     ruleData = book,
                     headerMapF = bookSource.getHeaderMap()
-                ).getStrResponseAwait(debugLog = debugLog)
+                ).getStrResponseAwait(debugLog = null)
                 res.body?.let { nextBody ->
                     contentData = analyzeContent(
                         book, nextUrl, res.url, nextBody, contentRule,
@@ -82,7 +94,7 @@ object BookContent {
                             ruleData = book,
                             headerMapF = bookSource.getHeaderMap()
                         )
-                        val res = analyzeUrl.getStrResponseAwait(debugLog = debugLog)
+                        val res = analyzeUrl.getStrResponseAwait(debugLog = null)
                         analyzeContent(
                             book, urlStr, res.url, res.body!!, contentRule,
                             bookChapter, bookSource, mNextChapterUrl, false
@@ -141,6 +153,7 @@ object BookContent {
             }
             if(printLog) debugLog?.log(bookSource.bookSourceUrl, "└" + nextUrlList.joinToString("，"))
         }
+
         return Pair(content, nextUrlList)
     }
 }

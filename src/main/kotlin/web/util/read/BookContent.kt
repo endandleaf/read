@@ -53,25 +53,37 @@ object  BookContent {
     }
 
     private suspend fun getBookContent(accessToken:String,user: Users, source:BookSource, url:String, index:Int,type:Int):String {
-        var chapterlist= getChapterListbycache(url,user.id!!)
-        if(chapterlist == null){
-            chapterlist= getlist(url,source,user.id!!,accessToken).also{
-                setChapterListbycache(url,it,user.id!!)
-            }
-        }
-        var webBook = WBook(source.json?:"",user.id!!,accessToken, false)
-        var book= getBookbycache(url,user.id!!).let {
-            if(it==null){
-                getbook(webBook,url)!!.also { setBookbycache(url,it,user.id!!) }
-            }else{
-                it
-            }
-        }
-        var systembook=mapper.get().booklistMapper.getbook(user.id!!,url)
-        if(systembook!=null){
-            book.durChapterIndex=systembook.durChapterIndex?:0
-        }
-        return webBook.getBookContent(book,chapterlist[index]).also { if( type != 1) setBookContentbycache(url,it,index,user.id!!) }
+     runCatching {
+          var chapterlist= getChapterListbycache(url,user.id!!)
+          if(chapterlist == null){
+              chapterlist= getlist(url,source,user.id!!,accessToken).also{
+                  setChapterListbycache(url,it,user.id!!)
+              }
+          }
+          var webBook = WBook(source.json?:"",user.id!!,accessToken, false)
+          var book= getBookbycache(url,user.id!!).let {
+              if(it==null){
+                  getbook(webBook,url)!!.also { setBookbycache(url,it,user.id!!) }
+              }else{
+                  it
+              }
+          }
+          // println("目录链接1 ${chapterlist[index].baseUrl}")
+          //println("目录链接 ${chapterlist[index].url}")
+          var systembook=mapper.get().booklistMapper.getbook(user.id!!,url)
+          if(systembook!=null){
+              book.durChapterIndex=systembook.durChapterIndex?:0
+          }else{
+             runCatching {
+                  val durChapterIndex=mapper.get().cacheService.get("indexuerid:${user.id},bookurl:${url}",Int::class.java)
+                  //println("获取阅读进度:${url},index:${durChapterIndex}")
+                  book.durChapterIndex=durChapterIndex
+              }
+          }
+         var nexturl=if(index+1 < chapterlist.size) chapterlist[index+1].url else ""
+          return webBook.getBookContent(book,chapterlist[index],nexturl).also { if( type != 1) setBookContentbycache(url,it,index,user.id!!) }
+      }
+      return  ""
     }
 
     private fun getbook(webBook: WBook, url:String): Book?= runBlocking{

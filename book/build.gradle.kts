@@ -2,7 +2,7 @@ plugins {
     kotlin("jvm")
 }
 
-val kotlin_version: String ="1.9.22"
+val kotlin_version: String ="2.1.0"
 group = "read"
 version = "1.0-SNAPSHOT"
 
@@ -12,31 +12,32 @@ repositories {
 
 dependencies {
     implementation("org.jetbrains.kotlin:kotlin-stdlib-jdk8:$kotlin_version")
-    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.7.3")
+    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.10.1")
 
     // 规则相关
-    implementation("org.jsoup:jsoup:1.14.1")
-    implementation("cn.wanghaomiao:JsoupXpath:2.5.0")
-    implementation("com.jayway.jsonpath:json-path:2.6.0")
+    implementation("org.jsoup:jsoup:1.16.2")
+    implementation("cn.wanghaomiao:JsoupXpath:2.5.3")
+    implementation("com.jayway.jsonpath:json-path:2.9.0")
 
     // json
     implementation("com.google.code.gson:gson:2.11.0")
     implementation("com.fasterxml.jackson.module:jackson-module-kotlin:2.13.+")
 
     //log
-    implementation("org.slf4j:slf4j-api:1.7.6")
-    implementation("org.slf4j:slf4j-simple:1.7.6")
+    implementation("org.slf4j:slf4j-api:2.0.16")
+    //implementation("org.slf4j:slf4j-simple:2.0.16")
 
     // Retrofit
     implementation("com.squareup.retrofit2:retrofit:2.6.1")
     implementation("com.julienviet:retrofit-vertx:1.1.3")
+    implementation("org.bouncycastle:bcpkix-jdk18on:1.80")
 
     // 网络
-    implementation("com.squareup.okhttp3:okhttp:4.9.1")
+    implementation("com.squareup.okhttp3:okhttp:4.12.0")
     implementation("com.squareup.okhttp3:logging-interceptor:4.1.0")
 
     //加解密类库
-    implementation("cn.hutool:hutool-crypto:5.8.0.M1")
+    implementation("cn.hutool:hutool-crypto:5.8.22")
 
     //js
    // implementation(files("src/lib/rhino-1.7.14.jar"))

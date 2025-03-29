@@ -11,10 +11,6 @@ import book.util.help.CookieStore
 import book.util.http.*
 import book.webBook.Debug
 import book.webBook.exception.NoStackTraceException
-import book.webBook.util.JsBase64
-import cn.hutool.crypto.digest.DigestUtil
-import cn.hutool.crypto.symmetric.AES
-import cn.hutool.crypto.symmetric.DESede
 import kotlinx.coroutines.Dispatchers.IO
 import kotlinx.coroutines.async
 import kotlinx.coroutines.runBlocking
@@ -31,6 +27,7 @@ import java.util.zip.ZipInputStream
 import java.text.SimpleDateFormat
 import cn.hutool.core.util.HexUtil
 import com.script.ScriptBindings
+import java.net.URI
 import kotlin.concurrent.thread
 
 /**
@@ -39,7 +36,7 @@ import kotlin.concurrent.thread
  * /android/data/{package}/cache/...
  */
 @Suppress("unused")
-interface JsExtensions {
+interface JsExtensions: JsEncodeUtils  {
 
     fun getSource(): BaseSource?
 
@@ -48,7 +45,7 @@ interface JsExtensions {
     }
 
     fun binding(bindings: ScriptBindings){
-        bindings["Base64"] = JsBase64
+        bindings["Base64"] = Base64
     }
 
     /**
@@ -124,7 +121,9 @@ interface JsExtensions {
      * @return 返回js获取的内容
      */
     fun webView(html: String?, url: String?, js: String?): String? {
-        return null
+        val header= GSON.toJson(getSource()?.getHeaderMap(true,false))
+        val str=Response.webview(html,url,js,getSource()?.usertocken?:"",header).body
+        return str
     }
 
     /**
@@ -169,8 +168,8 @@ interface JsExtensions {
      *js实现读取cookie
      */
     fun getCookie(tag: String, key: String? = null): String {
-        val cookie = CookieStore("").getCookie(tag)
-        val cookieMap = CookieStore("").cookieToMap(cookie)
+        val cookie = CookieStore(getSource()?.userid?:"",getSource()?.getKey()).getCookie(tag)
+        val cookieMap = CookieStore(getSource()?.userid?:"",getSource()?.getKey()).cookieToMap(cookie)
         return if (key != null) {
             cookieMap[key] ?: ""
         } else {
@@ -178,19 +177,39 @@ interface JsExtensions {
         }
     }
 
+    fun getCookie(key: String): String {
+        val cookie = CookieStore(getSource()?.userid?:"",getSource()?.getKey()).getCookie(key)
+        return cookie
+    }
 
-    fun startBrowserAwait(urlStr: String,title: String): Response {
-       return Response.startBrowserAwait(urlStr,title,getSource()?.usertocken?:"")
+
+    fun startBrowserAwait(urlStr: String,title: String, refetchAfterSuccess: Boolean,hide:Boolean): Response {
+        var url = urlStr
+        if(url.startsWith("/")) {
+            url = NetworkUtils.getAbsoluteURL(getSource()?.getKey(), url)
+        }
+        val header= GSON.toJson(getSource()?.getHeaderMap(true,false))
+        println("header:$header")
+       return Response.startBrowserAwait(url,title,getSource()?.usertocken?:"",hide,header)
+    }
+
+
+    fun startBrowserHideAwait(url: String, title: String): Response {
+        return startBrowserAwait(url, title,false,true)
     }
 
     fun startBrowser(url: String, title: String) {
         thread {
-            startBrowserAwait(url, title)
+            startBrowserAwait(url, title,false,false)
         }
     }
 
     fun startBrowserAwait(url: String, title: String, refetchAfterSuccess: Boolean): Response {
-        return startBrowserAwait(url, title)
+        return startBrowserAwait(url, title,refetchAfterSuccess,false)
+    }
+
+    fun startBrowserAwait(url: String, title: String): Response {
+        return startBrowserAwait(url, title,false,false)
     }
 
     fun  toast(str : String){
@@ -298,14 +317,6 @@ interface JsExtensions {
         return EncoderUtils.base64Encode(str, flags)
     }
 
-    fun md5Encode(str: String): String {
-        //println(str)
-        return MD5Utils.md5Encode(str)
-    }
-
-    fun md5Encode16(str: String): String {
-        return MD5Utils.md5Encode16(str)
-    }
 
     /**
      * 格式化时间
@@ -594,368 +605,5 @@ interface JsExtensions {
         return UUID.randomUUID().toString()
     }
 
-    /**
-     * AES 解码为 ByteArray
-     * @param str 传入的AES加密的数据
-     * @param key AES 解密的key
-     * @param transformation AES加密的方式
-     * @param iv ECB模式的偏移向量
-     */
-    fun aesDecodeToByteArray(
-        str: String, key: String, transformation: String, iv: String
-    ): ByteArray? {
-        return try {
-            EncoderUtils.decryptAES(
-                data = str.encodeToByteArray(),
-                key = key.encodeToByteArray(),
-                transformation,
-                iv.encodeToByteArray()
-            )
-        } catch (e: Exception) {
-            e.printOnDebug()
-            log(e.localizedMessage ?: "aesDecodeToByteArrayERROR")
-            null
-        }
-    }
-
-    /**
-     * AES 解码为 String
-     * @param str 传入的AES加密的数据
-     * @param key AES 解密的key
-     * @param transformation AES加密的方式
-     * @param iv ECB模式的偏移向量
-     */
-
-    fun aesDecodeToString(
-        str: String, key: String, transformation: String, iv: String
-    ): String? {
-        return aesDecodeToByteArray(str, key, transformation, iv)?.let { String(it) }
-    }
-
-    /**
-     * 已经base64的AES 解码为 ByteArray
-     * @param str 传入的AES Base64加密的数据
-     * @param key AES 解密的key
-     * @param transformation AES加密的方式
-     * @param iv ECB模式的偏移向量
-     */
-
-    fun aesBase64DecodeToByteArray(
-        str: String, key: String, transformation: String, iv: String
-    ): ByteArray? {
-        return try {
-            EncoderUtils.decryptBase64AES(
-                str.encodeToByteArray(),
-                key.encodeToByteArray(),
-                transformation,
-                iv.encodeToByteArray()
-            )
-        } catch (e: Exception) {
-            e.printOnDebug()
-            log(e.localizedMessage ?: "aesDecodeToByteArrayERROR")
-            null
-        }
-    }
-
-    /**
-     * 已经base64的AES 解码为 String
-     * @param str 传入的AES Base64加密的数据
-     * @param key AES 解密的key
-     * @param transformation AES加密的方式
-     * @param iv ECB模式的偏移向量
-     */
-
-    fun aesBase64DecodeToString(
-        str: String, key: String, transformation: String, iv: String
-    ): String? {
-        return aesBase64DecodeToByteArray(str, key, transformation, iv)?.let { String(it) }
-    }
-
-    /**
-     * 加密aes为ByteArray
-     * @param data 传入的原始数据
-     * @param key AES加密的key
-     * @param transformation AES加密的方式
-     * @param iv ECB模式的偏移向量
-     */
-    fun aesEncodeToByteArray(
-        data: String, key: String, transformation: String, iv: String
-    ): ByteArray? {
-        return try {
-            EncoderUtils.encryptAES(
-                data.encodeToByteArray(),
-                key = key.encodeToByteArray(),
-                transformation,
-                iv.encodeToByteArray()
-            )
-        } catch (e: Exception) {
-            e.printOnDebug()
-            log(e.localizedMessage ?: "aesEncodeToByteArrayERROR")
-            null
-        }
-    }
-
-    /**
-     * 加密aes为String
-     * @param data 传入的原始数据
-     * @param key AES加密的key
-     * @param transformation AES加密的方式
-     * @param iv ECB模式的偏移向量
-     */
-    fun aesEncodeToString(
-        data: String, key: String, transformation: String, iv: String
-    ): String? {
-        return aesEncodeToByteArray(data, key, transformation, iv)?.let { String(it) }
-    }
-
-    /**
-     * 加密aes后Base64化的ByteArray
-     * @param data 传入的原始数据
-     * @param key AES加密的key
-     * @param transformation AES加密的方式
-     * @param iv ECB模式的偏移向量
-     */
-    fun aesEncodeToBase64ByteArray(
-        data: String, key: String, transformation: String, iv: String
-    ): ByteArray? {
-        return try {
-            EncoderUtils.encryptAES2Base64(
-                data.encodeToByteArray(),
-                key.encodeToByteArray(),
-                transformation,
-                iv.encodeToByteArray()
-            )
-        } catch (e: Exception) {
-            e.printOnDebug()
-            log(e.localizedMessage ?: "aesEncodeToBase64ByteArrayERROR")
-            null
-        }
-    }
-
-    /**
-     * 加密aes后Base64化的String
-     * @param data 传入的原始数据
-     * @param key AES加密的key
-     * @param transformation AES加密的方式
-     * @param iv ECB模式的偏移向量
-     */
-    fun aesEncodeToBase64String(
-        data: String, key: String, transformation: String, iv: String
-    ): String? {
-        return aesEncodeToBase64ByteArray(data, key, transformation, iv)?.let { String(it) }
-    }
-
-
-
-    /**
-     * AES解密，算法参数经过Base64加密
-     *
-     * @param data 加密的字符串
-     * @param key Base64后的密钥
-     * @param mode 模式
-     * @param padding 补码方式
-     * @param iv Base64后的加盐
-     * @return 解密后的字符串
-     */
-    fun aesDecodeArgsBase64Str(
-        data: String,
-        key: String,
-        mode: String,
-        padding: String,
-        iv: String
-    ): String? {
-        return AES(
-            mode,
-            padding,
-            Base64.decode(key, Base64.NO_WRAP),
-            Base64.decode(iv, Base64.NO_WRAP)
-        ).decryptStr(data)
-    }
-
-    /**
-     * 3DES解密
-     *
-     * @param data 加密的字符串
-     * @param key 密钥
-     * @param mode 模式
-     * @param padding 补码方式
-     * @param iv 加盐
-     * @return 解密后的字符串
-     */
-    fun tripleDESDecodeStr(
-        data: String,
-        key: String,
-        mode: String,
-        padding: String,
-        iv: String
-    ): String? {
-        return DESede(mode, padding, key.toByteArray(), iv.toByteArray()).decryptStr(data)
-    }
-
-    /**
-     * 3DES解密，算法参数经过Base64加密
-     *
-     * @param data 加密的字符串
-     * @param key Base64后的密钥
-     * @param mode 模式
-     * @param padding 补码方式
-     * @param iv Base64后的加盐
-     * @return 解密后的字符串
-     */
-    fun tripleDESDecodeArgsBase64Str(
-        data: String,
-        key: String,
-        mode: String,
-        padding: String,
-        iv: String
-    ): String? {
-        return DESede(
-            mode,
-            padding,
-            Base64.decode(key, Base64.NO_WRAP),
-            Base64.decode(iv, Base64.NO_WRAP)
-        ).decryptStr(data)
-    }
-
-    /**
-     * AES加密并转为Base64，算法参数经过Base64加密
-     *
-     * @param data 被加密的字符串
-     * @param key Base64后的密钥
-     * @param mode 模式
-     * @param padding 补码方式
-     * @param iv Base64后的加盐
-     * @return 加密后的Base64
-     */
-    fun aesEncodeArgsBase64Str(
-        data: String,
-        key: String,
-        mode: String,
-        padding: String,
-        iv: String
-    ): String? {
-        return AES(
-            mode,
-            padding,
-            Base64.decode(key, Base64.NO_WRAP),
-            Base64.decode(iv, Base64.NO_WRAP)
-        ).encryptBase64(data)
-    }
-    /////DES
-    fun desDecodeToString(
-        data: String, key: String, transformation: String, iv: String
-    ): String? {
-        return EncoderUtils.decryptDES(
-            data.encodeToByteArray(),
-            key.encodeToByteArray(),
-            transformation,
-            iv.encodeToByteArray()
-        )?.let { String(it) }
-    }
-
-    fun desBase64DecodeToString(
-        data: String, key: String, transformation: String, iv: String
-    ): String? {
-        return EncoderUtils.decryptBase64DES(
-            data.encodeToByteArray(),
-            key.encodeToByteArray(),
-            transformation,
-            iv.encodeToByteArray()
-        )?.let { String(it) }
-    }
-
-    fun desEncodeToString(
-        data: String, key: String, transformation: String, iv: String
-    ): String? {
-        return EncoderUtils.encryptDES(
-            data.encodeToByteArray(),
-            key.encodeToByteArray(),
-            transformation,
-            iv.encodeToByteArray()
-        )?.let { String(it) }
-    }
-
-    fun desEncodeToBase64String(
-        data: String, key: String, transformation: String, iv: String
-    ): String? {
-        return EncoderUtils.encryptDES2Base64(
-            data.encodeToByteArray(),
-            key.encodeToByteArray(),
-            transformation,
-            iv.encodeToByteArray()
-        )?.let { String(it) }
-    }
-    /**
-     * 3DES加密并转为Base64
-     *
-     * @param data 被加密的字符串
-     * @param key 密钥
-     * @param mode 模式
-     * @param padding 补码方式
-     * @param iv 加盐
-     * @return 加密后的Base64
-     */
-    fun tripleDESEncodeBase64Str(
-        data: String,
-        key: String,
-        mode: String,
-        padding: String,
-        iv: String
-    ): String? {
-        return DESede(mode, padding, key.toByteArray(), iv.toByteArray()).encryptBase64(data)
-    }
-
-    /**
-     * 3DES加密并转为Base64，算法参数经过Base64加密
-     *
-     * @param data 被加密的字符串
-     * @param key Base64后的密钥
-     * @param mode 模式
-     * @param padding 补码方式
-     * @param iv Base64后的加盐
-     * @return 加密后的Base64
-     */
-    fun tripleDESEncodeArgsBase64Str(
-        data: String,
-        key: String,
-        mode: String,
-        padding: String,
-        iv: String
-    ): String? {
-        return DESede(
-            mode,
-            padding,
-            Base64.decode(key, Base64.NO_WRAP),
-            Base64.decode(iv, Base64.NO_WRAP)
-        ).encryptBase64(data)
-    }
-
-    /**
-     * 生成摘要，并转为16进制字符串
-     *
-     * @param data 被摘要数据
-     * @param algorithm 签名算法
-     * @return 16进制字符串
-     */
-    fun digestHex(
-        data: String,
-        algorithm: String,
-    ): String? {
-        return DigestUtil.digester(algorithm).digestHex(data)
-    }
-
-    /**
-     * 生成摘要，并转为Base64字符串
-     *
-     * @param data 被摘要数据
-     * @param algorithm 签名算法
-     * @return Base64字符串
-     */
-    fun digestBase64Str(
-        data: String,
-        algorithm: String,
-    ): String? {
-        return Base64.encodeToString(DigestUtil.digester(algorithm).digest(data), Base64.NO_WRAP)
-    }
 
 }

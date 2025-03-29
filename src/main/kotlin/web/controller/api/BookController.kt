@@ -6,6 +6,7 @@ import book.model.Book
 import book.model.BookChapter
 import book.model.BookSource
 import book.model.SearchBook
+import book.util.help.CookieStore
 import book.webBook.WBook
 import com.google.gson.Gson
 import com.google.gson.reflect.TypeToken
@@ -23,6 +24,7 @@ import org.noear.solon.data.cache.CacheService
 import org.noear.solon.web.cors.annotation.CrossOrigin
 import web.controller.api.ReadController.Companion.getBookbycache
 import web.controller.api.ReadController.Companion.setBookbycache
+import web.controller.api.ReadController.Companion.setChapterListbycache
 import web.mapper.BookCacheMapper
 import web.mapper.BookGroupMapper
 import web.mapper.BooklistMapper
@@ -33,6 +35,7 @@ import web.model.Booklist
 import web.model.UserCookie
 import web.response.*
 import web.util.read.Bookcache
+import web.util.read.getlist
 import web.util.read.updatebook
 import java.io.File
 import java.net.URI
@@ -170,6 +173,15 @@ open class BookController:BaseController() {
         }.onFailure {
             return@runBlocking JsonResponse(false,BOOKSEARCHERROR)
         }
+        val chapters=getlist(book.bookUrl!!, source, user.id!!, accessToken ?: "").also {
+            setChapterListbycache(book.bookUrl!!, it,user.id!!)
+        }
+        if(book.totalChapterNum != chapters.size){
+            book.totalChapterNum = chapters.size
+            book.latestChapterTitle=chapters[chapters.size-1].title
+            book.latestChapterTime=System.currentTimeMillis()
+        }
+        book.lastCheckTime=System.currentTimeMillis()
         booklistMapper.updateById(book.bookto(new!!,false))
         JsonResponse(true,SUCCESS).Data(book)
     }
@@ -281,6 +293,7 @@ open class BookController:BaseController() {
                 throw DataThrowable().data(JsonResponse(false,NOT_BANK))
             }
         }!!
+        bookCacheMapper.getlistbyuserid(user.id!!).also { if(it.size >=  5) throw DataThrowable().data(JsonResponse(false,CACHE_ERROR))}
         if (booktolist.origin == "loc_book"){
             var cache= BookCache().create(user.id!!,booktolist)
             cache.num=booktolist.totalChapterNum
@@ -322,7 +335,7 @@ open class BookController:BaseController() {
 
     @CacheRemove(tags = "search\${accessToken}")
     @Mapping("/saveCookies")
-    open fun saveCookies( accessToken:String?, url: String,cookie:String, html: String?)=run{
+    open fun saveCookies( accessToken:String?, url: String,cookie:String, html: String?, id: String?)=run{
         val user=getuserbytocken(accessToken).also {
             if(it == null){
                 throw DataThrowable().data(JsonResponse(false,NEED_LOGIN))
@@ -331,34 +344,93 @@ open class BookController:BaseController() {
         if (url.isBlank()){
             throw DataThrowable().data(JsonResponse(false,NOT_BANK))
         }
-        var host=geturl(url)
-        userCookieMapper.getcookie(user.id!!,host).let {
-            if (it != null){
-                it.value=cookie
-                userCookieMapper.updateById(it)
-            }else{
-                var c= UserCookie().create(user.id!!)
-                c.value = cookie
-                c.host=host
-                userCookieMapper.insert(c)
+        if((id?:"").isNotEmpty()){
+            runBlocking {
+                println("webview:$id,加载完成")
+                ApiWebSocket.addhtml(id = id?:"",html = html?:"")
             }
         }
-        runBlocking {
-            ApiWebSocket.addhtml(key = accessToken?:"",html = html?:"")
-        }
+        var host=geturl(url)
+       runCatching {
+            userCookieMapper.getcookie(user.id!!,host).let {
+                if (it != null){
+                    it.value=cookie
+                    userCookieMapper.updateById(it)
+                }else{
+                    var c= UserCookie().create(user.id!!,host)
+                    c.value = cookie
+                    c.host=host
+                    userCookieMapper.insert(c)
+                }
+            }
+        }.onFailure {
+           userCookieMapper.removeCookie(user.id!!,host)
+           var c= UserCookie().create(user.id!!,host)
+           c.value = cookie
+           c.host=host
+           userCookieMapper.insert(c)
+       }
         JsonResponse(true)
     }
 
-
-    @Mapping("/noCookies")
-    open fun noCookies( accessToken:String?)=run{
+    //@CacheRemove(tags = "search\${accessToken}")
+    @Mapping("/savehtml")
+    open fun savehtml( accessToken:String?, html: String?, id: String?)=run{
         val user=getuserbytocken(accessToken).also {
             if(it == null){
                 throw DataThrowable().data(JsonResponse(false,NEED_LOGIN))
             }
         }!!
+        if((id?:"").isNotEmpty()){
+            runBlocking {
+                println("webview:$id,加载完成")
+                ApiWebSocket.addhtml(id = id?:"",html = html?:"")
+            }
+        }
+        JsonResponse(true)
+    }
+
+    @CacheRemove(tags = "search\${accessToken}")
+    @Mapping("/cleancookies")
+    open fun cleancookies( accessToken:String?)=run{
+        val user=getuserbytocken(accessToken).also {
+            if(it == null){
+                throw DataThrowable().data(JsonResponse(false,NEED_LOGIN))
+            }
+        }!!
+        userCookieMapper.delUsercookies(user.id!!)
+        val file=File("cookie/${user.id}")
+        if(file.exists()){
+            println("删除文件夹");
+            file.deleteRecursively()
+        }
+        JsonResponse(true)
+    }
+
+    @CacheRemove(tags = "search\${accessToken}")
+    @Mapping("/cleansourcecookies")
+    open fun cleansourcecookies( accessToken:String?, url: String)=run{
+        val user=getuserbytocken(accessToken).also {
+            if(it == null){
+                throw DataThrowable().data(JsonResponse(false,NEED_LOGIN))
+            }
+        }!!
+        var source=getsource(url)?:throw DataThrowable().data(JsonResponse(false,NOT_SOURCE))
+        CookieStore(user.id!!,source.bookSourceUrl).clear()
+        JsonResponse(true)
+    }
+
+
+    @Mapping("/noCookies")
+    open fun noCookies( accessToken:String?,id:String?)=run{
+        val user=getuserbytocken(accessToken).also {
+            if(it == null){
+                throw DataThrowable().data(JsonResponse(false,NEED_LOGIN))
+            }
+        }!!
+       if(id ==  null || id.isEmpty()) throw DataThrowable().data(JsonResponse(false, NOT_BANK))
         runBlocking {
-            ApiWebSocket.addhtml(key = accessToken?:"",html = "")
+            ApiWebSocket.addhtml(id = id?:"",html = "")
         }
         JsonResponse(true)
     }

@@ -24,7 +24,7 @@ class CacheJob: Runnable {
         }
         logger.info("开始添加缓存")
         isupdatebookcron = true
-        var caches = mapper.get().bookCacheMapper.selectList(QueryWrapper())
+        val caches = mapper.get().bookCacheMapper.selectList(QueryWrapper())
         runCatching {
             caches.forEach {
                 thread { Bookcache.addcache(it.id!!) }

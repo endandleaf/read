@@ -3,6 +3,7 @@ package book.webBook.analyzeRule
 import book.model.BaseSource
 import book.model.Book
 import book.model.BookChapter
+import book.model.BookSource
 import book.util.*
 import book.util.AppConst.UA_NAME
 import book.util.AppPattern.JS_PATTERN
@@ -22,7 +23,6 @@ import com.script.rhino.RhinoScriptEngine
 import kotlin.coroutines.ContinuationInterceptor
 import kotlin.coroutines.CoroutineContext
 import kotlin.coroutines.EmptyCoroutineContext
-import book.webBook.util.JsBase64
 
 
 class AnalyzeUrl(
@@ -92,40 +92,40 @@ class AnalyzeUrl(
 
         //执行@js,<js></js>
         analyzeJs()
-
+        //println("ruleUrl1 $ruleUrl")
         //替换参数
         if(needanalyzeUrl)  replaceKeyPageJs()
-
+        //println("ruleUrl2 $ruleUrl")
 
         //处理URL
         if(needanalyzeUrl) analyzeUrl()
 
-        //println("ruleUrl:$ruleUrl")
-
+       // println("ruleUrl3 $ruleUrl")
     }
 
     private fun analyzeJs() {
         var start = 0
-        var tmp: String
         val jsMatcher = JS_PATTERN.matcher(ruleUrl)
+        var result = ruleUrl
         while (jsMatcher.find()) {
             if (jsMatcher.start() > start) {
-                tmp =
-                    ruleUrl.substring(start, jsMatcher.start()).trim { it <= ' ' }
-                //println(tmp)
-                if (tmp.isNotEmpty()) {
-                    ruleUrl = tmp.replace("@result", ruleUrl)
+                ruleUrl.substring(start, jsMatcher.start()).trim().let {
+                    if (it.isNotEmpty()) {
+                        result = it.replace("@result", result)
+                    }
                 }
             }
-            ruleUrl = evalJS(jsMatcher.group(2) ?: jsMatcher.group(1), ruleUrl) as String
+            result = evalJS(jsMatcher.group(2) ?: jsMatcher.group(1), result).toString()
             start = jsMatcher.end()
         }
         if (ruleUrl.length > start) {
-            tmp = ruleUrl.substring(start).trim { it <= ' ' }
-            if (tmp.isNotEmpty()) {
-                ruleUrl = tmp.replace("@result", ruleUrl)
+            ruleUrl.substring(start).trim().let {
+                if (it.isNotEmpty()) {
+                    result = it.replace("@result", result)
+                }
             }
         }
+        ruleUrl = result
     }
 
     /**
@@ -138,13 +138,11 @@ class AnalyzeUrl(
             //替换所有内嵌{{js}}
             val url = analyze.innerRule("{{", "}}") {
                 val jsEval = evalJS(it) ?: ""
-                //println(jsEval)
                 when {
                     jsEval is String -> jsEval
                     jsEval is Double && jsEval % 1.0 == 0.0 -> String.format("%.0f", jsEval)
-                    else -> URLEncoder.encode(jsEval.toString(), "UTF-8")
+                    else -> jsEval.toString()
                 }
-
             }
             if (url.isNotEmpty()) ruleUrl = url
         }
@@ -254,7 +252,7 @@ class AnalyzeUrl(
         val bindings = buildScriptBindings { bindings ->
             bindings["java"] = this
             bindings["baseUrl"] = baseUrl
-            bindings["cookie"] = CookieStore(userid)
+            bindings["cookie"] = CookieStore(userid,source?.getKey())
             bindings["cache"] = CacheManager
             bindings["page"] = page
             bindings["key"] = key
@@ -273,6 +271,12 @@ class AnalyzeUrl(
     }
 
     fun put(key: String, value: String): String {
+        if(source != null){
+            val userid = source.userid?:""
+            chapter?.userid = userid
+            ruleData?.userid = userid
+        }
+        //println("put key:$key,value:$value")
         chapter?.putVariable(key, value)
             ?: ruleData?.putVariable(key, value)
         return value
@@ -284,7 +288,7 @@ class AnalyzeUrl(
         if(source != null){
             userid = source.userid?:""
         }
-        var store=CookieStore(userid)
+        var store=CookieStore(userid,source?.getKey())
         val cookie = store.getCookie(tag ?: url)
         //println("cookie : $cookie")
         if (cookie.isNotEmpty()) {
@@ -315,10 +319,14 @@ class AnalyzeUrl(
         setCookie(source?.getKey())
         val strResponse: StrResponse
         if (this.useWebView && useWebView) {
-            throw Exception("不支持webview")
+            //println("webview url is $url")
+            var s=startBrowserHideAwait(url,"webview")
+            //println("gethtml ,${ s.body}")
+            return StrResponse(url,s.body)
+            //throw Exception("不支持webview")
         } else {
             //println("proxy"+proxy.toString())
-            strResponse = getProxyClient(proxy, debugLog).newCallStrResponse(retry) {
+            strResponse = getProxyClient(proxy, null).newCallStrResponse(retry) {
                 addHeaders(headerMap)
                 when (method) {
                     RequestMethod.POST -> {
@@ -345,7 +353,7 @@ class AnalyzeUrl(
             if(source != null){
                 userid = source.userid?:""
             }
-            var store=CookieStore(userid)
+            var store=CookieStore(userid,source?.getKey())
             store.setCookienourl(it,(source?.getKey())?:urlNoQuery)
         }
         //println(strResponse.body)
@@ -363,7 +371,7 @@ class AnalyzeUrl(
         debugLog: DebugLog? = null
     ): StrResponse {
         return runBlocking {
-            getStrResponseAwait(jsStr, sourceRegex, useWebView, debugLog)
+            getStrResponseAwait(jsStr, sourceRegex, useWebView, null)
         }
     }
 

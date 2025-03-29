@@ -76,6 +76,7 @@ object SourceAnalyzer {
                     bookSourceUrl = jsonItem.readString("bookSourceUrl")
                         ?: throw NoStackTraceException("格式不对")
                     bookSourceName = jsonItem.readString("bookSourceName") ?: ""
+                    variableComment = jsonItem.readString("variableComment") ?: ""
                     bookSourceGroup = jsonItem.readString("bookSourceGroup")
                     loginUrl = jsonItem.readString("loginUrl")
                     loginUi = jsonItem.readString("loginUi")
@@ -148,12 +149,15 @@ object SourceAnalyzer {
                     ruleContent = ContentRule(
                         content = content,
                         replaceRegex = toNewRule(jsonItem.readString("ruleBookContentReplace")),
+                        title = toNewRule(jsonItem.readString("title")),
                         nextContentUrl = toNewRule(jsonItem.readString("ruleContentUrlNext"))
+
                     )
                 }
             } else {
                 source.jsLib=sourceAny.jsLib
                 source.bookSourceUrl = sourceAny.bookSourceUrl
+                source.variableComment = sourceAny.variableComment
                 source.bookSourceName = sourceAny.bookSourceName
                 source.bookSourceGroup = sourceAny.bookSourceGroup
                 source.bookSourceType = sourceAny.bookSourceType
@@ -248,6 +252,7 @@ object SourceAnalyzer {
         var ruleContent: Any? = null   ,                 // 正文页规则
         var jsLib:String?=null,
         var enabledCookieJar: Boolean?=false,
+        var variableComment:String?=null,
     )
 
     // default规则适配

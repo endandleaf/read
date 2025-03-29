@@ -6,10 +6,9 @@ import book.model.Book
 import book.model.BookChapter
 import book.model.BookSource
 import book.model.SearchBook
-import book.util.GSON
+import book.util.AppPattern.JS_PATTERN
 import book.util.http.StrResponse
 import book.webBook.analyzeRule.AnalyzeUrl
-import com.google.gson.Gson
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 
@@ -57,15 +56,12 @@ class WBook (val bookSource: BookSource, val debugLog: Boolean = true, var debug
 //    }
 
     fun getexploreUrl():String = run{
+        val jsMatcher = JS_PATTERN.matcher(bookSource.exploreUrl!!)
         if(bookSource.exploreUrl == null){
             return  ""
-        }else if (bookSource.exploreUrl!!.contains("<js>") || bookSource.exploreUrl!!.contains("@js")) {
-            var jsStr=bookSource.exploreUrl!!
-            jsStr=jsStr.replace("<js>", "").replace("</js>", "").replace("@js","").replace("const","let")
-            if ( (bookSource.jsLib?:"").isNotBlank()){
-                jsStr=bookSource.jsLib+"\n"+jsStr
-            }
-            val jsEval=bookSource.evalJS(jsStr)
+        }else if (jsMatcher.find()) {
+
+            val jsEval = bookSource.evalJS(jsMatcher.group(2) ?: jsMatcher.group(1))
             when {
                 jsEval is String -> return@run jsEval
                 jsEval is Double && jsEval % 1.0 == 0.0 -> return@run  String.format("%.0f", jsEval)
@@ -78,6 +74,8 @@ class WBook (val bookSource: BookSource, val debugLog: Boolean = true, var debug
 
     suspend fun searchBook(key: String, page: Int? = 1): List<SearchBook> {
         val variableBook = SearchBook(origin = sourceUrl)
+        variableBook.userid=userid?:""
+        variableBook.searchinit()
         return bookSource.searchUrl?.let {searchUrl->
             val analyzeUrl = AnalyzeUrl(
                 mUrl = searchUrl,
@@ -89,13 +87,18 @@ class WBook (val bookSource: BookSource, val debugLog: Boolean = true, var debug
                 headerMapF = bookSource.getHeaderMap(true),
             )
 
-            var res = analyzeUrl.getStrResponseAwait(debugLog = debugger)
+            var res = analyzeUrl.getStrResponseAwait(debugLog = null)
+
+            if(debugger != null){
+                debugger?.log("搜索源码Qwq${res.body}");
+            }
 
             bookSource.loginCheckJs?.let { checkJs ->
                 if (checkJs.isNotBlank()) {
                     res = analyzeUrl.evalJS(checkJs, res) as StrResponse
                 }
             }
+
             BookList.analyzeBookList(
                 res.body,
                 bookSource,
@@ -120,6 +123,8 @@ class WBook (val bookSource: BookSource, val debugLog: Boolean = true, var debug
         page: Int? = 1
     ): List<SearchBook> {
         val variableBook =  SearchBook(origin = sourceUrl)
+        variableBook.userid=userid?:""
+        variableBook.searchinit()
         val analyzeUrl = AnalyzeUrl(
             mUrl = url,
             page = page,
@@ -128,7 +133,10 @@ class WBook (val bookSource: BookSource, val debugLog: Boolean = true, var debug
             ruleData = variableBook,
             headerMapF = bookSource.getHeaderMap(true)
         )
-        var res = analyzeUrl.getStrResponseAwait(debugLog = debugger)
+        var res = analyzeUrl.getStrResponseAwait(debugLog = null)
+        if(debugger != null){
+            debugger?.log("发现源码Qwq${res.body}");
+        }
         //检测书源是否已登录
         bookSource.loginCheckJs?.let { checkJs ->
             if (checkJs.isNotBlank()) {
@@ -152,6 +160,7 @@ class WBook (val bookSource: BookSource, val debugLog: Boolean = true, var debug
     suspend fun getBookInfo(book: Book, canReName: Boolean = true): Book {
         book.type = bookSource.bookSourceType
         if (!book.infoHtml.isNullOrEmpty()) {
+            book.userid=userid?:""
             BookInfo.analyzeBookInfo(
                 book,
                 book.infoHtml,
@@ -172,6 +181,7 @@ class WBook (val bookSource: BookSource, val debugLog: Boolean = true, var debug
     suspend fun getBookInfo(bookUrl: String, canReName: Boolean = true): Book {
         val book = Book()
         book.bookUrl = bookUrl
+        book.userid=userid?:""
         book.origin = bookSource.bookSourceUrl
         book.originName = bookSource.bookSourceName
         book.originOrder = bookSource.customOrder
@@ -183,7 +193,10 @@ class WBook (val bookSource: BookSource, val debugLog: Boolean = true, var debug
             ruleData = book,
             headerMapF = bookSource.getHeaderMap(true)
         )
-        var res = analyzeUrl.getStrResponseAwait(debugLog = debugger)
+        var res = analyzeUrl.getStrResponseAwait(debugLog = null)
+        if(debugger != null){
+            debugger?.log("书籍源码Qwq${res.body}");
+        }
         //检测书源是否已登录
         bookSource.loginCheckJs?.let { checkJs ->
             if (checkJs.isNotBlank()) {
@@ -202,6 +215,7 @@ class WBook (val bookSource: BookSource, val debugLog: Boolean = true, var debug
     suspend fun getChapterList(
         book: Book
     ): List<BookChapter> {
+        book.userid=userid?:""
         book.type = bookSource.bookSourceType
         return if (book.bookUrl == book.tocUrl && !book.tocHtml.isNullOrEmpty()) {
             BookChapterList.analyzeChapterList(
@@ -219,7 +233,10 @@ class WBook (val bookSource: BookSource, val debugLog: Boolean = true, var debug
                 ruleData = book,
                 headerMapF = bookSource.getHeaderMap(true)
             )
-            var res = analyzeUrl.getStrResponseAwait(debugLog = debugger)
+            var res = analyzeUrl.getStrResponseAwait(debugLog = null)
+            if(debugger != null){
+                debugger?.log("目录源码Qwq${res.body}");
+            }
             //检测书源是否已登录
             bookSource.loginCheckJs?.let { checkJs ->
                 if (checkJs.isNotBlank()) {
@@ -239,6 +256,7 @@ class WBook (val bookSource: BookSource, val debugLog: Boolean = true, var debug
         // bookChapterUrl:String,
         nextChapterUrl: String? = null
     ): String {
+        book.userid=userid?:""
         //println(bookSource.ruleContent?.content)
         //println(GSON.toJson(bookChapter))
         if (bookSource.getContentRule().content.isNullOrEmpty()) {
@@ -264,8 +282,11 @@ class WBook (val bookSource: BookSource, val debugLog: Boolean = true, var debug
         var res = analyzeUrl.getStrResponseAwait(
             jsStr = bookSource.getContentRule().webJs,
             sourceRegex = bookSource.getContentRule().sourceRegex,
-            debugLog = debugger
+            debugLog = null
         )
+        if(debugger != null){
+            debugger?.log("正文源码Qwq${res.body}");
+        }
         return BookContent.analyzeContent(
             res.body,
             book,

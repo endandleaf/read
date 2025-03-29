@@ -52,38 +52,41 @@ class ApiWebSocket : SimpleWebSocketListener() {
             }
         }
 
-        suspend fun lock(key:String){
+        suspend fun lock(id:String){
             var webMsg = WebMsg()
+            logger.info("WebSocket lock $id")
+            webMsg.semaphore.acquire()
             mutex.withLock {
-                logger.info("WebSocket lock $key")
-                webMsg.semaphore.acquire()
-                malock[key]=webMsg
+                malock[id]=webMsg
             }
             webMsg.semaphore.acquire()
-            logger.info("WebSocket endlock $key")
+            logger.info("WebSocket endlock $id")
         }
 
-        suspend fun gethtml(key:String):String{
+        suspend fun gethtml(id:String):String{
             var html=""
-            logger.info("WebSocket gethtml $key")
+            var webMsg: WebMsg? = null
+            logger.info("WebSocket gethtml $id")
             mutex.withLock {
-                var webMsg = malock[key]
-                if(webMsg!=null){
-                    html=webMsg.html
-                    malock.remove( key)
-                }
+                webMsg = malock[id]
+            }
+            if(webMsg!=null){
+                html=webMsg!!.html
+                malock.remove( id)
             }
             return html
         }
 
-        suspend fun addhtml(key:String,html:String){
-            logger.info("WebSocket addhtml $key")
+        suspend fun addhtml(id:String,html:String){
+            logger.info("WebSocket addhtml $id")
+            var webMsg: WebMsg? = null
             mutex.withLock {
-                var webMsg = malock[key]
-                if(webMsg!=null){
-                    webMsg.html=html
-                    webMsg.semaphore.release()
-                }
+                 webMsg = malock[id]
+            }
+            if(webMsg!=null){
+                webMsg!!.html=html
+                webMsg!!.semaphore.release()
+                webMsg!!.semaphore.release()
             }
         }
     }

@@ -9,7 +9,7 @@ import com.google.gson.reflect.TypeToken
 
 @JsonIgnoreProperties("variableMap", "infoHtml", "tocHtml", "origins", "kindList")
 data class SearchBook(
-    override var bookUrl: String = "",
+    private var _bookUrl: String = "",
     var origin: String = "",                     // 书源规则
     var originName: String = "",
     var type: Int = 0,                          // @BookType
@@ -25,24 +25,52 @@ data class SearchBook(
     var variable: String? = null,
     var originOrder: Int = 0,
 ) : BaseBook {
+
     override var userid: String = ""
         set(value) {
             if (value.isNotBlank() && value != field) {
                 field = value
-                if(variable.isNullOrBlank()){
-                    variable=getvariableMap(value)
-                }else{
-                   runCatching {
-                        var old=GSON.fromJsonObject<HashMap<String, String>>(variable).getOrNull() ?: hashMapOf()
-                        GSON.fromJsonObject<HashMap<String, String>>(getvariableMap(value)).getOrNull() ?: hashMapOf<String, String>().forEach{(k,v)->
-                            old[k] = v
-                        }
-                        variable = GSON.toJson(old)
-                    }
-                }
-
+                init()
             }
         }
+    override var bookUrl: String = _bookUrl
+        set(value) {
+            field = value
+            //init()
+        }
+
+    fun init(){
+        if(isinit || userid.isEmpty()){
+            return
+        }
+        if(bookUrl.isNotEmpty() || isseachbook){
+            //println(variable)
+            //println("init ${bookUrl}")
+            if(variable.isNullOrBlank()){
+                variable=getvariableMap(userid)
+            }else{
+                runCatching {
+                    var old=GSON.fromJsonObject<HashMap<String, String>>(variable).getOrNull() ?: hashMapOf()
+                    GSON.fromJsonObject<HashMap<String, String>>(getvariableMap(userid)).getOrNull() ?: hashMapOf<String, String>().forEach{(k,v)->
+                        old[k] = v
+                    }
+                    val json=GSON.toJson(old)
+                    variable = json
+                    putVariable(json)
+                }
+            }
+            isinit = true
+        }
+    }
+
+    fun searchinit(){
+        isseachbook=true
+        init()
+    }
+
+
+
+    override var isinit: Boolean = false
 
     override var infoHtml: String? = null
 
@@ -57,16 +85,18 @@ data class SearchBook(
         return false
     }
 
+    private var isseachbook=false
+
     override val variableMap: HashMap<String, String>
         get() {
             return GSON.fromJsonObject<HashMap<String, String>>(getvariableMap(userid)).getOrNull() ?: hashMapOf()
         }
 
     private fun getCachename(userid:String):String{
-        if(bookUrl == ""){
-            return "variableMap${origin}_userid_${userid}"
+        if(isseachbook){
+            return "searchbookvariableMap${origin}_userid_${userid}"
         }
-        return "variableMap${bookUrl}_userid_${userid}"
+        return "searchbookvariableMap${bookUrl}_userid_${userid}"
     }
 
 
@@ -94,24 +124,35 @@ data class SearchBook(
     }
 
     override fun putVariable(key: String, value: String?) {
-        if(userid.isEmpty()){
-           return
-        }
+        if(!isinit) init()
         val variableMap=this.variableMap
         if (value != null) {
             variableMap[key] = value
         } else {
             variableMap.remove(key)
         }
-        variable = GSON.toJson(variableMap)
-        putVariable(variable?:"")
+        if(userid.isEmpty()){
+            variable = GSON.toJson(variableMap)
+            return
+        }
+        if(bookUrl.isNotEmpty()){
+            variable = GSON.toJson(variableMap)
+            putVariable(variable?:"")
+        }else{
+            variable = GSON.toJson(variableMap)
+            if(isseachbook){
+                putVariable(variable?:"")
+            }
+        }
     }
 
     override fun getVariable(key: String): String? {
-        if (bookUrl == ""){
-            return variableMap[key]
+        if(!isinit) init()
+        return variableMap[key]?:SearchBook(origin = origin).let {
+            it.userid=userid
+            it.searchinit()
+            it.variableMap[key]
         }
-        return variableMap[key]?:SearchBook(origin = origin).also { it.userid=userid }.getVariable(key)
     }
 
 
@@ -120,7 +161,7 @@ data class SearchBook(
             name = name,
             author = author,
             kind = kind,
-            bookUrl = bookUrl,
+            _bookUrl = bookUrl,
             origin = origin,
             originName = originName,
             type = type,

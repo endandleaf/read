@@ -24,29 +24,42 @@ data class BookChapter(
     var startFragmentId: String? = null,  //EPUB书籍当前章节的fragmentId
     var endFragmentId: String? = null,    //EPUB书籍下一章节的fragmentId
     var variable: String? = null ,       //变量
+    var lastCheckTime: Long? = null
 ): RuleDataInterface {
+    override var isinit: Boolean = false
 
     override var userid: String = ""
         set(value) {
             if (value.isNotBlank() && value != field) {
                 field = value
-                if(variable.isNullOrBlank()){
-                    variable=getvariableMap(value)
-                }else{
-                    runCatching {
-                        var old=GSON.fromJsonObject<HashMap<String, String>>(variable).getOrNull() ?: hashMapOf()
-                        GSON.fromJsonObject<HashMap<String, String>>(getvariableMap(value)).getOrNull() ?: hashMapOf<String, String>().forEach{(k,v)->
-                            old[k] = v
-                        }
-                        variable = GSON.toJson(old)
-                    }
-                }
-
+                init()
             }
         }
 
+    fun init(){
+        if(isinit || userid.isEmpty()){
+            return
+        }
+        if(url.isNotEmpty()){
+            if(variable.isNullOrBlank()){
+                variable=getvariableMap(userid)
+            }else{
+                runCatching {
+                    var old=GSON.fromJsonObject<HashMap<String, String>>(variable).getOrNull() ?: hashMapOf()
+                    GSON.fromJsonObject<HashMap<String, String>>(getvariableMap(userid)).getOrNull() ?: hashMapOf<String, String>().forEach{(k,v)->
+                        old[k] = v
+                    }
+                    val json=GSON.toJson(old)
+                    variable = json
+                    putVariable(json)
+                }
+            }
+            isinit = true
+        }
+    }
+
     private fun getCachename(userid:String):String{
-        return "BookChaptervariableMap${bookUrl}_userid_${userid}"
+        return "BookChaptervariableMap${url}_userid_${userid}"
     }
 
     override val variableMap: HashMap<String, String>
@@ -77,17 +90,28 @@ data class BookChapter(
     }
 
     override fun putVariable(key: String, value: String?) {
-        if(userid.isEmpty()){
-            return
-        }
+        if(!isinit) init()
         val variableMap=this.variableMap
         if (value != null) {
             variableMap[key] = value
         } else {
             variableMap.remove(key)
         }
-        variable = GSON.toJson(variableMap)
-        putVariable(variable?:"")
+        if(userid.isEmpty()){
+            variable = GSON.toJson(variableMap)
+            return
+        }
+        if(url.isNotEmpty()){
+            variable = GSON.toJson(variableMap)
+            putVariable(variable?:"")
+        }else{
+            variable = GSON.toJson(variableMap)
+        }
+    }
+
+    override fun getVariable(key: String): String? {
+        if(!isinit) init()
+        return variableMap[key]
     }
 
 
@@ -101,6 +125,7 @@ data class BookChapter(
     }
 
     fun getAbsoluteURL():String{
+        //println("目录url$url")
         val urlMatcher = AnalyzeUrl.paramPattern.matcher(url)
         val urlBefore = if(urlMatcher.find())url.substring(0,urlMatcher.start()) else url
         val urlAbsoluteBefore = NetworkUtils.getAbsoluteURL(baseUrl,urlBefore)

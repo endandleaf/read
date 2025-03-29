@@ -18,6 +18,8 @@ class LoginContorller {
     @Inject(value = "\${admin.password}", autoRefreshed=true)
     lateinit var _password: String
 
+
+
     @Post
     @Mapping("/login")
     fun login(ctx: Context, username: String?, password: String?)=run {
@@ -32,6 +34,8 @@ class LoginContorller {
             JsonResponse(isSuccess = false, errorMsg =PASS_ERROR )
         }
     }
+
+
 
     @Mapping("/logout")
     fun logout(ctx: Context){

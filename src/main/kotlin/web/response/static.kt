@@ -57,3 +57,11 @@ val ADD_ERROR="添加失败"
 val CODE_ERROR="邀请码不存在"
 
 val CAN_NOT="无权限"
+
+val SOURCE_JSON_ERROR="书源格式化错误"
+
+val SOURCE_URL_ERROR="书源URL不呢为空"
+
+val SOURCE_IS = "书源已存在"
+
+val CACHE_ERROR="最多5个缓存任务"

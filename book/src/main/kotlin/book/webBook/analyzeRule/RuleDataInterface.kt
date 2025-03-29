@@ -2,6 +2,8 @@ package book.webBook.analyzeRule
 
 interface RuleDataInterface {
 
+    var isinit:Boolean
+
     val variableMap: HashMap<String, String>
 
     var userid: String

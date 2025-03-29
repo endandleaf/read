@@ -12,7 +12,7 @@ import kotlin.math.min
 
 @JsonIgnoreProperties("variableMap", "infoHtml", "tocHtml", "config", "rootDir", "readConfig", "localBook", "epub", "epubRootDir", "onLineTxt", "localTxt", "umd", "realAuthor", "unreadChapterNum", "folderName", "localFile", "kindList", "_userNameSpace", "bookDir", "userNameSpace")
 data class Book(
-    override var bookUrl: String = "",                   // 详情页Url(本地书源存储完整文件路径)
+    private var _bookUrl: String = "",          // 详情页Url(本地书源存储完整文件路径)
     var tocUrl: String = "",                    // 目录页Url (toc=table of Contents)
     var origin: String = BookType.local,        // 书源URL(默认BookType.local)
     var originName: String = "",                //书源名称
@@ -45,24 +45,43 @@ data class Book(
     var readConfig: ReadConfig? = null,
 
 ): BaseBook  {
+    override var isinit: Boolean = false
+
+    override var bookUrl: String = _bookUrl
+        set(value) {
+            field = value
+            init()
+        }
+
     override var userid: String = ""
         set(value) {
             if (value.isNotBlank() && value != field) {
                 field = value
-                if(variable.isNullOrBlank()){
-                    variable=getvariableMap(value)
-                }else{
-                    runCatching {
-                        var old=GSON.fromJsonObject<HashMap<String, String>>(variable).getOrNull() ?: hashMapOf()
-                        GSON.fromJsonObject<HashMap<String, String>>(getvariableMap(value)).getOrNull() ?: hashMapOf<String, String>().forEach{(k,v)->
-                            old[k] = v
-                        }
-                        variable = GSON.toJson(old)
-                    }
-                }
-
+                init()
             }
         }
+
+    fun init(){
+        if(isinit || userid.isEmpty()){
+            return
+        }
+        if(bookUrl.isNotEmpty()){
+            if(variable.isNullOrBlank()){
+                variable=getvariableMap(userid)
+            }else{
+                runCatching {
+                    var old=GSON.fromJsonObject<HashMap<String, String>>(variable).getOrNull() ?: hashMapOf()
+                    GSON.fromJsonObject<HashMap<String, String>>(getvariableMap(userid)).getOrNull() ?: hashMapOf<String, String>().forEach{(k,v)->
+                        old[k] = v
+                    }
+                    val json=GSON.toJson(old)
+                    variable = json
+                    putVariable(json)
+                }
+            }
+            isinit = true
+        }
+    }
 
     companion object {
         const val hTag = 2L
@@ -124,8 +143,9 @@ data class Book(
     }
 
     private fun getCachename(userid:String):String{
-        return "variableMap${bookUrl}_userid_${userid}"
+        return "bookvariableMap${bookUrl}_userid_${userid}"
     }
+
 
     override val variableMap: HashMap<String, String>
         get() {
@@ -155,24 +175,33 @@ data class Book(
     }
 
     override fun putVariable(key: String, value: String?) {
-        if(userid.isEmpty()){
-            return
-        }
+        //println("book putVariable,key:$key,value:$value")
+        if(!isinit) init()
         val variableMap=this.variableMap
         if (value != null) {
             variableMap[key] = value
         } else {
             variableMap.remove(key)
         }
-        variable = GSON.toJson(variableMap)
-        putVariable(variable?:"")
+        if(userid.isEmpty()){
+            variable = GSON.toJson(variableMap)
+            return
+        }
+        if(bookUrl.isNotEmpty()){
+            variable = GSON.toJson(variableMap)
+            putVariable(variable?:"")
+        }else{
+            variable = GSON.toJson(variableMap)
+        }
     }
 
     override fun getVariable(key: String): String? {
-        if (bookUrl == ""){
-            return variableMap[key]
+        if(!isinit) init()
+        return variableMap[key]?:SearchBook(origin = origin).let {
+            it.userid=userid
+            it.searchinit()
+            it.variableMap[key]
         }
-        return variableMap[key]?:SearchBook(origin = origin).also { it.userid=userid }.getVariable(key)
     }
 
 
@@ -266,7 +295,7 @@ data class Book(
             name = name,
             author = author,
             kind = kind,
-            bookUrl = bookUrl,
+            _bookUrl = bookUrl,
             origin = origin,
             originName = originName,
             type = type,

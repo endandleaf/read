@@ -16,6 +16,7 @@ import web.filter.ErrorsFilter
 import web.mapper.BookSourceMapper
 import web.model.BookSource
 import web.response.JsonResponse
+import java.util.*
 import book.model.BookSource as Booksource
 
 @Controller
@@ -125,9 +126,11 @@ class DebugBookSource {
                 if(it.createtime != null){
                     source.createtime=it.createtime
                 }
+                bookSource.lastUpdateTime= Date().time
                 update=insert+booksourcemapper.updateById(source)
             }else{
-                bookSource.enabled=true
+                source.enabled=true
+                source.sourceorder=9999
                 insert=update+booksourcemapper.insert(source)
             }
         }
