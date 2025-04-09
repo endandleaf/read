@@ -36,6 +36,15 @@ open class HomeController {
     @Inject(value = "\${admin.code:}", autoRefreshed=true)
     var mycode:String=""
 
+    @Inject(value = "\${user.allowuptxt:false}", autoRefreshed=true)
+    var allowuptxt:Boolean=false
+
+    @Inject(value = "\${user.allowcache:false}", autoRefreshed=true)
+    var allowcache:Boolean=false
+
+    @Inject(value = "\${user.source:0}", autoRefreshed=true)
+    var source:Int =0
+
 
 
     @Tran
@@ -69,7 +78,13 @@ open class HomeController {
         if(c == _code){
             user.code="开放注册"
         }
+        user.source=source
+        user.AllowCache=allowcache
+        user.AllowUpTxt=allowuptxt
 
+        if(user.source != 0 && user.source !=1 && user.source !=2){
+            user.source=0
+        }
         if(usersMapper.insert(user.create()) == 0){
             throw DataThrowable().data(JsonResponse(isSuccess = false, errorMsg = ADD_ERROR))
         }

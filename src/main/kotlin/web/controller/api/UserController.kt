@@ -20,6 +20,7 @@ import web.util.admin.passsign
 open class UserController:BaseController() {
 
 
+
     @Mapping("/login")
     fun login(username:String? , password:String? , model:String?,@Path v:Int) = run {
         if (username.isNullOrBlank() || password.isNullOrBlank() )  {

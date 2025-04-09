@@ -77,7 +77,7 @@ return x.a},
 ad(){var x=this
 x.aL()
 if(x.a.e)$.ab.RG$.push(new A.aMt())
-x.qX()
+x.qY()
 x.r.a3(0,x.gY0())
 B.cO("book_detail_page",0)},
 m(){var x,w=this
@@ -107,20 +107,20 @@ break
 case 5:return B.h(null,w)
 case 1:return B.f(u,w)}})
 return B.i($async$Fy,w)},
-qX(){var x=0,w=B.j(y.v),v=1,u,t=this,s,r,q,p,o
-var $async$qX=B.e(function(d,e){if(d===1){u=e
+qY(){var x=0,w=B.j(y.v),v=1,u,t=this,s,r,q,p,o
+var $async$qY=B.e(function(d,e){if(d===1){u=e
 x=v}while(true)switch(x){case 0:x=t.z==null?2:3
 break
 case 2:q=t.a.c
 x=4
-return B.c(K.wz(q,q.b),$async$qX)
+return B.c(K.wz(q,q.b),$async$qY)
 case 4:t.z=e
 case 3:v=6
 t.F(new A.aMp(t))
 x=9
-return B.c(t.Fy(),$async$qX)
+return B.c(t.Fy(),$async$qY)
 case 9:x=10
-return B.c(t.z.m3(),$async$qX)
+return B.c(t.z.m3(),$async$qY)
 case 10:s=e
 if(t.c!=null){t.F(new A.aMq(t,s))
 B.cc(F.Ps,new A.aMr(t),y.F)}v=1
@@ -136,7 +136,7 @@ case 5:x=1
 break
 case 8:return B.h(null,w)
 case 1:return B.f(u,w)}})
-return B.i($async$qX,w)},
+return B.i($async$qY,w)},
 amO(){var x,w,v,u,t=this
 if(t.c==null)return
 x=t.r.f
@@ -175,7 +175,7 @@ if(C.cp(t)){t=s.c
 t.toString
 v.push(C.c_(r,r,r,C.aM(D.aK,C.Z(t)?D.a0:D.Z,r,r),r,r,new A.aMi(s),r,r,r,r))}p=W.iF(v,!w,p,!0,0,x,r,u)
 x=s.y?M.bie(B.E(204,255,255,255),C.aM(F.Rf,D.Z,r,r),!0,new A.aMj(s)):r
-return new N.mg(C.eY(p,r,C.fq(!0,s.alD(),!0,E.M,!0,!0),r,x),r,new A.aMk(s),!q,r,y.m)},
+return new N.mg(C.eY(p,r,C.fr(!0,s.alD(),!0,E.M,!0,!0),r,x),r,new A.aMk(s),!q,r,y.m)},
 G(d){return this.alf()},
 alD(){var x,w,v,u,t=this,s=null
 if(t.e)return C.cI(Y.n5(s,4,s),s,s)
@@ -302,7 +302,7 @@ $0(){var x=this.b.d
 H.b0(this.a,!1).bS(x)},
 $S:0};(function installTearOffs(){var x=a._instance_0u
 var w
-x(w=A.LG.prototype,"gaw8","qX",2)
+x(w=A.LG.prototype,"gaw8","qY",2)
 x(w,"gY0","amO",0)
 x(w,"galg","Xf",0)})();(function inheritance(){var x=a.inherit,w=a.inheritMany
 x(A.qS,B.O)
@@ -317,4 +317,4 @@ F.QY=new C.bq(57504,!1)
 F.iN=new C.bq(58333,!1)
 F.Rf=new C.bq(58392,!1)})()};
 ((a,b)=>{a[b]=a.current
-a.eventLog.push({p:"main.dart.js_147",e:"endPart",h:b})})($__dart_deferred_initializers__,"xxK/W5EEkFxnNmemHHTF3PGlWA0=");
+a.eventLog.push({p:"main.dart.js_147",e:"endPart",h:b})})($__dart_deferred_initializers__,"qulSqCDuCIInhGA2A0L2RPPNbrY=");
