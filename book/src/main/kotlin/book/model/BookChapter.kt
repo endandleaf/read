@@ -109,9 +109,9 @@ data class BookChapter(
         }
     }
 
-    override fun getVariable(key: String): String? {
+    override fun getVariable(key: String): String {
         if(!isinit) init()
-        return variableMap[key]
+        return (variableMap[key]?:"")
     }
 
 

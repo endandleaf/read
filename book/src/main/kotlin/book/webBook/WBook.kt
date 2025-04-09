@@ -87,7 +87,7 @@ class WBook (val bookSource: BookSource, val debugLog: Boolean = true, var debug
                 headerMapF = bookSource.getHeaderMap(true),
             )
 
-            var res = analyzeUrl.getStrResponseAwait(debugLog = null)
+            var res = analyzeUrl.getStrResponseAwait()
 
             if(debugger != null){
                 debugger?.log("搜索源码Qwq${res.body}");
@@ -133,7 +133,7 @@ class WBook (val bookSource: BookSource, val debugLog: Boolean = true, var debug
             ruleData = variableBook,
             headerMapF = bookSource.getHeaderMap(true)
         )
-        var res = analyzeUrl.getStrResponseAwait(debugLog = null)
+        var res = analyzeUrl.getStrResponseAwait()
         if(debugger != null){
             debugger?.log("发现源码Qwq${res.body}");
         }
@@ -193,7 +193,7 @@ class WBook (val bookSource: BookSource, val debugLog: Boolean = true, var debug
             ruleData = book,
             headerMapF = bookSource.getHeaderMap(true)
         )
-        var res = analyzeUrl.getStrResponseAwait(debugLog = null)
+        var res = analyzeUrl.getStrResponseAwait()
         if(debugger != null){
             debugger?.log("书籍源码Qwq${res.body}");
         }
@@ -233,7 +233,7 @@ class WBook (val bookSource: BookSource, val debugLog: Boolean = true, var debug
                 ruleData = book,
                 headerMapF = bookSource.getHeaderMap(true)
             )
-            var res = analyzeUrl.getStrResponseAwait(debugLog = null)
+            var res = analyzeUrl.getStrResponseAwait()
             if(debugger != null){
                 debugger?.log("目录源码Qwq${res.body}");
             }
@@ -282,7 +282,6 @@ class WBook (val bookSource: BookSource, val debugLog: Boolean = true, var debug
         var res = analyzeUrl.getStrResponseAwait(
             jsStr = bookSource.getContentRule().webJs,
             sourceRegex = bookSource.getContentRule().sourceRegex,
-            debugLog = null
         )
         if(debugger != null){
             debugger?.log("正文源码Qwq${res.body}");

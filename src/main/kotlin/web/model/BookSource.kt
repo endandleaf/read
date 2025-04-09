@@ -16,11 +16,11 @@ import book.model.BookSource as Booksource
 class BookSource {
     @TableId
     @PrimaryKey
-    var bookSourceUrl: String? = null           // 地址，包括 http/https
-    var bookSourceName: String? = null           // 名称
-    var bookSourceGroup: String? = null
-    var sourceorder: Int? = null
-    var bookSourceType: Int? = null         // 类型，0 文本，1 音频
+     var bookSourceUrl: String? = null           // 地址，包括 http/https
+     var bookSourceName: String? = null           // 名称
+     var bookSourceGroup: String? = null
+     var sourceorder: Int? = null
+     var bookSourceType: Int? = null         // 类型，0 文本，1 音频
     @ColumnType(value = "LONGTEXT")
     var exploreUrl: String? = null                 // 发现url
     var enabled: Boolean? = null         // 是否启用
@@ -63,5 +63,18 @@ class BookSource {
         this.createtime = LocalDateTime.now()
         this.json= Gson().toJson(bookSource)
         return this
+    }
+
+    fun toBaseSource(): BaseSource {
+        return BaseSource(
+            bookSourceUrl = this.bookSourceUrl?:"",
+            bookSourceName = this.bookSourceName?:"",
+            bookSourceGroup = this.bookSourceGroup,
+            bookSourceType = this.bookSourceType,
+            sourceorder = this.sourceorder,
+            enabledExplore = this.enabledExplore,
+            enabled = this.enabled?:false,
+            json = this.json?:"{}"
+        )
     }
 }

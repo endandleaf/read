@@ -195,13 +195,28 @@ data class Book(
         }
     }
 
-    override fun getVariable(key: String): String? {
+    override fun getVariable(key: String): String {
         if(!isinit) init()
-        return variableMap[key]?:SearchBook(origin = origin).let {
+        return (variableMap[key]?:SearchBook(origin = origin).let {
             it.userid=userid
             it.searchinit()
             it.variableMap[key]
-        }
+        })?:""
+    }
+
+    fun getbookVariable(): String {
+        var key="custom"
+        if(!isinit) init()
+        return (variableMap[key]?:SearchBook(origin = origin).let {
+            it.userid=userid
+            it.searchinit()
+            it.variableMap[key]
+        })?:""
+    }
+
+    fun setbookVariable(info: String) {
+        var key="custom"
+        putVariable(key,info)
     }
 
 

@@ -2,22 +2,17 @@ package web.controller.api
 
 import book.model.Book
 import book.webBook.localBook.LocalBook
-import com.google.gson.Gson
 import org.apache.ibatis.solon.annotation.Db
 import org.noear.solon.annotation.Controller
 import org.noear.solon.annotation.Inject
 import org.noear.solon.annotation.Mapping
 import org.noear.solon.core.handle.UploadedFile
 import org.noear.solon.core.util.DataThrowable
-import org.noear.solon.data.annotation.CacheRemove
 import org.noear.solon.web.cors.annotation.CrossOrigin
 import web.mapper.BooklistMapper
 import web.model.Booklist
 import web.response.*
-import web.service.MyCacheService
 import web.util.cache.getlocalpath
-import web.util.cache.removecache
-import web.util.cache.setcache
 import java.io.File
 import java.net.URLDecoder
 import kotlin.concurrent.thread
@@ -34,7 +29,6 @@ open class LocalBookController:BaseController() {
 
     @Mapping("/importBookPreview")
     open fun importBookPreview(accessToken:String?, file: UploadedFile?)=run{
-        println("importBookPreview")
         if(file == null) throw DataThrowable().data(JsonResponse(false, NOT_BANK))
         if (file.isEmpty()) {
             throw DataThrowable().data(JsonResponse(false, NOT_BANK))
@@ -47,7 +41,7 @@ open class LocalBookController:BaseController() {
         if(!(user.AllowUpTxt?:false)) {
             throw DataThrowable().data(JsonResponse(false,NOT_ALLOW_TXT))
         }
-        if(!file.name.endsWith(".txt")){
+        if(!file.name.endsWith(".txt") && !file.name.endsWith(".epub")){
             throw DataThrowable().data(JsonResponse(false,NOT_TXT))
         }
         var f1=file.name
@@ -63,7 +57,7 @@ open class LocalBookController:BaseController() {
         val book = Book.initLocalBook(localpath, localpath, "")
         val chapters = LocalBook.getChapterList(book)
         if(booklistMapper.getbook(user.id!!,book.bookUrl) == null){
-            var booklist= Booklist().create().bookto(book)
+            val booklist= Booklist().create().bookto(book)
             booklist.originName="本地"
             booklist.userid=user.id
             booklist.lastCheckTime=System.currentTimeMillis()

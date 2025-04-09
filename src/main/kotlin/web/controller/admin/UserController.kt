@@ -44,6 +44,10 @@ open class UserController {
     @Inject
     lateinit var bookCacheMapper: BookCacheMapper
 
+    @Db("db")
+    @Inject
+    lateinit var userBookSourceMapper: UserBookSourceMapper
+
     @Post
     @Mapping("/adduser")
     fun adduser( user: Users) = run{
@@ -132,5 +136,6 @@ open class UserController {
         userCookieMapper.delUsercookies(id)
         usertockenMapper.delUsertockens(id)
         bookCacheMapper.delUserCache(id)
+        userBookSourceMapper.delUserSource(id)
     }
 }

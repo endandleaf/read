@@ -7,4 +7,5 @@ solon.dataSources:
 admin:
   username: "admin"
   password: "adminadmin"
+  cron: false
   #code: "接口的code参数" //如果需要使用获取邀请码参数请修改这个参数，重启生效

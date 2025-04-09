@@ -59,7 +59,7 @@ class MyCacheService() {
 
         fun set(key: String, obj: Any,userid:String) {
             setcache(key,anytoString(obj),userid)
-            my!!.cacheService.store(getsystemkeyname(key, userid),obj,999999999)
+            my!!.cacheService.store(getsystemkeyname(key, userid),obj,600)
         }
 
         fun <T : Any?> get(key: String, type: Class<T>?,userid:String): T? {

@@ -10,5 +10,6 @@ data class SearchRule(
     override var updateTime: String? = null,
     override var bookUrl: String? = null,
     override var coverUrl: String? = null,
-    override var wordCount: String? = null
+    override var wordCount: String? = null,
+    var checkKeyWord: String? = null
 ) : BookListRule

@@ -1,0 +1,20 @@
+((a,b,c)=>{a[b]=a[b]||{}
+a[b][c]=a[b][c]||[]
+a[b][c].push({p:"main.dart.js_29",e:"beginPart"})})(self,"$__dart_deferred_initializers__","eventLog")
+$__dart_deferred_initializers__.current=function(a,b,c,$){var A={
+bDO(){var y,x
+try{y=$.aip()
+return y}catch(x){}return!1},
+bDC(){var y,x
+try{y=$.bpQ()
+return y}catch(x){}return!1}}
+A=a.updateHolder(c[128],A)
+var z=a.updateTypes([]);(function lazyInitializers(){var y=a.lazyFinal,x=a.lazy
+y($,"bJX","bpQ",()=>{$.b9S()
+return!1})
+x($,"bNG","e8",()=>{A.bDC()
+return!1})
+x($,"bNI","fv",()=>{A.bDO()
+return!1})})()};
+((a,b)=>{a[b]=a.current
+a.eventLog.push({p:"main.dart.js_29",e:"endPart",h:b})})($__dart_deferred_initializers__,"ITNP9WawL4/IEEAkdtb2yeAkBOc=");

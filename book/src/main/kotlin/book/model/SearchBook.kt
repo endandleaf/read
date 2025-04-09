@@ -148,11 +148,11 @@ data class SearchBook(
 
     override fun getVariable(key: String): String? {
         if(!isinit) init()
-        return variableMap[key]?:SearchBook(origin = origin).let {
+        return ( variableMap[key]?:SearchBook(origin = origin).let {
             it.userid=userid
             it.searchinit()
             it.variableMap[key]
-        }
+        })?:""
     }
 
 

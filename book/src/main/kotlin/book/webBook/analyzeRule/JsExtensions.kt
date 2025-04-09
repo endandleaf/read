@@ -8,9 +8,11 @@ import book.util.AppConst.dateFormat
 import book.util.Base64
 import book.util.help.CacheManager
 import book.util.help.CookieStore
+import book.util.help.cookieJarHeader
 import book.util.http.*
 import book.webBook.Debug
 import book.webBook.exception.NoStackTraceException
+import cn.hutool.core.codec.Base64Decoder
 import kotlinx.coroutines.Dispatchers.IO
 import kotlinx.coroutines.async
 import kotlinx.coroutines.runBlocking
@@ -27,7 +29,8 @@ import java.util.zip.ZipInputStream
 import java.text.SimpleDateFormat
 import cn.hutool.core.util.HexUtil
 import com.script.ScriptBindings
-import java.net.URI
+import org.slf4j.Logger
+import org.slf4j.LoggerFactory
 import kotlin.concurrent.thread
 
 /**
@@ -37,6 +40,8 @@ import kotlin.concurrent.thread
  */
 @Suppress("unused")
 interface JsExtensions: JsEncodeUtils  {
+
+    val logger: Logger
 
     fun getSource(): BaseSource?
 
@@ -52,6 +57,7 @@ interface JsExtensions: JsEncodeUtils  {
      * 访问网络,返回String
      */
     fun ajax(urlStr: String): String? {
+        logger.info("ajax url: $urlStr")
         return runBlocking {
             kotlin.runCatching {
                 val analyzeUrl = AnalyzeUrl(urlStr, source = getSource())
@@ -87,6 +93,7 @@ interface JsExtensions: JsEncodeUtils  {
      * 访问网络,返回Response<String>
      */
     fun connect(urlStr: String): StrResponse {
+        logger.info("connect:$urlStr")
         return runBlocking {
             val analyzeUrl = AnalyzeUrl(urlStr, source = getSource())
             kotlin.runCatching {
@@ -125,6 +132,11 @@ interface JsExtensions: JsEncodeUtils  {
         val str=Response.webview(html,url,js,getSource()?.usertocken?:"",header).body
         return str
     }
+
+    fun getWebViewUA(): String {
+        return  AppConst.defaultuserAgent;
+    }
+
 
     /**
      * 可从网络，本地文件(阅读私有缓存目录和书籍保存位置支持相对路径)导入JavaScript脚本
@@ -185,11 +197,12 @@ interface JsExtensions: JsEncodeUtils  {
 
     fun startBrowserAwait(urlStr: String,title: String, refetchAfterSuccess: Boolean,hide:Boolean): Response {
         var url = urlStr
-        if(url.startsWith("/")) {
+        logger.info("跳转URL：$url")
+        if(url.isEmpty() || url.startsWith("/")) {
             url = NetworkUtils.getAbsoluteURL(getSource()?.getKey(), url)
         }
         val header= GSON.toJson(getSource()?.getHeaderMap(true,false))
-        println("header:$header")
+        logger.info("header:$header")
        return Response.startBrowserAwait(url,title,getSource()?.usertocken?:"",hide,header)
     }
 
@@ -212,10 +225,6 @@ interface JsExtensions: JsEncodeUtils  {
         return startBrowserAwait(url, title,false,false)
     }
 
-    fun  toast(str : String){
-        println("toast:$str")
-        Response.toast(str,getSource()?.usertocken?:"")
-    }
 
 
     /**
@@ -244,28 +253,86 @@ interface JsExtensions: JsEncodeUtils  {
      * js实现重定向拦截,网络访问get
      */
     fun get(urlStr: String, headers: Map<String, String>): Connection.Response {
-        return Jsoup.connect(urlStr)
-            .sslSocketFactory(SSLHelper.unsafeSSLSocketFactory)
-            .ignoreContentType(true)
-            .followRedirects(false)
-            .headers(headers)
-            .method(Connection.Method.GET)
-            .execute()
+        logger.info("get:$urlStr")
+        val requestHeaders = if (getSource()?.enabledCookieJar == true) {
+            headers.toMutableMap().apply { put(cookieJarHeader, "1") }
+        } else headers
+        val rateLimiter = ConcurrentRateLimiter(getSource())
+        val response = rateLimiter.withLimitBlocking {
+            Jsoup.connect(urlStr)
+                .sslSocketFactory(SSLHelper.unsafeSSLSocketFactory)
+                .ignoreContentType(true)
+                .followRedirects(false)
+                .headers(requestHeaders)
+                .method(Connection.Method.GET)
+                .execute()
+        }
+        return response
+    }
+
+
+    /**
+     * js实现重定向拦截,网络访问head,不返回Response Body更省流量
+     */
+    fun head(urlStr: String, headers: Map<String, String>): Connection.Response {
+        logger.info("head:$urlStr")
+        val requestHeaders = if (getSource()?.enabledCookieJar == true) {
+            headers.toMutableMap().apply { put(cookieJarHeader, "1") }
+        } else headers
+        val rateLimiter = ConcurrentRateLimiter(getSource())
+        val response = rateLimiter.withLimitBlocking {
+            Jsoup.connect(urlStr)
+                .sslSocketFactory(SSLHelper.unsafeSSLSocketFactory)
+                .ignoreContentType(true)
+                .followRedirects(false)
+                .headers(requestHeaders)
+                .method(Connection.Method.HEAD)
+                .execute()
+        }
+        return response
     }
 
     /**
      * 网络访问post
      */
     fun post(urlStr: String, body: String, headers: Map<String, String>): Connection.Response {
-        return Jsoup.connect(urlStr)
-            .sslSocketFactory(SSLHelper.unsafeSSLSocketFactory)
-            .ignoreContentType(true)
-            .followRedirects(false)
-            .requestBody(body)
-            .headers(headers)
-            .method(Connection.Method.POST)
-            .execute()
+        logger.info("post:$urlStr")
+        val requestHeaders = if (getSource()?.enabledCookieJar == true) {
+            headers.toMutableMap().apply { put(cookieJarHeader, "1") }
+        } else headers
+        val rateLimiter = ConcurrentRateLimiter(getSource())
+        val response = rateLimiter.withLimitBlocking {
+            Jsoup.connect(urlStr)
+                .sslSocketFactory(SSLHelper.unsafeSSLSocketFactory)
+                .ignoreContentType(true)
+                .followRedirects(false)
+                .requestBody(body)
+                .headers(requestHeaders)
+                .method(Connection.Method.POST)
+                .execute()
+        }
+        return response
     }
+
+    /* Str转ByteArray */
+    fun strToBytes(str: String): ByteArray {
+        return str.toByteArray(charset("UTF-8"))
+    }
+
+    fun strToBytes(str: String, charset: String): ByteArray {
+        return str.toByteArray(charset(charset))
+    }
+
+    /* ByteArray转Str */
+    fun bytesToStr(bytes: ByteArray): String {
+        return String(bytes, charset("UTF-8"))
+    }
+
+    fun bytesToStr(bytes: ByteArray, charset: String): String {
+        return String(bytes, charset(charset))
+    }
+
+
 
     /**
      * js实现解码,不能删
@@ -273,6 +340,11 @@ interface JsExtensions: JsEncodeUtils  {
     fun base64Decode(str: String): String {
         return EncoderUtils.base64Decode(str, Base64.NO_WRAP)
     }
+
+    fun base64Decode(str: String?, charset: String): String {
+        return Base64Decoder.decodeStr(str, charset(charset));
+    }
+
 
     fun base64Decode(str: String, flags: Int): String {
         return EncoderUtils.base64Decode(str, flags)
@@ -292,6 +364,17 @@ interface JsExtensions: JsEncodeUtils  {
         return Base64.decode(str, flags)
     }
 
+
+    fun base64Encode(str: String): String? {
+        return EncoderUtils.base64Encode(str, Base64.NO_WRAP)
+    }
+
+    fun base64Encode(str: String, flags: Int): String? {
+        return EncoderUtils.base64Encode(str, flags)
+    }
+
+
+
     /* HexString 解码为字节数组 */
     fun hexDecodeToByteArray(hex: String): ByteArray? {
         return HexUtil.decodeHex(hex)
@@ -308,14 +391,6 @@ interface JsExtensions: JsEncodeUtils  {
     }
 
 
-    fun base64Encode(str: String): String? {
-        //println(str)
-        return EncoderUtils.base64Encode(str, Base64.NO_WRAP)
-    }
-
-    fun base64Encode(str: String, flags: Int): String? {
-        return EncoderUtils.base64Encode(str, flags)
-    }
 
 
     /**
@@ -363,6 +438,14 @@ interface JsExtensions: JsEncodeUtils  {
 
     fun htmlFormat(str: String): String {
         return HtmlFormatter.formatKeepImg(str)
+    }
+
+    fun t2s(text: String): String {
+        return ChineseUtils.t2s(text)
+    }
+
+    fun s2t(text: String): String {
+        return ChineseUtils.s2t(text)
     }
 
     //****************文件操作******************//
@@ -434,6 +517,8 @@ interface JsExtensions: JsEncodeUtils  {
         return unzipPath.substring(FileUtils.getCachePath().length)
     }
 
+
+
     /**
      * js实现文件夹内所有文件读取
      */
@@ -501,6 +586,9 @@ interface JsExtensions: JsEncodeUtils  {
         return null
     }
 
+
+
+
     //******************文件操作************************//
 
     /**
@@ -512,6 +600,7 @@ interface JsExtensions: JsEncodeUtils  {
         }
         return null
     }
+
 
     /**
      * 返回字体解析类
@@ -566,23 +655,47 @@ interface JsExtensions: JsEncodeUtils  {
     }
 
     /**
+     * 章节数转数字
+     */
+    fun toNumChapter(s: String?): String? {
+        s ?: return null
+        val matcher = AppPattern.titleNumPattern.matcher(s)
+        if (matcher.find()) {
+            val intStr = StringUtils.stringToInt(matcher.group(2))
+            return "${matcher.group(1)}${intStr}${matcher.group(3)}"
+        }
+        return s
+    }
+
+
+    fun toURL(urlStr: String): JsURL {
+        return JsURL(urlStr)
+    }
+
+    fun toURL(url: String, baseUrl: String? = null): JsURL {
+        return JsURL(url, baseUrl)
+    }
+
+    /**
      * 弹窗提示
      */
     fun toast(msg: Any?) {
-        Debug.log("toast: " + msg.toString())
+        logger.info("toast:$msg")
+        Response.toast("$msg",getSource()?.usertocken?:"")
     }
 
     /**
      * 弹窗提示 停留时间较长
      */
     fun longToast(msg: Any?) {
-        Debug.log("longToast: " + msg.toString())
+        toast(msg)
     }
 
     /**
      * 输出调试日志
      */
-    fun log(msg: String): String {
+    fun log(msg: String?): String? {
+        logger.info("log:  $msg")
         Debug.log(msg)
         return msg
     }

@@ -11,21 +11,23 @@ import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import org.noear.solon.net.websocket.WebSocket
+import org.slf4j.LoggerFactory
 import web.controller.api.ApiWebSocket.WebMsg
 import web.controller.api.ReadController.Companion.getBookbycache
 import web.controller.api.ReadController.Companion.getChapterListbycache
 import web.controller.api.ReadController.Companion.setBookContentbycache
 import web.controller.api.ReadController.Companion.setBookbycache
 import web.controller.api.ReadController.Companion.setChapterListbycache
+import web.model.BaseSource
 import web.model.Users
 import web.util.mapper.mapper
-import java.util.Date
 
 object  BookContent {
     private var ma:MutableMap<String, Deferred<String>> = mutableMapOf()
     private val mutex = Mutex()
+    private val logger = LoggerFactory.getLogger(BookContent::class.java)
 
-    fun  getbookcontent(accessToken:String,user: Users, source:BookSource, url:String, index:Int,type:Int):String= runBlocking{
+    fun  getbookcontent(accessToken:String, user: Users, source: BaseSource, url:String, index:Int, type:Int):String= runBlocking{
         var key="url:$url,index:$index"
         var deferred: Deferred<String>? = null
         mutex.withLock {
@@ -38,11 +40,11 @@ object  BookContent {
             }
         }
         runCatching {
-           return@runBlocking deferred!!.await().also { println(key+"完成");remove(key) }
+           return@runBlocking deferred!!.await().also { logger.info(key+"完成");remove(key) }
         }.onFailure {
             it.printStackTrace()
         }
-        println(key+"失败")
+        logger.error(key+"失败")
         remove(key).let { "" }
     }
 
@@ -52,7 +54,7 @@ object  BookContent {
         }
     }
 
-    private suspend fun getBookContent(accessToken:String,user: Users, source:BookSource, url:String, index:Int,type:Int):String {
+    private suspend fun getBookContent(accessToken:String,user: Users, source:BaseSource, url:String, index:Int,type:Int):String {
      runCatching {
           var chapterlist= getChapterListbycache(url,user.id!!)
           if(chapterlist == null){
@@ -72,13 +74,16 @@ object  BookContent {
           //println("目录链接 ${chapterlist[index].url}")
           var systembook=mapper.get().booklistMapper.getbook(user.id!!,url)
           if(systembook!=null){
+             // println("获取阅读进度1:${url},index:${systembook.durChapterIndex}")
               book.durChapterIndex=systembook.durChapterIndex?:0
           }else{
              runCatching {
                   val durChapterIndex=mapper.get().cacheService.get("indexuerid:${user.id},bookurl:${url}",Int::class.java)
                   //println("获取阅读进度:${url},index:${durChapterIndex}")
                   book.durChapterIndex=durChapterIndex
-              }
+              }.getOrElse {
+                  it.printStackTrace()
+             }
           }
          var nexturl=if(index+1 < chapterlist.size) chapterlist[index+1].url else ""
           return webBook.getBookContent(book,chapterlist[index],nexturl).also { if( type != 1) setBookContentbycache(url,it,index,user.id!!) }
@@ -92,7 +97,7 @@ object  BookContent {
            book= webBook.getBookInfo(url,canReName = true)
         }.onFailure {
             if(it is ConcurrentException){
-                println("getbook 并发原因？？？？")
+                logger.info("getbook 并发原因？？？？")
                 delay(1000)
                 book=getbook(webBook,url)
             }

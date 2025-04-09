@@ -21,13 +21,16 @@ import java.util.regex.Pattern
 import kotlin.coroutines.ContinuationInterceptor
 import kotlin.coroutines.CoroutineContext
 import kotlin.coroutines.EmptyCoroutineContext
+import org.apache.commons.text.StringEscapeUtils
+import org.jsoup.nodes.Node
 
 private val log: Logger = LoggerFactory.getLogger(WBook::class.java)
 class AnalyzeRule(
     var ruleData: RuleDataInterface? =null,
     private val source: BaseSource? = null
 ):JsExtensions {
-
+    override val logger: Logger
+        get() =  LoggerFactory.getLogger(AnalyzeRule::class.java)
 
     val book get() = ruleData as? BaseBook
 
@@ -76,11 +79,14 @@ class AnalyzeRule(
     fun setContent(content: Any?, baseUrl: String? = null): AnalyzeRule {
         if (content == null) throw AssertionError("内容不可空（Content cannot be null）")
         this.content = content
-        isJSON = content.toString().isJson()
+        isJSON = when (content) {
+            is Node -> false
+            else -> content.toString().isJson()
+        }
         setBaseUrl(baseUrl)
-        objectChangedXP = true
-        objectChangedJS = true
-        objectChangedJP = true
+        analyzeByXPath = null
+        analyzeByJSoup = null
+        analyzeByJSonPath = null
         return this
     }
 
@@ -229,14 +235,26 @@ class AnalyzeRule(
     fun getString(
         ruleList: List<SourceRule>,
         mContent: Any? = null,
-        isUrl: Boolean = false
+        isUrl: Boolean = false,
+        unescape: Boolean = true
     ): String {
         var result: Any? = null
         val content = mContent ?: this.content
         if (content != null && ruleList.isNotEmpty()) {
             result = content
             if (result is NativeObject) {
-                result = result[ruleList[0].rule]?.toString()
+                val sourceRule = ruleList.first()
+                putRule(sourceRule.putMap)
+                sourceRule.makeUpRule(result)
+                result = if (sourceRule.getParamSize() > 1) {
+                    // get {{}}
+                    sourceRule.rule
+                } else {
+                    // 键值直接访问
+                    result[sourceRule.rule]?.toString()
+                }?.let {
+                    replaceRegex(it, sourceRule)
+                }
             } else {
                 for (sourceRule in ruleList) {
                     putRule(sourceRule.putMap)
@@ -244,7 +262,11 @@ class AnalyzeRule(
                     result?.let {
                         if (sourceRule.rule.isNotBlank() || sourceRule.replaceRegex.isEmpty()) {
                             result = when (sourceRule.mode) {
-                                Mode.Js -> evalJS(sourceRule.rule, it)
+                                Mode.Js -> run{
+                                    var s:Any? = null
+                                    kotlin.runCatching { s=evalJS(sourceRule.rule, it) }.onFailure { it.printStackTrace() }
+                                    s
+                                }
                                 Mode.Json -> getAnalyzeByJSonPath(it).getString(sourceRule.rule)
                                 Mode.XPath -> getAnalyzeByXPath(it).getString(sourceRule.rule)
                                 Mode.Default -> if (isUrl) {
@@ -252,6 +274,7 @@ class AnalyzeRule(
                                 } else {
                                     getAnalyzeByJSoup(it).getString(sourceRule.rule)
                                 }
+
                                 else -> sourceRule.rule
                             }
                         }
@@ -263,12 +286,11 @@ class AnalyzeRule(
             }
         }
         if (result == null) result = ""
-        val str = kotlin.runCatching {
-            Entities.unescape(result.toString())
-        }.onFailure {
-            log.info("Entities.unescape() error\n${it.localizedMessage}")
-        }.getOrElse {
-            result.toString()
+        val resultStr = result.toString()
+        val str = if (unescape && resultStr.indexOf('&') > -1) {
+            StringEscapeUtils.unescapeHtml4(resultStr)
+        } else {
+            resultStr
         }
         if (isUrl) {
             return if (str.isBlank()) {
@@ -300,6 +322,7 @@ class AnalyzeRule(
                             result.toString(),
                             sourceRule.rule.splitNotBlank("&&")
                         )
+
                         Mode.Js -> evalJS(sourceRule.rule, it)
                         Mode.Json -> getAnalyzeByJSonPath(it).getObject(sourceRule.rule)
                         Mode.XPath -> getAnalyzeByXPath(it).getElements(sourceRule.rule)
@@ -332,14 +355,15 @@ class AnalyzeRule(
                             result.toString(),
                             sourceRule.rule.splitNotBlank("&&")
                         )
+
                         Mode.Js -> evalJS(sourceRule.rule, result)
                         Mode.Json -> getAnalyzeByJSonPath(it).getList(sourceRule.rule)
                         Mode.XPath -> getAnalyzeByXPath(it).getElements(sourceRule.rule)
                         else -> getAnalyzeByJSoup(it).getElements(sourceRule.rule)
                     }
-                    if (sourceRule.replaceRegex.isNotEmpty()) {
-                        result = replaceRegex(result.toString(), sourceRule)
-                    }
+//                    if (sourceRule.replaceRegex.isNotEmpty()) {
+//                        result = replaceRegex(result.toString(), sourceRule)
+//                    }
                 }
             }
         }
@@ -630,6 +654,10 @@ class AnalyzeRule(
                     || ruleStr.startsWith("$[")
                     || ruleStr.startsWith("//")
         }
+
+        fun getParamSize(): Int {
+            return ruleParam.size
+        }
     }
 
     enum class Mode {
@@ -637,7 +665,6 @@ class AnalyzeRule(
     }
 
     fun put(key: String, value: String): String {
-        //println("put2 key:$key,value:$value")
         if(source != null){
             val userid = source.userid?:""
             chapter?.userid = userid
@@ -713,6 +740,7 @@ class AnalyzeRule(
      * js实现跨域访问,不能删
      */
     override fun ajax(urlStr: String): String? {
+        logger.info("ajax url: $urlStr")
         return runBlocking {
             kotlin.runCatching {
                 val analyzeUrl = AnalyzeUrl(urlStr, source = source, ruleData = book)
@@ -726,17 +754,7 @@ class AnalyzeRule(
         }
     }
 
-    /**
-     * 章节数转数字
-     */
-    fun toNumChapter(s: String?): String? {
-        s ?: return null
-        val matcher = titleNumPattern.matcher(s)
-        if (matcher.find()) {
-            return "${matcher.group(1)}${StringUtils.stringToInt(matcher.group(2))}${matcher.group(3)}"
-        }
-        return s
-    }
+
 
     /**
      * 更新BookUrl,如果搜索结果有tocUrl也会更新,有些书源bookUrl定期更新,可以在js内调用更新

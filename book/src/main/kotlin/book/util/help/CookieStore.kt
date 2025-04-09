@@ -6,6 +6,7 @@ import book.util.MD5Utils
 import book.util.TextUtils
 import java.io.File
 import java.io.FileNotFoundException
+import java.net.IDN
 import java.net.URI
 
 // TODO 处理cookie
@@ -98,9 +99,9 @@ class CookieStore(val userid:String,key: String?) : CookieManager {
     }
 
     fun getKey(tag: String, key: String? = null): String {
-        println("getKey tag:$tag, key:$key")
+       // println("getKey tag:$tag, key:$key")
         val cookie = this.getCookie(tag)
-        println("getKeycookie:$cookie")
+        //println("getKeycookie:$cookie")
         val cookieMap = this.cookieToMap(cookie)
         return if (key != null) {
              println("getKey:"+cookieMap[key])
@@ -119,10 +120,37 @@ class CookieStore(val userid:String,key: String?) : CookieManager {
             if (url.contains("#") ) {
                 key=url.split("#")[0]
             }
-            val uri = URI(key)
+            var uri = URI(key)
+            if(uri.host == null){
+                uri = encodeChineseUrl(url)
+            }
             key = uri.host
         }
         return key
+    }
+
+    fun mergeCookies(vararg cookies: String?): String? {
+        val cookieMap = mergeCookiesToMap(*cookies)
+        return mapToCookie(cookieMap)
+    }
+
+    fun mergeCookiesToMap(vararg cookies: String?): MutableMap<String, String> {
+        return cookies.filterNotNull().map {
+           cookieToMap(it)
+        }.reduce { acc, cookieMap ->
+            acc.apply { putAll(cookieMap) }
+        }
+    }
+
+
+    private fun encodeChineseUrl(url: String): URI {
+        val regex = Regex("^(https?://)([^/]+)(.*)")
+        val match = regex.find(url) ?: throw IllegalArgumentException("Invalid URL")
+
+        val (protocol, rawHost, path) = match.destructured
+        val encodedHost = IDN.toASCII(rawHost) // 编码域名部分
+
+        return URI("$protocol$encodedHost$path")
     }
 
     private fun getsurl(url: String): String {
@@ -142,7 +170,9 @@ class CookieStore(val userid:String,key: String?) : CookieManager {
     }
 
     override fun getCookie(url: String): String {
+       // println("获取cookie:$url")
         var key = geturl(url)
+       // println("获取cookie:$key")
        // println("surl:${getsurl(key)}")
         var cookiemap1= cookieToMap(getcookie(key))  //当前域名
         var cookiemap2= cookieToMap(getcookie("."+key))  //上级域名
@@ -151,12 +181,12 @@ class CookieStore(val userid:String,key: String?) : CookieManager {
         cookiemap2.putAll(cookiemap1)
         if(CookieList.manager != null){
            // println(userid+" "+CookieList.manager!!.getCookie(userid,key)+" "+key)
-            var cookiemap4= cookieToMap(CookieList.manager!!.getCookie(userid,key))
+            val cookiemap4= cookieToMap(CookieList.manager!!.getCookie(userid,key))
             cookiemap2.putAll(cookiemap4)
         }else{
             println("用户cookie加载失败")
         }
-        println("getCookie($url):"+mapToCookie(cookiemap2))
+        //println("getCookie($key):"+mapToCookie(cookiemap2))
         return mapToCookie(cookiemap2)?:""
     }
 

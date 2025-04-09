@@ -1,7 +1,6 @@
 package web.controller.api
 
 import book.WBook.Debugger
-import book.app.ToastMessage
 import book.webBook.WBook
 import com.google.gson.Gson
 import kotlinx.coroutines.runBlocking
@@ -13,8 +12,10 @@ import org.noear.solon.net.websocket.WebSocket
 import org.noear.solon.net.websocket.listener.SimpleWebSocketListener
 import org.slf4j.LoggerFactory
 import web.mapper.BookSourceMapper
+import web.mapper.UserBookSourceMapper
 import web.mapper.UsersMapper
 import web.mapper.UsertockenMapper
+import web.model.BaseSource
 import web.model.Users
 import web.response.JsonResponse
 import java.io.IOException
@@ -34,24 +35,28 @@ open  class DebugWebSocket : SimpleWebSocketListener() {
     @Inject
     lateinit var booksourcemapper: BookSourceMapper
 
+    @Db("db")
+    @Inject
+    lateinit var userBookSourceMapper: UserBookSourceMapper
+
     private  val logger= LoggerFactory.getLogger(DebugWebSocket::class.java)
 
     override fun onOpen(socket: WebSocket) {
         val accessToken: String = socket.param("id")
         logger.info("websocket Open $accessToken")
-        if (accessToken == null || accessToken.isBlank()) {
+        if (accessToken.isBlank()) {
             socket.close()
             return
         }
 
-        var tocken=usertockenMapper.selectById(accessToken)
+        val tocken=usertockenMapper.selectById(accessToken)
         if (tocken == null) {
             logger.info("websocket tocken is null")
             socket.close()
             return
         }
 
-        var user=usersMapper.selectById(tocken.userid)
+        val user=usersMapper.selectById(tocken.userid)
         if (user == null) {
             logger.info("websocket user is null")
             socket.close()
@@ -63,7 +68,13 @@ open  class DebugWebSocket : SimpleWebSocketListener() {
     override fun onMessage(socket: WebSocket, text: String): Unit = runBlocking{
         val accessToken: String = socket.param("id")
         val user=getuserbytocken(accessToken)
-        var msg=Gson().fromJson(text, DebugMsg::class.java)
+        if (user == null){
+            socket.send("event: error\n")
+            socket.send(Gson().toJson(JsonResponse(false,"user不存在")) + "\n\n")
+            socket.close()
+            return@runBlocking
+        }
+        val msg=Gson().fromJson(text, DebugMsg::class.java)
         if (msg.url == null || msg.url!!.isBlank()){
             socket.send("event: error\n")
             socket.send(Gson().toJson(JsonResponse(false,"书源连接不存在")) + "\n\n")
@@ -76,7 +87,11 @@ open  class DebugWebSocket : SimpleWebSocketListener() {
             socket.close()
             return@runBlocking
         }
-        var bookSource=booksourcemapper.selectById(msg.url)
+        val bookSource: BaseSource?= if(user.source == 2){
+            userBookSourceMapper.getBookSource(msg.url!!,user.id!!)?.toBaseSource()
+        }else{
+            booksourcemapper.getBookSource(msg.url!!)?.toBaseSource()
+        }
         if (bookSource == null){
             socket.send("event: error\n")
             socket.send(Gson().toJson(JsonResponse(false,"未配置书源")) + "\n\n")
@@ -88,7 +103,7 @@ open  class DebugWebSocket : SimpleWebSocketListener() {
             logger.info( Gson().toJson(mapOf("msg" to msg)) + "\n\n")
         }
         runCatching {
-            val webBook = WBook(bookSource!!.json ?: "", user!!.id!!, accessToken, true)
+            val webBook = WBook(bookSource.json ?: "", user.id!!, accessToken, true)
             debugger.startDebug(webBook, msg.key!!)
         }
         //socket.send("event: end\n")
@@ -101,11 +116,11 @@ open  class DebugWebSocket : SimpleWebSocketListener() {
         if (accessToken == null || accessToken.isBlank()) {
             return null
         }
-        var tocken=usertockenMapper.selectById(accessToken)
+        val tocken=usertockenMapper.selectById(accessToken)
         if (tocken == null) {
             return null
         }
-        var user=usersMapper.selectById(tocken.userid)
+        val user=usersMapper.selectById(tocken.userid)
         if (user == null) {
             return null
         }

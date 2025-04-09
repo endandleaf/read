@@ -14,6 +14,11 @@ fun String?.isDataUrl() =
         dataUriRegex.matches(it)
     } ?: false
 
+fun String?.isUri(): Boolean {
+    this ?: return false
+    return this.startsWith("file://", true)
+}
+
 fun String?.isJson(): Boolean = this?.run {
     val str = this.trim()
     when {

@@ -114,6 +114,7 @@ object SourceAnalyzer {
                         kind = toNewRule(jsonItem.readString("ruleSearchKind")),
                         bookUrl = toNewRule(jsonItem.readString("ruleSearchNoteUrl")),
                         coverUrl = toNewRule(jsonItem.readString("ruleSearchCoverUrl")),
+                        checkKeyWord = toNewRule(jsonItem.readString("checkKeyWord")),
                         lastChapter = toNewRule(jsonItem.readString("ruleSearchLastChapter"))
                     )
                     ruleExplore = ExploreRule(

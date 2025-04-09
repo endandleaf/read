@@ -43,7 +43,8 @@ dependencies {
    // implementation(files("src/lib/rhino-1.7.14.jar"))
     implementation("org.mozilla:rhino:1.8.0")
     implementation(files("src/lib/xmlpull-1.1.3.1.jar"))
-
+    implementation("org.apache.commons:commons-text:1.13.0")
+    implementation("com.github.liuyueyi:quick-transfer-core:0.2.16")
     testImplementation(kotlin("test"))
 }
 sourceSets {

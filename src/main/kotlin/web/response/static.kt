@@ -8,6 +8,8 @@ val PASS_ERROR = "用户名或密码错误"
 
 val NOT_SOURCE = "书源不存在"
 
+val IS_WEBVIEW = "webview书源不支持缓存"
+
 val SUCCESS = "success"
 
 val BOOKSEARCHERROR="通过书源获取书本信息失败"

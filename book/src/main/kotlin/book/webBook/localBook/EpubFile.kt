@@ -13,17 +13,18 @@ import org.jsoup.nodes.Element
 import org.jsoup.select.Elements
 import org.slf4j.LoggerFactory
 import java.io.File
-import java.io.FileOutputStream
 import java.io.IOException
 import java.io.InputStream
 import java.nio.charset.Charset
 import java.nio.file.Paths
 import java.util.*
 import java.util.zip.ZipFile
-
 private val logger = LoggerFactory.getLogger(EpubFile::class.java)
 
 class EpubFile(var book: Book) {
+    init {
+        updateCover()
+    }
 
     companion object {
         private var eFile: EpubFile? = null
@@ -147,8 +148,97 @@ class EpubFile(var book: Book) {
         }
         return null
     }
-
     private fun getContent(chapter: BookChapter): String? {
+        /*获取当前章节文本*/
+        val contents = epubBook?.contents ?: return null
+        val nextChapterFirstResourceHref =chapter.url.substringBeforeLast("#")
+        val currentChapterFirstResourceHref = chapter.url.substringBeforeLast("#")
+        val isLastChapter = nextChapterFirstResourceHref.isBlank()
+        val startFragmentId = chapter.startFragmentId
+        val endFragmentId = chapter.endFragmentId
+        val elements = Elements()
+        var findChapterFirstSource = false
+        val includeNextChapterResource = !endFragmentId.isNullOrBlank()
+        /*一些书籍依靠href索引的resource会包含多个章节，需要依靠fragmentId来截取到当前章节的内容*/
+        /*注:这里较大增加了内容加载的时间，所以首次获取内容后可存储到本地cache，减少重复加载*/
+        for (res in contents) {
+            if (!findChapterFirstSource) {
+                if (currentChapterFirstResourceHref != res.href) continue
+                findChapterFirstSource = true
+                // 第一个xhtml文件
+                elements.add(
+                    getBody(res, startFragmentId, endFragmentId)
+                )
+                // 不是最后章节 且 已经遍历到下一章节的内容时停止
+                if (!isLastChapter && res.href == nextChapterFirstResourceHref) break
+                continue
+            }
+            if (nextChapterFirstResourceHref != res.href) {
+                // 其余部分
+                elements.add(getBody(res, null, null))
+            } else {
+                // 下一章节的第一个xhtml
+                if (includeNextChapterResource) {
+                    //有Fragment 则添加到上一章节
+                    elements.add(getBody(res, null, endFragmentId))
+                }
+                break
+            }
+        }
+        //title标签中的内容不需要显示在正文中，去除
+        for( i in 1..6){
+            elements.select("h$i").forEach{
+                it.remove()
+            }
+        }
+       // elements.select("[class=\"chapter-title2\"]").remove()
+        elements.select("title").remove()
+        elements.select("[style*=display:none]").remove()
+        elements.select("img[src=\"cover.jpeg\"]").forEachIndexed { i, it ->
+            if (i > 0) it.remove()
+        }
+        elements.select("img").forEach{
+           if(it.attr("src").contains("cover")){
+               var url=book.coverUrl?:""
+               if(!url.startsWith("http") && !url.startsWith("https")){
+                   url="http/$url"
+               }
+               it.attr("src",url)
+           }else{
+               val data=epubBook!!.resources.resourceMap[it.attr("src")]?.data
+               if(data != null){
+                   val coverFile = "${MD5Utils.md5Encode16(book.bookUrl+it.attr("src"))}.jpg"
+                   val relativeCoverUrl = Paths.get("assets", book.getUserNameSpace(), "covers", coverFile).toString()
+                   var url="/" + relativeCoverUrl
+                   val coverUrl = Paths.get(book.workRoot(), "storage", relativeCoverUrl).toString()
+                   if (!File(coverUrl).exists()) {
+                       FileUtils.writeBytes(coverUrl,data)
+                   }
+                   if(!url.startsWith("http") && !url.startsWith("https")){
+                       url="http/$url"
+                   }
+                   it.attr("src",url)
+               }
+
+           }
+        }
+        elements.select("img").forEach {
+            if (it.attributesSize() <= 1) {
+                return@forEach
+            }
+            val src = it.attr("src")
+            it.clearAttributes()
+            it.attr("src", src)
+        }
+        val tag = Book.rubyTag
+        if (book.getDelTag(tag)) {
+            elements.select("rp, rt").remove()
+        }
+        val html = elements.outerHtml()
+        return HtmlFormatter.formatKeepImg(html)
+    }
+
+    private fun getContent2(chapter: BookChapter): String? {
         /**
          * <image width="1038" height="670" xlink:href="..."/>
          * ...titlepage.xhtml
@@ -167,6 +257,8 @@ class EpubFile(var book: Book) {
             /*注:这里较大增加了内容加载的时间，所以首次获取内容后可存储到本地cache，减少重复加载*/
             for (res in epubBook.contents) {
                 if (chapter.url.substringBeforeLast("#") == res.href) {
+                    println(startFragmentId)
+                    println(endFragmentId)
                     elements.add(getBody(res, startFragmentId, endFragmentId))
                     isChapter = true
                     /**

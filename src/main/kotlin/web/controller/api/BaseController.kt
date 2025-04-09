@@ -29,61 +29,104 @@ open class BaseController {
     @Inject
     lateinit var bookSourcemapper: BookSourceMapper
 
+    @Db("db")
+    @Inject
+    lateinit var userBookSourceMapper: UserBookSourceMapper
+
 
     fun getuserbytocken(accessToken:String?): Users?{
         if (accessToken == null || accessToken.isBlank()) {
             return null
         }
-        var tocken=usertockenMapper.selectById(accessToken)
+        val tocken=usertockenMapper.selectById(accessToken)
         if (tocken == null) {
             return null
         }
-        var user=usersMapper.selectById(tocken.userid)
+        val user=usersMapper.selectById(tocken.userid)
         if (user == null) {
             return null
         }
         return user
     }
 
-    fun getsource(accessToken:String?,  bookSourceUrl:String?): Pair<BookSource?, JsonResponse?>{
-        getuserbytocken(accessToken).also {
-            if(it == null){
-                return Pair(null, JsonResponse(false,NEED_LOGIN))
-            }
-        }!!
-        var source=bookSourcemapper.getBookSource(bookSourceUrl.also {
-            if (it == null){
-                return Pair(null, JsonResponse(false,NOT_BANK))
-            }
-        }!!).also {
-            if (it == null){
-                return Pair(null, JsonResponse(false,NOT_SOURCE))
-            }
-        }!!
-        return Pair(source,null)
-    }
-
-    fun getsourceuser(accessToken:String?,  bookSourceUrl:String?): Triple<Users?,BookSource?, JsonResponse?>{
-        var user=getuserbytocken(accessToken).also {
+    fun getsourceuser(accessToken:String?,  bookSourceUrl:String?): Triple<Users?,BaseSource?, JsonResponse?>{
+        val user=getuserbytocken(accessToken).also {
             if(it == null){
                 return Triple(null,null, JsonResponse(false,NEED_LOGIN))
             }
         }!!
-        var source=bookSourcemapper.getBookSource(bookSourceUrl.also {
-            if (it == null){
-                return Triple(null,null, JsonResponse(false,NOT_BANK))
-            }
-        }!!).also {
-            if (it == null){
+        if(bookSourceUrl == null){
+            return Triple(null,null, JsonResponse(false,NOT_BANK))
+        }
+        val source:BaseSource?= if(user.source == 2){
+            userBookSourceMapper.getBookSource(bookSourceUrl,user.id!!)?.toBaseSource()
+        }else{
+            bookSourcemapper.getBookSource(bookSourceUrl)?.toBaseSource()
+        }.also {
+            if(it == null){
                 return Triple(null,null, JsonResponse(false,NOT_SOURCE))
             }
         }!!
         return Triple(user,source,null)
     }
 
-    fun getsource( bookSourceUrl:String?): BookSource?{
-        if(bookSourceUrl == null){return null}
-        return bookSourcemapper.getBookSource(bookSourceUrl!!)
+    fun getsource(accessToken:String?,  bookSourceUrl:String?,user: Users): Pair<BaseSource?, JsonResponse?>{
+        getuserbytocken(accessToken).also {
+            if(it == null){
+                return Pair(null, JsonResponse(false,NEED_LOGIN))
+            }
+        }!!
+        if(bookSourceUrl == null){
+            return Pair(null, JsonResponse(false,NOT_BANK))
+        }
+        val source:BaseSource?= if(user.source == 2){
+            userBookSourceMapper.getBookSource(bookSourceUrl,user.id!!)?.toBaseSource()
+        }else{
+            bookSourcemapper.getBookSource(bookSourceUrl)?.toBaseSource()
+        }.also {
+            if(it == null){
+                return Pair(null, JsonResponse(false,NOT_SOURCE))
+            }
+        }!!
+        return Pair(source,null)
+    }
+
+    fun getsource( bookSourceUrl:String,user: Users): BaseSource?{
+        val source:BaseSource?= if(user.source == 2){
+            userBookSourceMapper.getBookSource(bookSourceUrl,user.id!!)?.toBaseSource()
+        }else{
+            bookSourcemapper.getBookSource(bookSourceUrl)?.toBaseSource()
+        }
+        return source
+    }
+
+    fun  getallBookSourcelist(user: Users): List<BaseSource>{
+        val list = mutableListOf<BaseSource>()
+        if(user.source == 2){
+            userBookSourceMapper.getallBookSourcelist(user.id!!)?.forEach {
+                list.add(it.toBaseSource())
+            }
+        }else{
+            bookSourcemapper.getallBookSourcelist()?.forEach {
+                list.add(it.toBaseSource())
+            }
+        }
+
+        return list
+    }
+
+    fun  getBookSourcelist(enabled: Boolean,user: Users): List<BaseSource>{
+        val list = mutableListOf<BaseSource>()
+        if(user.source == 2){
+            userBookSourceMapper.getBookSourcelist(enabled,user.id!!)?.forEach {
+                list.add(it.toBaseSource())
+            }
+        }else{
+            bookSourcemapper.getBookSourcelist(enabled)?.forEach {
+                list.add(it.toBaseSource())
+            }
+        }
+        return list
     }
 
 

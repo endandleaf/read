@@ -10,6 +10,7 @@ import book.util.AppPattern.JS_PATTERN
 import book.util.AppPattern.dataUriRegex
 import book.util.help.CacheManager
 import book.util.help.CookieStore
+import book.util.help.cookieJarHeader
 import book.util.http.*
 import book.webBook.DebugLog
 import book.webBook.exception.ConcurrentException
@@ -20,9 +21,17 @@ import okhttp3.RequestBody.Companion.toRequestBody
 import java.net.URLEncoder
 import java.util.regex.Pattern
 import com.script.rhino.RhinoScriptEngine
+import okhttp3.OkHttpClient
+import okhttp3.Response
+import org.slf4j.Logger
+import org.slf4j.LoggerFactory
+import java.io.ByteArrayInputStream
+import java.io.InputStream
+import java.util.concurrent.TimeUnit
 import kotlin.coroutines.ContinuationInterceptor
 import kotlin.coroutines.CoroutineContext
 import kotlin.coroutines.EmptyCoroutineContext
+import kotlin.math.max
 
 
 class AnalyzeUrl(
@@ -47,6 +56,9 @@ class AnalyzeUrl(
         private val concurrentRecordMap = hashMapOf<String, ConcurrentRecord>()
     }
 
+    override val logger: Logger
+        get() =  LoggerFactory.getLogger(AnalyzeUrl::class.java)
+
     var ruleUrl = ""
         private set
     var url: String = ""
@@ -67,6 +79,8 @@ class AnalyzeUrl(
     private var useWebView: Boolean = false
     private var webJs: String? = null
     private val enabledCookieJar = source?.enabledCookieJar ?: false
+    private val concurrentRateLimiter = ConcurrentRateLimiter(source)
+    private val domain: String
 
 
     init {
@@ -76,6 +90,7 @@ class AnalyzeUrl(
             }
         }
         initUrl()
+        domain = NetworkUtils.getSubDomain(source?.getKey() ?: url)
     }
 
 
@@ -100,7 +115,7 @@ class AnalyzeUrl(
         //处理URL
         if(needanalyzeUrl) analyzeUrl()
 
-       // println("ruleUrl3 $ruleUrl")
+       logger.info("ruleUrl3 $ruleUrl")
     }
 
     private fun analyzeJs() {
@@ -282,24 +297,32 @@ class AnalyzeUrl(
         return value
     }
 
-    private fun setCookie(tag: String?) {
-       // println("setCookie tag:$tag")
+    private fun setCookie() {
+        //println("setCookie domain:$url")
         var userid=""
         if(source != null){
             userid = source.userid?:""
         }
         var store=CookieStore(userid,source?.getKey())
-        val cookie = store.getCookie(tag ?: url)
+        val cookie = store.getCookie(urlNoQuery)
         //println("cookie : $cookie")
         if (cookie.isNotEmpty()) {
-            val cookieMap = store.cookieToMap(cookie)
+            /*val cookieMap = store.cookieToMap(cookie)
             val customCookieMap = store.cookieToMap(headerMap["Cookie"] ?: "")
             customCookieMap.putAll(cookieMap)
             val newCookie = store.mapToCookie(customCookieMap)
             newCookie?.let {
                 //println("putcookie : $it,url:${url}")
                 headerMap.put("Cookie", it)
+            }*/
+            store.mergeCookies(cookie, headerMap["Cookie"])?.let {
+                headerMap.put("Cookie", it)
             }
+        }
+        if (enabledCookieJar) {
+            headerMap[cookieJarHeader] = "1"
+        } else {
+            headerMap.remove(cookieJarHeader)
         }
     }
 
@@ -309,57 +332,49 @@ class AnalyzeUrl(
     suspend fun getStrResponseAwait(
         jsStr: String? = null,
         sourceRegex: String? = null,
-        useWebView: Boolean = true,
-        debugLog: DebugLog? = null
+        useWebView: Boolean = true
     ): StrResponse {
         if (type != null) {
             return StrResponse(url, StringUtils.byteToHexString(getByteArrayAwait()))
         }
-        val concurrentRecord = fetchStart()
-        setCookie(source?.getKey())
-        val strResponse: StrResponse
-        if (this.useWebView && useWebView) {
-            //println("webview url is $url")
-            var s=startBrowserHideAwait(url,"webview")
-            //println("gethtml ,${ s.body}")
-            return StrResponse(url,s.body)
-            //throw Exception("不支持webview")
-        } else {
-            //println("proxy"+proxy.toString())
-            strResponse = getProxyClient(proxy, null).newCallStrResponse(retry) {
-                addHeaders(headerMap)
-                when (method) {
-                    RequestMethod.POST -> {
-                        url(urlNoQuery)
-                        val contentType = headerMap["Content-Type"]
-                        val body = body
-                        if (fieldMap.isNotEmpty() || body.isNullOrBlank()) {
-                            postForm(fieldMap, true)
-                        } else if (!contentType.isNullOrBlank()) {
-                            val requestBody = body.toRequestBody(contentType.toMediaType())
-                            post(requestBody)
-                        } else {
-                            postJson(body)
+        var strResponse: StrResponse
+        concurrentRateLimiter.withLimit{
+            setCookie()
+            if (this.useWebView && useWebView) {
+                var s=startBrowserHideAwait(url,"webview")
+                return StrResponse(url,s.body)
+            } else {
+                strResponse = getClient().newCallStrResponse(retry) {
+                    addHeaders(headerMap)
+                    when (method) {
+                        RequestMethod.POST -> {
+                            url(urlNoQuery)
+                            val contentType = headerMap["Content-Type"]
+                            val body = body
+                            if (fieldMap.isNotEmpty() || body.isNullOrBlank()) {
+                                postForm(fieldMap, true)
+                            } else if (!contentType.isNullOrBlank()) {
+                                val requestBody = body.toRequestBody(contentType.toMediaType())
+                                post(requestBody)
+                            } else {
+                                postJson(body)
+                            }
                         }
+                        else -> get(urlNoQuery, fieldMap, true)
                     }
-                    else -> get(urlNoQuery, fieldMap, true)
                 }
+                if(enabledCookieJar) strResponse.headers().values("Set-Cookie").forEach {
+                    //println("enabledCookieJar")
+                    var userid=""
+                    if(source != null){
+                        userid = source.userid?:""
+                    }
+                    var store=CookieStore(userid,source?.getKey())
+                    store.setCookienourl(it,(source?.getKey())?:urlNoQuery)
+                }
+                return strResponse
             }
         }
-        fetchEnd(concurrentRecord)
-        if(enabledCookieJar) strResponse.headers().values("Set-Cookie").forEach {
-            //println("enabledCookieJar")
-            var userid=""
-            if(source != null){
-                userid = source.userid?:""
-            }
-            var store=CookieStore(userid,source?.getKey())
-            store.setCookienourl(it,(source?.getKey())?:urlNoQuery)
-        }
-        //println(strResponse.body)
-        //println(headerMap.toString())
-        //println(source?.getKey())
-        return strResponse
     }
 
 
@@ -368,30 +383,20 @@ class AnalyzeUrl(
         jsStr: String? = null,
         sourceRegex: String? = null,
         useWebView: Boolean = true,
-        debugLog: DebugLog? = null
     ): StrResponse {
         return runBlocking {
-            getStrResponseAwait(jsStr, sourceRegex, useWebView, null)
+            getStrResponseAwait(jsStr, sourceRegex, useWebView)
         }
     }
 
+
     /**
-     * 访问网站,返回ByteArray
+     * 访问网站,返回Response
      */
-    suspend fun getByteArrayAwait(): ByteArray {
-        val concurrentRecord = fetchStart()
-        @Suppress("RegExpRedundantEscape")
-        val dataUriFindResult = dataUriRegex.find(urlNoQuery)
-        @Suppress("BlockingMethodInNonBlockingContext")
-        if (dataUriFindResult != null) {
-            val dataUriBase64 = dataUriFindResult.groupValues[1]
-            val byteArray = Base64.decode(dataUriBase64, Base64.DEFAULT)
-            fetchEnd(concurrentRecord)
-            return byteArray
-        } else {
-            setCookie(source?.getKey())
-            val strResponse: StrResponse
-            val byteArray = getProxyClient(proxy).newCallResponseBody(retry) {
+    suspend fun getResponseAwait(): Response {
+        concurrentRateLimiter.withLimit {
+            setCookie()
+            val response = getClient().newCallResponse(retry) {
                 addHeaders(headerMap)
                 when (method) {
                     RequestMethod.POST -> {
@@ -407,11 +412,37 @@ class AnalyzeUrl(
                             postJson(body)
                         }
                     }
+
                     else -> get(urlNoQuery, fieldMap, true)
                 }
-            }.bytes()
-            fetchEnd(concurrentRecord)
-            return byteArray
+            }
+            if(enabledCookieJar) response.headers.values("Set-Cookie").forEach {
+                //println("enabledCookieJar")
+                var userid=""
+                if(source != null){
+                    userid = source.userid?:""
+                }
+                var store=CookieStore(userid,source?.getKey())
+                store.setCookienourl(it,(source?.getKey())?:urlNoQuery)
+            }
+            return response
+        }
+    }
+
+    private fun getClient(): OkHttpClient {
+        val client = getProxyClient(proxy)
+        if (readTimeout == null) {
+            return client
+        }
+        return client.newBuilder()
+            .readTimeout(readTimeout, TimeUnit.MILLISECONDS)
+            .callTimeout(max(60 * 1000L, readTimeout * 2), TimeUnit.MILLISECONDS)
+            .build()
+    }
+
+    fun getResponse(): Response {
+        return runBlocking(coroutineContext) {
+            getResponseAwait()
         }
     }
 
@@ -425,74 +456,68 @@ class AnalyzeUrl(
         return null
     }
 
+    /**
+     * 访问网站,返回ByteArray
+     */
+    suspend fun getByteArrayAwait(): ByteArray {
+        getByteArrayIfDataUri()?.let {
+            return it
+        }
+        return getResponseAwait().body!!.bytes()
+    }
 
-
+    fun getByteArray(): ByteArray {
+        return runBlocking(coroutineContext) {
+            getByteArrayAwait()
+        }
+    }
 
     /**
-     * 开始访问,并发判断
+     * 访问网站,返回InputStream
      */
-    private fun fetchStart(): ConcurrentRecord? {
-        source ?: return null
-        val concurrentRate = source.concurrentRate
-        if (concurrentRate.isNullOrEmpty()) {
-            return null
+    suspend fun getInputStreamAwait(): InputStream {
+        getByteArrayIfDataUri()?.let {
+            return ByteArrayInputStream(it)
         }
-        val rateIndex = concurrentRate.indexOf("/")
-        var fetchRecord = concurrentRecordMap[source.getKey()]
-        if (fetchRecord == null) {
-            fetchRecord = ConcurrentRecord(rateIndex > 0, System.currentTimeMillis(), 1)
-            concurrentRecordMap[source.getKey()] = fetchRecord
-            return fetchRecord
+        return getResponseAwait().body!!.byteStream()
+    }
+
+    fun getInputStream(): InputStream {
+        return runBlocking(coroutineContext) {
+            getInputStreamAwait()
         }
-        val waitTime: Int = synchronized(fetchRecord) {
-            try {
-                if (rateIndex == -1) {
-                    if (fetchRecord.frequency > 0) {
-                        return@synchronized concurrentRate.toInt()
-                    }
-                    val nextTime = fetchRecord.time + concurrentRate.toInt()
-                    if (System.currentTimeMillis() >= nextTime) {
-                        fetchRecord.time = System.currentTimeMillis()
-                        fetchRecord.frequency = 1
-                        return@synchronized 0
-                    }
-                    return@synchronized (nextTime - System.currentTimeMillis()).toInt()
-                } else {
-                    val sj = concurrentRate.substring(rateIndex + 1)
-                    val nextTime = fetchRecord.time + sj.toInt()
-                    if (System.currentTimeMillis() >= nextTime) {
-                        fetchRecord.time = System.currentTimeMillis()
-                        fetchRecord.frequency = 1
-                        return@synchronized 0
-                    }
-                    val cs = concurrentRate.substring(0, rateIndex)
-                    if (fetchRecord.frequency > cs.toInt()) {
-                        return@synchronized (nextTime - System.currentTimeMillis()).toInt()
-                    } else {
-                        fetchRecord.frequency = fetchRecord.frequency + 1
-                        return@synchronized 0
-                    }
+    }
+
+    /**
+     * 上传文件
+     */
+    suspend fun upload(fileName: String, file: Any, contentType: String): StrResponse {
+        return getProxyClient(proxy).newCallStrResponse(retry) {
+            url(urlNoQuery)
+            val bodyMap = GSON.fromJsonObject<HashMap<String, Any>>(body).getOrNull()!!
+            bodyMap.forEach { entry ->
+                if (entry.value.toString() == "fileRequest") {
+                    bodyMap[entry.key] = mapOf(
+                        Pair("fileName", fileName),
+                        Pair("file", file),
+                        Pair("contentType", contentType)
+                    )
                 }
-            } catch (e: Exception) {
-                return@synchronized 0
             }
+            postMultipart(type, bodyMap)
         }
-        if (waitTime > 0) {
-            throw ConcurrentException("根据并发率还需等待${waitTime}毫秒才可以访问", waitTime = waitTime)
-        }
-        return fetchRecord
     }
 
-    /**
-     * 访问结束
-     */
-    private fun fetchEnd(concurrentRecord: ConcurrentRecord?) {
-        if (concurrentRecord != null && !concurrentRecord.concurrent) {
-            synchronized(concurrentRecord) {
-                concurrentRecord.frequency = concurrentRecord.frequency - 1
-            }
-        }
+
+    fun getUserAgent(): String {
+        return headerMap.get(UA_NAME, true) ?: AppConst.userAgent
     }
+
+    fun isPost(): Boolean {
+        return method == RequestMethod.POST
+    }
+
+
 
     override fun getSource(): BaseSource? {
         return source
@@ -601,7 +626,7 @@ class AnalyzeUrl(
     }
 
     data class ConcurrentRecord(
-        val concurrent: Boolean,
+        val isConcurrent: Boolean,
         var time: Long,
         var frequency: Int
     )

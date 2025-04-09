@@ -59,7 +59,7 @@ object BookChapterList {
                         source = bookSource,
                         ruleData = book,
                         headerMapF = bookSource.getHeaderMap()
-                    ).getStrResponseAwait(debugLog = debugLog).body?.let { nextBody ->
+                    ).getStrResponseAwait().body?.let { nextBody ->
                         chapterData = analyzeChapterList(
                             book, nextUrl, nextUrl,
                             nextBody, tocRule, listRule, bookSource, true, false, debugLog
@@ -82,7 +82,7 @@ object BookChapterList {
                                 ruleData = book,
                                 headerMapF = bookSource.getHeaderMap()
                             )
-                            val res = analyzeUrl.getStrResponseAwait(debugLog = debugLog)
+                            val res = analyzeUrl.getStrResponseAwait()
                             analyzeChapterList(
                                 book, urlStr, res.url,
                                 res.body!!, tocRule, listRule, bookSource, false, false, debugLog

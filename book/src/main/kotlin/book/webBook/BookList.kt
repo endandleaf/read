@@ -207,6 +207,8 @@ object BookList {
             }
             if (log) debugLog?.log(bookSource.bookSourceUrl, "└${searchBook.bookUrl}")
             return searchBook
+        }else{
+            if (log) debugLog?.log(bookSource.bookSourceUrl, "└书名获取为空")
         }
         return null
     }

@@ -41,6 +41,9 @@ dependencies {
     implementation("org.noear:solon-web"){
         exclude(group = "org.noear", module = "solon-serialization-snack3")
     }
+    implementation("org.noear:solon-web-staticfiles"){
+        exclude(group = "org.slf4j", module = "slf4j-simple")
+    }
     implementation("org.noear:solon-view-freemarker"){
         exclude(group = "org.slf4j", module = "slf4j-simple")
     }

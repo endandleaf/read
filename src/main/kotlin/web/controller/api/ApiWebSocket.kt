@@ -9,7 +9,6 @@ import kotlinx.coroutines.sync.withLock
 import org.apache.ibatis.solon.annotation.Db
 import org.noear.solon.annotation.Controller
 import org.noear.solon.annotation.Inject
-import org.noear.solon.annotation.Mapping
 import org.noear.solon.net.annotation.ServerEndpoint
 import org.noear.solon.net.websocket.WebSocket
 import org.noear.solon.net.websocket.listener.SimpleWebSocketListener

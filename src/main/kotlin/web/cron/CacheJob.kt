@@ -2,6 +2,7 @@ package web.cron
 
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper
 import kotlinx.coroutines.runBlocking
+import org.noear.solon.annotation.Inject
 import org.noear.solon.scheduling.annotation.Scheduled
 import org.slf4j.LoggerFactory
 import web.cron.BookJob.Companion
@@ -18,7 +19,13 @@ class CacheJob: Runnable {
         private var isupdatebookcron = false
     }
 
+    @Inject(value = "\${admin.cron:true}", autoRefreshed=true)
+    var cron:Boolean=true
+
     override fun run() = runBlocking{
+        if(!cron){
+            return@runBlocking
+        }
         if (isupdatebookcron) {
             return@runBlocking
         }

@@ -24,6 +24,7 @@ class InitConfig {
 
     class Cookie(val userCookieMapper: UserCookieMapper) : CookieManager {
         override fun getCookie(id: String, url: String): String {
+            if(url.isEmpty()) return ""
             var cookies: String = ""
             runCatching {
                 userCookieMapper.getcookiemo(id, url).let {

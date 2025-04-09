@@ -19,6 +19,10 @@ class mapper {
     @Inject
     lateinit var bookSourcemapper: BookSourceMapper
 
+    @Db("db")
+    @Inject
+    lateinit var userBookSourceMapper: UserBookSourceMapper
+
 
     @Db("db")
     @Inject

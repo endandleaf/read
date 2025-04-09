@@ -13,8 +13,35 @@ web端不支持cookie的保存，不支持朗读功能，但支持听书类型�
 web端不支持webview所以不支持保存cookies，windows端用的js获取的cookies所以不支持httponly的cookie
 
 # 推荐书源
-[晴天](http://api.qingtian618.cn:9999/)
+[晴天](https://api.qingtian618.com/)
 
+# 书源权限
+书源可以直接调用java代码，所以给予书源权限时一定要小心！
+
+# 未支持函数
+以下函数还未支持，有些调用了安卓接口无法支持，有些我觉得用不上，有些我也不知道是干啥，如果有阅读3支持的书源，轻阅读不支持，可以在issues里发给我。
+````
+fun webViewGetSource(html: String?, url: String?, js: String?, sourceRegex: String): String?
+fun webViewGetOverrideUrl(
+    html: String?,
+    url: String?,
+    js: String?,
+    overrideUrlRegex: String
+): String?
+fun getVerificationCode(imageUrl: String): String 
+fun un7zFile(zipPath: String): String 
+fun unrarFile(zipPath: String): String
+fun unArchiveFile(zipPath: String): String
+fun  getRarStringContent(url: String, path: String): String
+fun  getRarStringContent(url: String, path: String, charsetName: String): String
+fun get7zStringContent(url: String, path: String): String
+fun get7zStringContent(url: String, path: String, charsetName: String): String 
+fun getRarByteArrayContent(url: String, path: String): ByteArray?
+fun get7zByteArrayContent(url: String, path: String): ByteArray? 
+fun openUrl(url: String) 
+fun getGlideUrl(): GlideUrl
+fun getMediaItem(): MediaItem 
+````
 # 热键(web端和windows支持)
 esc键返回 左右键翻页
 F11 无边框 F12恢复边框(仅windows支持)

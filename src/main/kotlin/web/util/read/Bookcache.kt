@@ -15,6 +15,7 @@ import web.controller.api.ReadController.Companion.getChapterListbycache
 import web.controller.api.ReadController.Companion.setBookContentbycache
 import web.controller.api.ReadController.Companion.setBookbycache
 import web.controller.api.ReadController.Companion.setChapterListbycache
+import web.model.BaseSource
 import web.model.BookSource
 import web.model.Users
 import web.util.mapper.mapper
@@ -64,9 +65,13 @@ object Bookcache {
             if (user == null) return@runBlocking
             var book=mapper.get().booklistMapper.selectById(cache.bookid)
             if (book == null) return@runBlocking
-            var source:BookSource? = null
+            var source:BaseSource? = null
             if(book.origin != "loc_book"){
-                source = mapper.get().bookSourcemapper.getBookSource(book.origin?:"jskadhjka")
+                source = if(user.source == 2){
+                    mapper.get().userBookSourceMapper.getBookSource(book.origin?:"",user.id?:"")?.toBaseSource()
+                }else{
+                    mapper.get().bookSourcemapper.getBookSource(book.origin?:"")?.toBaseSource()
+                }
                 if (source == null) return@runBlocking
             }
 
@@ -148,7 +153,7 @@ object Bookcache {
         }
     }
 
-    private suspend fun getBookContent(accessToken:String, user: Users, source: BookSource, url:String, index:Int):String {
+    private suspend fun getBookContent(accessToken:String, user: Users, source: BaseSource, url:String, index:Int):String {
         var chapterlist= getChapterListbycache(url,user.id!!)
         if(chapterlist == null){
             chapterlist= getlist(url,source,user.id!!,accessToken).also{
@@ -167,7 +172,7 @@ object Bookcache {
         if(systembook!=null){
             book.durChapterIndex=systembook.durChapterIndex?:0
         }
-        var nexturl=if(index+1 < chapterlist.size) chapterlist[index+1].url else ""
+        val nexturl=if(index+1 < chapterlist.size) chapterlist[index+1].url else ""
         return webBook.getBookContent(book,chapterlist[index],nexturl).also { setBookContentbycache(url,it,index,user.id!!) }
     }
 
@@ -177,7 +182,7 @@ object Bookcache {
             book= webBook.getBookInfo(url,canReName = true)
         }.onFailure {
             if(it is ConcurrentException){
-                println("getbook 并发原因？？？？")
+                logger.info("getbook 并发原因？？？？")
                 delay(1000)
                 book=getbook(webBook,url)
             }

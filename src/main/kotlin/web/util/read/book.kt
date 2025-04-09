@@ -10,20 +10,20 @@ import kotlinx.coroutines.runBlocking
 import web.controller.api.ReadController
 import web.controller.api.ReadController.Companion.getBookbycache
 import web.controller.api.ReadController.Companion.setBookbycache
-import web.model.BookSource
+import web.model.BaseSource
 import web.model.Booklist
 import web.util.mapper.mapper
 import kotlin.random.Random
 
-fun updatebook(book: Booklist, source: BookSource,userid:String) = runBlocking{
-    var list= getlist(book.bookUrl!! ,source,userid,"")
-    if (list!=null){
-        var lastCheckTime=System.currentTimeMillis()
-        var lastCheckCount=list.size
+fun updatebook(book: Booklist, source: BaseSource,userid:String) = runBlocking{
+    val list= getlist(book.bookUrl!! ,source,userid,"")
+    if (list.isNotEmpty()){
+        val lastCheckTime=System.currentTimeMillis()
+        val lastCheckCount=list.size
         if (list.size != book.totalChapterNum ){
-            var totalChapterNum=list.size
-            var latestChapterTitle=list[list.size-1].title
-            var latestChapterTime=System.currentTimeMillis()
+            val totalChapterNum=list.size
+            val latestChapterTitle=list[list.size-1].title
+            val latestChapterTime=System.currentTimeMillis()
             ReadController.removeChapterListbycache(book.bookUrl?:"",userid)
             ReadController.setChapterListbycache(book.bookUrl?:"",list,userid)
             mapper.get().booklistMapper.updatetime(book.id!!,latestChapterTitle,latestChapterTime,lastCheckTime,lastCheckCount, totalChapterNum )
@@ -44,7 +44,7 @@ fun getlist(url:String):List<BookChapter>{
     return  chapters
 }
 
-suspend fun getlist(url:String, source: BookSource,userid:String,accessToken :String):List<BookChapter>{
+suspend fun getlist(url:String, source: BaseSource,userid:String,accessToken :String):List<BookChapter>{
     val webBook = WBook(source.json?:"",userid,accessToken, false)
     val book= getBookbycache(url,userid).let {
         if(it==null){

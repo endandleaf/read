@@ -7,9 +7,12 @@ import book.util.fromJsonArray
 import book.util.fromJsonObject
 import book.util.help.SourceAnalyzer
 import book.util.isJsonArray
+import book.webBook.analyzeRule.AnalyzeRule
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties
 import com.google.gson.Gson
 import com.google.gson.reflect.TypeToken
+import org.slf4j.Logger
+import org.slf4j.LoggerFactory
 import java.io.InputStream
 
 
@@ -49,7 +52,8 @@ class BookSource(
     //    @Ignore
 //    @IgnoredOnParcel
     private var searchRuleV: SearchRule? = null
-
+    override val logger: Logger
+        get() =  LoggerFactory.getLogger(BookSource::class.java)
     //    @Ignore
 //    @IgnoredOnParcel
     private var exploreRuleV: ExploreRule? = null
