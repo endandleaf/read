@@ -42,10 +42,6 @@ open class BookController:BaseController() {
     @Inject
     lateinit var booklistMapper: BooklistMapper
 
-    @Db("db")
-    @Inject
-    lateinit var userCookieMapper: UserCookieMapper
-
     @Inject
     lateinit var bookGroupMapper: BookGroupMapper
 
@@ -351,32 +347,17 @@ open class BookController:BaseController() {
         if (url.isBlank()){
             throw DataThrowable().data(JsonResponse(false,NOT_BANK))
         }
+        runCatching {
+            CookieStore(user.id!!).replaceCookie(url,cookie)
+        }.onFailure {
+            it.printStackTrace()
+        }
         if((id?:"").isNotEmpty()){
             runBlocking {
                 println("webview:$id,加载完成")
                 ApiWebSocket.addhtml(id = id?:"",html = html?:"")
             }
         }
-        val host=geturl(url)
-       runCatching {
-            userCookieMapper.getcookie(user.id!!,host).let {
-                if (it != null){
-                    it.value=cookie
-                    userCookieMapper.updateById(it)
-                }else{
-                    val c= UserCookie().create(user.id!!,host)
-                    c.value = cookie
-                    c.host=host
-                    userCookieMapper.insert(c)
-                }
-            }
-        }.onFailure {
-           userCookieMapper.removeCookie(user.id!!,host)
-           val c= UserCookie().create(user.id!!,host)
-           c.value = cookie
-           c.host=host
-           userCookieMapper.insert(c)
-       }
         JsonResponse(true)
     }
 
@@ -390,12 +371,13 @@ open class BookController:BaseController() {
         }!!
         if((id?:"").isNotEmpty()){
             runBlocking {
-                println("webview:$id,加载完成")
+                println("webview:$id,加载完成,htm:$html")
                 ApiWebSocket.addhtml(id = id?:"",html = html?:"")
             }
         }
         JsonResponse(true)
     }
+
 
     @CacheRemove(tags = "search\${accessToken}")
     @Mapping("/cleancookies")
@@ -405,25 +387,7 @@ open class BookController:BaseController() {
                 throw DataThrowable().data(JsonResponse(false,NEED_LOGIN))
             }
         }!!
-        userCookieMapper.delUsercookies(user.id!!)
-        val file=File("cookie/${user.id}")
-        if(file.exists()){
-            println("删除文件夹");
-            file.deleteRecursively()
-        }
-        JsonResponse(true)
-    }
-
-    @CacheRemove(tags = "search\${accessToken}")
-    @Mapping("/cleansourcecookies")
-    open fun cleansourcecookies( accessToken:String?, url: String)=run{
-        val user=getuserbytocken(accessToken).also {
-            if(it == null){
-                throw DataThrowable().data(JsonResponse(false,NEED_LOGIN))
-            }
-        }!!
-        val source=getsource(url,user)?:throw DataThrowable().data(JsonResponse(false,NOT_SOURCE))
-        CookieStore(user.id!!,source.bookSourceUrl).clear()
+        CookieStore(user.id!!).clear()
         JsonResponse(true)
     }
 
@@ -538,18 +502,6 @@ open class BookController:BaseController() {
         }!!
         booklistMapper.changebookgroup(book.id!!,name?:"")
         JsonResponse(true)
-    }
-
-    private fun geturl(url: String): String {
-        var key = url
-        if(key.contains("\n")){
-            key= key.split("\n")[0]
-        }
-        if (url.contains("http://") || url.contains("https://")) {
-            val uri = URI(key)
-            key = uri.host
-        }
-        return key
     }
 
 }

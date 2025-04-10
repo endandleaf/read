@@ -150,7 +150,7 @@ object BookHelp {
             return
         }
         downloadImages.add(src)
-        val analyzeUrl = AnalyzeUrl(src, source = bookSource)
+        val analyzeUrl = AnalyzeUrl(src, source = bookSource,debugLog = null)
         try {
             analyzeUrl.getByteArrayAwait().let {
                 FileUtils.createFileIfNotExist(

@@ -58,7 +58,7 @@ object BookChapterList {
                         mUrl = nextUrl,
                         source = bookSource,
                         ruleData = book,
-                        headerMapF = bookSource.getHeaderMap()
+                        headerMapF = bookSource.getHeaderMap(),debugLog = debugLog
                     ).getStrResponseAwait().body?.let { nextBody ->
                         chapterData = analyzeChapterList(
                             book, nextUrl, nextUrl,
@@ -80,7 +80,7 @@ object BookChapterList {
                                 mUrl = urlStr,
                                 source = bookSource,
                                 ruleData = book,
-                                headerMapF = bookSource.getHeaderMap()
+                                headerMapF = bookSource.getHeaderMap(),debugLog = debugLog
                             )
                             val res = analyzeUrl.getStrResponseAwait()
                             analyzeChapterList(
@@ -137,7 +137,7 @@ object BookChapterList {
         log: Boolean = false,
         debugLog: DebugLog? = null
     ): Pair<List<BookChapter>, List<String>>  {
-        val analyzeRule = AnalyzeRule(book, bookSource)
+        val analyzeRule = AnalyzeRule(book,debugLog, bookSource,)
         analyzeRule.setContent(body).setBaseUrl(baseUrl)
         analyzeRule.setRedirectUrl(redirectUrl)
         //获取目录列表

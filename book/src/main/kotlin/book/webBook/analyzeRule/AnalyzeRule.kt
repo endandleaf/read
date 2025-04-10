@@ -7,6 +7,8 @@ import book.util.*
 import book.util.AppPattern.JS_PATTERN
 import book.util.help.CacheManager
 import book.util.help.CookieStore
+import book.webBook.Debug
+import book.webBook.DebugLog
 import book.webBook.WBook
 import com.script.buildScriptBindings
 import com.script.rhino.RhinoScriptEngine
@@ -24,11 +26,13 @@ import kotlin.coroutines.EmptyCoroutineContext
 import org.apache.commons.text.StringEscapeUtils
 import org.jsoup.nodes.Node
 
-private val log: Logger = LoggerFactory.getLogger(WBook::class.java)
+
 class AnalyzeRule(
     var ruleData: RuleDataInterface? =null,
+    var debugLog: DebugLog?,
     private val source: BaseSource? = null
 ):JsExtensions {
+
     override val logger: Logger
         get() =  LoggerFactory.getLogger(AnalyzeRule::class.java)
 
@@ -90,6 +94,13 @@ class AnalyzeRule(
         return this
     }
 
+
+    override fun log(msg: String?): String? {
+        logger.info("log:  $msg")
+        debugLog?.log(source?. getKey(), msg)
+        return msg
+    }
+
     fun setBaseUrl(baseUrl: String?): AnalyzeRule {
         baseUrl?.let {
             this.baseUrl = baseUrl
@@ -101,7 +112,7 @@ class AnalyzeRule(
         try {
             redirectUrl = URL(url)
         } catch (e: Exception) {
-            log.info("URL($url) error\n${e.localizedMessage}")
+            logger.info("URL($url) error\n${e.localizedMessage}")
         }
         return redirectUrl
     }
@@ -679,6 +690,7 @@ class AnalyzeRule(
     }
 
     fun get(key: String): String {
+        logger.info("get: $key")
         when (key) {
             "bookName" -> book?.let {
                 return it.name
@@ -713,7 +725,7 @@ class AnalyzeRule(
         }
         val bindings = buildScriptBindings { bindings ->
             bindings["java"] = this
-            bindings["cookie"] =  CookieStore(userid,source?.getKey())
+            bindings["cookie"] = source?.getCookieManger()
             bindings["cache"] = CacheManager
             bindings["source"] = source
             bindings["book"] = book
@@ -743,7 +755,7 @@ class AnalyzeRule(
         logger.info("ajax url: $urlStr")
         return runBlocking {
             kotlin.runCatching {
-                val analyzeUrl = AnalyzeUrl(urlStr, source = source, ruleData = book)
+                val analyzeUrl = AnalyzeUrl(urlStr, source = source, ruleData = book,debugLog = debugLog)
                 analyzeUrl.getStrResponseAwait().body
             }.onFailure {
                 log("ajax(${urlStr}) error\n${it.stackTraceToString()}")

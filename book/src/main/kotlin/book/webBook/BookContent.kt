@@ -38,7 +38,7 @@ object BookContent {
         val content = StringBuilder()
         val nextUrlList = arrayListOf(redirectUrl)
         val contentRule = bookSource.getContentRule()
-        val analyzeRule = AnalyzeRule(book, bookSource).setContent(body, baseUrl)
+        val analyzeRule = AnalyzeRule(book,debugLog, bookSource).setContent(body, baseUrl)
         analyzeRule.setRedirectUrl(redirectUrl)
         analyzeRule.nextChapterUrl = mNextChapterUrl
         val titleRule = contentRule.title
@@ -69,7 +69,7 @@ object BookContent {
                     mUrl = nextUrl,
                     source = bookSource,
                     ruleData = book,
-                    headerMapF = bookSource.getHeaderMap()
+                    headerMapF = bookSource.getHeaderMap(),debugLog = debugLog
                 ).getStrResponseAwait()
                 res.body?.let { nextBody ->
                     contentData = analyzeContent(
@@ -92,7 +92,7 @@ object BookContent {
                             mUrl = urlStr,
                             source = bookSource,
                             ruleData = book,
-                            headerMapF = bookSource.getHeaderMap()
+                            headerMapF = bookSource.getHeaderMap(),debugLog = debugLog
                         )
                         val res = analyzeUrl.getStrResponseAwait()
                         analyzeContent(
@@ -135,7 +135,7 @@ object BookContent {
         printLog: Boolean = true,
         debugLog: DebugLog? = null
     ): Pair<String, List<String>> {
-        val analyzeRule = AnalyzeRule(book, bookSource)
+        val analyzeRule = AnalyzeRule(book, debugLog,bookSource)
         analyzeRule.setContent(body, baseUrl)
         val rUrl = analyzeRule.setRedirectUrl(redirectUrl)
         analyzeRule.nextChapterUrl = nextChapterUrl

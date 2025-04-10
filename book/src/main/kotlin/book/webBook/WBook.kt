@@ -7,8 +7,13 @@ import book.model.BookChapter
 import book.model.BookSource
 import book.model.SearchBook
 import book.util.AppPattern.JS_PATTERN
+import book.util.help.cookieJarHeader
+import book.util.http.ConcurrentRateLimiter
+import book.util.http.SSLHelper
 import book.util.http.StrResponse
 import book.webBook.analyzeRule.AnalyzeUrl
+import org.jsoup.Connection
+import org.jsoup.Jsoup
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 
@@ -84,7 +89,7 @@ class WBook (val bookSource: BookSource, val debugLog: Boolean = true, var debug
                 baseUrl = bookSource.bookSourceUrl,
                 source = bookSource,
                 ruleData = variableBook,
-                headerMapF = bookSource.getHeaderMap(true),
+                headerMapF = bookSource.getHeaderMap(true),debugLog = debugger
             )
 
             var res = analyzeUrl.getStrResponseAwait()
@@ -98,7 +103,7 @@ class WBook (val bookSource: BookSource, val debugLog: Boolean = true, var debug
                     res = analyzeUrl.evalJS(checkJs, res) as StrResponse
                 }
             }
-
+            checkRedirect(bookSource, res)
             BookList.analyzeBookList(
                 res.body,
                 bookSource,
@@ -131,7 +136,7 @@ class WBook (val bookSource: BookSource, val debugLog: Boolean = true, var debug
             baseUrl = bookSource.bookSourceUrl,
             source = bookSource,
             ruleData = variableBook,
-            headerMapF = bookSource.getHeaderMap(true)
+            headerMapF = bookSource.getHeaderMap(true),debugLog = debugger
         )
         var res = analyzeUrl.getStrResponseAwait()
         if(debugger != null){
@@ -143,6 +148,7 @@ class WBook (val bookSource: BookSource, val debugLog: Boolean = true, var debug
                 res = analyzeUrl.evalJS(checkJs, result = res) as StrResponse
             }
         }
+        checkRedirect(bookSource, res)
         return BookList.analyzeBookList(
             res.body,
             bookSource,
@@ -191,7 +197,7 @@ class WBook (val bookSource: BookSource, val debugLog: Boolean = true, var debug
             baseUrl = bookSource.bookSourceUrl,
             source = bookSource,
             ruleData = book,
-            headerMapF = bookSource.getHeaderMap(true)
+            headerMapF = bookSource.getHeaderMap(true),debugLog = debugger
         )
         var res = analyzeUrl.getStrResponseAwait()
         if(debugger != null){
@@ -203,7 +209,7 @@ class WBook (val bookSource: BookSource, val debugLog: Boolean = true, var debug
                 res = analyzeUrl.evalJS(checkJs, result = res) as StrResponse
             }
         }
-
+        checkRedirect(bookSource, res)
         BookInfo.analyzeBookInfo(book, res.body, bookSource, book.bookUrl, res.url, canReName, debugLog = debugger)
         book.tocHtml = null
         return book
@@ -231,7 +237,7 @@ class WBook (val bookSource: BookSource, val debugLog: Boolean = true, var debug
                 baseUrl = book.bookUrl,
                 source = bookSource,
                 ruleData = book,
-                headerMapF = bookSource.getHeaderMap(true)
+                headerMapF = bookSource.getHeaderMap(true),debugLog = debugger
             )
             var res = analyzeUrl.getStrResponseAwait()
             if(debugger != null){
@@ -243,6 +249,7 @@ class WBook (val bookSource: BookSource, val debugLog: Boolean = true, var debug
                     res = analyzeUrl.evalJS(checkJs, result = res) as StrResponse
                 }
             }
+            checkRedirect(bookSource, res)
             return BookChapterList.analyzeChapterList(book, res.body, bookSource, book.tocUrl, res.url, debugLog = debugger)
         }
     }
@@ -277,7 +284,7 @@ class WBook (val bookSource: BookSource, val debugLog: Boolean = true, var debug
             source = bookSource,
             ruleData = book,
             chapter = bookChapter,
-            headerMapF = bookSource.getHeaderMap(true)
+            headerMapF = bookSource.getHeaderMap(true),debugLog = debugger
         )
         var res = analyzeUrl.getStrResponseAwait(
             jsStr = bookSource.getContentRule().webJs,
@@ -286,6 +293,7 @@ class WBook (val bookSource: BookSource, val debugLog: Boolean = true, var debug
         if(debugger != null){
             debugger?.log("正文源码Qwq${res.body}");
         }
+        checkRedirect(bookSource, res)
         return BookContent.analyzeContent(
             res.body,
             book,
@@ -296,5 +304,20 @@ class WBook (val bookSource: BookSource, val debugLog: Boolean = true, var debug
             nextChapterUrl,
             debugLog = debugger
         )
+    }
+
+    /**
+     * 检测重定向
+     */
+    private fun checkRedirect(bookSource: BookSource, response: StrResponse) {
+        response.raw.priorResponse?.let {
+            if (it.isRedirect) {
+                if(debugger != null){
+                    debugger?.log(bookSource.bookSourceUrl, "≡检测到重定向(${it.code})")
+                    debugger?.log(bookSource.bookSourceUrl, "┌重定向后地址")
+                    debugger?.log(bookSource.bookSourceUrl, "└${response.url}")
+                }
+            }
+        }
     }
 }

@@ -1,5 +1,7 @@
 package book.util
 
+import cn.hutool.core.lang.Validator
+import okhttp3.internal.publicsuffix.PublicSuffixDatabase
 import retrofit2.Response
 import java.net.InetAddress
 import java.net.NetworkInterface
@@ -107,19 +109,32 @@ object NetworkUtils {
     }
 
     fun getBaseUrl(url: String?): String? {
-        if (url == null || !url.startsWith("http")) return null
-        val index = url.indexOf("/", 9)
-        return if (index == -1) {
-            url
-        } else url.substring(0, index)
+        url ?: return null
+        if (url.startsWith("http://", true)
+            || url.startsWith("https://", true)
+        ) {
+            val index = url.indexOf("/", 9)
+            return if (index == -1) {
+                url
+            } else url.substring(0, index)
+        }
+        return null
     }
 
-    fun getSubDomain(url: String?): String {
-        val baseUrl = getBaseUrl(url) ?: return ""
-        return if (baseUrl.indexOf(".") == baseUrl.lastIndexOf(".")) {
-            baseUrl.substring(baseUrl.lastIndexOf("/") + 1)
-        } else baseUrl.substring(baseUrl.indexOf(".") + 1)
+
+    fun getSubDomain(url: String): String {
+        val baseUrl = getBaseUrl(url) ?: return url
+        return kotlin.runCatching {
+            val mURL = URL(baseUrl)
+            val host: String = mURL.host
+            //mURL.scheme https/http
+            //判断是否为ip
+            if (isIPAddress(host)) return host
+            //PublicSuffixDatabase处理域名
+            PublicSuffixDatabase.get().getEffectiveTldPlusOne(host) ?: host
+        }.getOrDefault(baseUrl)
     }
+
 
     /**
      * Get local Ip address.
@@ -155,8 +170,11 @@ object NetworkUtils {
      * @param input the address string to check for validity.
      * @return True if the input parameter is a valid IPv4 address.
      */
-    fun isIPv4Address(input: String): Boolean {
-        return IPV4_PATTERN.matcher(input).matches()
+    fun isIPv4Address(input: String?): Boolean {
+        return input != null && input.isNotEmpty()
+                && input[0] in '1'..'9'
+                && input.count { it == '.' } == 3
+                && Validator.isIpv4(input)
     }
 
     /**
@@ -167,4 +185,12 @@ object NetworkUtils {
                 "([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])$"
     )
 
+    fun isIPv6Address(input: String?): Boolean {
+        return input != null && input.contains(":") && Validator.isIpv6(input)
+    }
+
+
+    fun isIPAddress(input: String?): Boolean {
+        return isIPv4Address(input?:"") || isIPv6Address(input)
+    }
 }

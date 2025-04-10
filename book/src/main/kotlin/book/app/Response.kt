@@ -15,6 +15,9 @@ data class Response(
         var toast =fun  (str: String,tocken:String){
 
         }
+        var getVerificationCode =fun  (imgurl:String,tocken:String):String{
+            return ""
+        }
     }
     fun code() =code
     fun body() =body

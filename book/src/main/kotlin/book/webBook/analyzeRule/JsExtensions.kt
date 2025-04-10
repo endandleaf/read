@@ -31,6 +31,8 @@ import cn.hutool.core.util.HexUtil
 import com.script.ScriptBindings
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
+import java.nio.file.Paths
+import java.time.LocalDateTime
 import kotlin.concurrent.thread
 
 /**
@@ -60,7 +62,7 @@ interface JsExtensions: JsEncodeUtils  {
         logger.info("ajax url: $urlStr")
         return runBlocking {
             kotlin.runCatching {
-                val analyzeUrl = AnalyzeUrl(urlStr, source = getSource())
+                val analyzeUrl = AnalyzeUrl(urlStr, source = getSource(),debugLog = null)
                 analyzeUrl.getStrResponse(urlStr).body
             }.onFailure {
                 it.printOnDebug()
@@ -78,7 +80,7 @@ interface JsExtensions: JsEncodeUtils  {
             val asyncArray = Array(urlList.size) {
                 async(IO) {
                     val url = urlList[it]
-                    val analyzeUrl = AnalyzeUrl(url, source = getSource())
+                    val analyzeUrl = AnalyzeUrl(url, source = getSource(),debugLog = null)
                     analyzeUrl.getStrResponse(url)
                 }
             }
@@ -95,7 +97,7 @@ interface JsExtensions: JsEncodeUtils  {
     fun connect(urlStr: String): StrResponse {
         logger.info("connect:$urlStr")
         return runBlocking {
-            val analyzeUrl = AnalyzeUrl(urlStr, source = getSource())
+            val analyzeUrl = AnalyzeUrl(urlStr, source = getSource(),debugLog = null)
             kotlin.runCatching {
                 analyzeUrl.getStrResponseAwait()
             }.onFailure {
@@ -109,7 +111,7 @@ interface JsExtensions: JsEncodeUtils  {
     fun connect(urlStr: String, header: String?): StrResponse {
         return runBlocking {
             val headerMap = GSON.fromJsonObject<Map<String, String>>(header).getOrNull()
-            val analyzeUrl = AnalyzeUrl(urlStr, headerMapF = headerMap, source = getSource())
+            val analyzeUrl = AnalyzeUrl(urlStr, headerMapF = headerMap, source = getSource(),debugLog = null)
             kotlin.runCatching {
                 analyzeUrl.getStrResponseAwait()
             }.onFailure {
@@ -180,18 +182,20 @@ interface JsExtensions: JsEncodeUtils  {
      *js实现读取cookie
      */
     fun getCookie(tag: String, key: String? = null): String {
-        val cookie = CookieStore(getSource()?.userid?:"",getSource()?.getKey()).getCookie(tag)
-        val cookieMap = CookieStore(getSource()?.userid?:"",getSource()?.getKey()).cookieToMap(cookie)
+        val store=getSource()?.getCookieManger()
+        val cookie =(store?.getCookie(tag))?:""
+        val cookieMap =store?.cookieToMap(cookie)
         return if (key != null) {
-            cookieMap[key] ?: ""
+            cookieMap?.get(key) ?:""
         } else {
             cookie
         }
     }
 
     fun getCookie(key: String): String {
-        val cookie = CookieStore(getSource()?.userid?:"",getSource()?.getKey()).getCookie(key)
-        return cookie
+        val store=getSource()?.getCookieManger()
+        val cookie = store?.getCookie(key)
+        return cookie?:""
     }
 
 
@@ -234,7 +238,7 @@ interface JsExtensions: JsEncodeUtils  {
      * @return 相对路径
      */
     fun downloadFile(content: String, url: String): String {
-        val type = AnalyzeUrl(url).type ?: return ""
+        val type = AnalyzeUrl(url,debugLog = null).type ?: return ""
         val zipPath = FileUtils.getPath(
             FileUtils.createFolderIfNotExist(FileUtils.getCachePath()),
             "${MD5Utils.md5Encode16(url)}.${type}"
@@ -255,7 +259,7 @@ interface JsExtensions: JsEncodeUtils  {
     fun get(urlStr: String, headers: Map<String, String>): Connection.Response {
         logger.info("get:$urlStr")
         val requestHeaders = if (getSource()?.enabledCookieJar == true) {
-            headers.toMutableMap().apply { put(cookieJarHeader, "1") }
+            headers.toMutableMap().apply { put(cookieJarHeader, (getSource()?.getcookieJarHeaderid())?:"") }
         } else headers
         val rateLimiter = ConcurrentRateLimiter(getSource())
         val response = rateLimiter.withLimitBlocking {
@@ -277,7 +281,7 @@ interface JsExtensions: JsEncodeUtils  {
     fun head(urlStr: String, headers: Map<String, String>): Connection.Response {
         logger.info("head:$urlStr")
         val requestHeaders = if (getSource()?.enabledCookieJar == true) {
-            headers.toMutableMap().apply { put(cookieJarHeader, "1") }
+            headers.toMutableMap().apply { put(cookieJarHeader, (getSource()?.getcookieJarHeaderid())?:"") }
         } else headers
         val rateLimiter = ConcurrentRateLimiter(getSource())
         val response = rateLimiter.withLimitBlocking {
@@ -293,12 +297,34 @@ interface JsExtensions: JsEncodeUtils  {
     }
 
     /**
+     * 打开图片验证码对话框，等待返回验证结果
+     */
+    fun getVerificationCode(imageUrl: String): String {
+        logger.info("getVerificationCode:$imageUrl")
+        val img=this.get(imageUrl,hashMapOf())
+        val store=getSource()?.getCookieManger()
+        store?.savejsonResponse(img)
+        val coverFile = "${MD5Utils.md5Encode16(getSource()?.getKey() +getSource()?.userid +"VerificationCode")}.jpg"
+        val relativeCoverUrl = Paths.get("assets", "", "codes", coverFile).toString()
+        val url="/" + relativeCoverUrl
+        val coverUrl = Paths.get("", "storage", relativeCoverUrl).toString()
+        val file=File(coverUrl)
+        if (file.exists()) {
+            file.delete()
+        }
+        FileUtils.writeBytes(coverUrl, img.bodyAsBytes())
+        val code=Response.getVerificationCode(url+"?time=${LocalDateTime.now()}",getSource()?.usertocken?:"").trim()
+        logger.info("获取到code:$code")
+        return code
+    }
+
+    /**
      * 网络访问post
      */
     fun post(urlStr: String, body: String, headers: Map<String, String>): Connection.Response {
-        logger.info("post:$urlStr")
+        logger.info("post:$urlStr,body:$body,headers:${GSON.toJson(headers)}")
         val requestHeaders = if (getSource()?.enabledCookieJar == true) {
-            headers.toMutableMap().apply { put(cookieJarHeader, "1") }
+            headers.toMutableMap().apply { put(cookieJarHeader, (getSource()?.getcookieJarHeaderid())?:"") }
         } else headers
         val rateLimiter = ConcurrentRateLimiter(getSource())
         val response = rateLimiter.withLimitBlocking {

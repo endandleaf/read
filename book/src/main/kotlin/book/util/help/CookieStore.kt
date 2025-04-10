@@ -1,23 +1,40 @@
 @file:Suppress("unused")
 package book.util.help
 
-import book.CookieList
+
 import book.util.MD5Utils
+import book.util.NetworkUtils
 import book.util.TextUtils
+import org.slf4j.Logger
+import org.slf4j.LoggerFactory
 import java.io.File
-import java.io.FileNotFoundException
+import okhttp3.Cookie
+import okhttp3.Headers
+import okhttp3.HttpUrl
+import okhttp3.HttpUrl.Companion.toHttpUrlOrNull
+import okhttp3.Request
+import okhttp3.Response
+import org.jsoup.Connection
 import java.net.IDN
 import java.net.URI
 
-// TODO 处理cookie
-class CookieStore(val userid:String,key: String?) : CookieManager {
 
-    private val cookiepath="cookie"
-    private  val mykey= MD5Utils.md5Encode(key?:"test")
+
+// TODO 处理cookie
+class CookieStore(val userid:String) : CookieManager {
+    companion object{
+        val Stores:HashMap<String,CookieStore> = HashMap();
+    }
+    private val logger: Logger = LoggerFactory.getLogger(CookieStore::class.java)
+
+    private val mainpath="storage"
+    private val cookiepath="$mainpath/cookies"
+    private val mycookiepath="$cookiepath/$userid"
 
     init {
-        checkfile("$cookiepath/$userid")
-        checkfile("$cookiepath/$userid/$mykey")
+        checkfile(mainpath)
+        checkfile(cookiepath)
+        checkfile(mycookiepath)
     }
 
     fun checkfile(path:String){
@@ -27,60 +44,91 @@ class CookieStore(val userid:String,key: String?) : CookieManager {
         }else{
             if (!file.isDirectory){
                 file.delete()
-                val file = File(path)
                 file.mkdirs()
             }
         }
     }
 
     fun clear(){
-        val file = File("$cookiepath/$userid/$mykey")
+        val file = File(mycookiepath)
         if(file.exists()){
             file.deleteRecursively()
         }
+        checkfile(mycookiepath)
     }
 
+    fun loadRequest(request: Request): Request {
+        var url = request.url.toString()
+        val pos = url.indexOf('?')
+        if (pos != -1) {
+            url = url.substring(0, pos)
+        }
+
+        val cookie = getCookie(url)
+        val requestCookie = request.header("Cookie")
+
+        val newCookie = mergeCookies(requestCookie, cookie) ?: return request
+        kotlin.runCatching {
+            return request.newBuilder()
+                .header("Cookie", newCookie)
+                .build()
+        }.onFailure {
+            this.removeCookie(url)
+            //val msg = "设置cookie出错，已清除cookie $domain cookie:$newCookie\n$it"
+           // AppLog.put(msg, it)
+        }
+
+        return request
+    }
+
+    fun savejsonResponse(response: Connection.Response) {
+        var url = response.url().toString()
+        val pos = url.indexOf('?')
+        if (pos != -1) {
+            url = url.substring(0, pos)
+        }
+
+        val cookieString = mapToCookie(  response.cookies())
+        if(cookieString != null){
+            replaceCookie(url, cookieString)
+        }
+        //println("savejsonResponse $url, $cookieString")
+    }
+
+    fun saveResponse(response: Response) {
+        val url = response.request.url
+        val headers = response.headers
+        saveCookiesFromHeaders(url, headers)
+    }
+
+    private fun saveCookiesFromHeaders(url: HttpUrl, headers: Headers) {
+        val cookies = Cookie.parseAll(url, headers)
+        var url=url.toString()
+        val pos = url.indexOf('?')
+        if (pos != -1) {
+            url = url.substring(0, pos)
+        }
+        //val sessionCookie = cookies.filter { !it.persistent }.getString()
+        //println(sessionCookie)
+        val cookieString = cookies.getString()
+        replaceCookie(url, cookieString)
+    }
+
+    fun List<Cookie>.getString() = buildString {
+        this@getString.forEachIndexed { index, cookie ->
+            if (index > 0) append("; ")
+            append(cookie.name).append('=').append(cookie.value)
+        }
+    }
+
+    private fun getkey(url: String) :String {
+        return  NetworkUtils.getSubDomain(url)
+    }
 
     override fun setCookie(url: String, cookie: String?) {
-        println("setCookie url:$url, cookie:$cookie")
-        var key = geturl(url)
-        if (!cookie.isNullOrBlank()) {
-            var cookie2=getcookie(url)
-            if(cookie2.isNotEmpty()){
-                val cookieMap = cookieToMap(cookie)
-                val cookie2Map = cookieToMap(cookie2)
-                cookie2Map.putAll(cookieMap)
-                File("$cookiepath/$userid/$mykey/$key").writeText(mapToCookie(cookie2Map)?:"")
-            }else{
-                File("$cookiepath/$userid/$mykey/$key").writeText(cookie)
-            }
-        }
-    }
-
-    fun setCookienourl( cookie: String,url:String) {
-        val cookieMap = cookieToMap(cookie)
-        if(cookieMap.isNotEmpty()){
-            var domain = ""
-            var keys : MutableList<String> = mutableListOf()
-            for((k,v) in cookieMap){
-                when(k.lowercase()){
-                    "domain"->{
-                        domain = v
-                        keys.add(k)
-                    }
-                    "expires","httponly","max-age"
-                        ,"partitioned","path","secure"
-                        ,"samesite"   -> keys.add(k)
-                }
-            }
-            keys.forEach{cookieMap.remove(it)}
-            var c= mapToCookie(cookieMap)
-            if(domain.isNotBlank()){
-                setCookie(domain, c)
-            }else{
-                setCookie(url, c)
-            }
-        }
+        logger.info("setCookie url:$url")
+        val key=getkey(url)
+        File("$mycookiepath/$key").writeText(cookie?:"")
     }
 
     override fun replaceCookie(url: String, cookie: String) {
@@ -99,35 +147,16 @@ class CookieStore(val userid:String,key: String?) : CookieManager {
     }
 
     fun getKey(tag: String, key: String? = null): String {
-       // println("getKey tag:$tag, key:$key")
         val cookie = this.getCookie(tag)
-        //println("getKeycookie:$cookie")
         val cookieMap = this.cookieToMap(cookie)
+        logger.info("tag:$tag, key:$key ")
         return if (key != null) {
-             println("getKey:"+cookieMap[key])
             cookieMap[key] ?: ""
         } else {
             cookie
         }
     }
 
-    private fun geturl(url: String): String {
-        var key = url
-        if(key.contains("\n")){
-            key= key.split("\n")[0]
-        }
-        if (url.contains("http://") || url.contains("https://")) {
-            if (url.contains("#") ) {
-                key=url.split("#")[0]
-            }
-            var uri = URI(key)
-            if(uri.host == null){
-                uri = encodeChineseUrl(url)
-            }
-            key = uri.host
-        }
-        return key
-    }
 
     fun mergeCookies(vararg cookies: String?): String? {
         val cookieMap = mergeCookiesToMap(*cookies)
@@ -153,49 +182,46 @@ class CookieStore(val userid:String,key: String?) : CookieManager {
         return URI("$protocol$encodedHost$path")
     }
 
-    private fun getsurl(url: String): String {
-        val pos = url.indexOf('.')
-        return if (pos != -1 && pos != url.length ) url.substring(pos, url.length) else ""
-    }
-
-    private fun getcookie(url: String): String {
-        var key = geturl(url)
-
-        try {
-            val content =  File("$cookiepath/$userid/$mykey/$key").readText()
-            return content
-        }catch (e: Exception){
-            return ""
+    private fun getcookie(url: String):String {
+        val key=getkey(url)
+        var ck=""
+        runCatching {
+            ck =  File("$mycookiepath/$key").readText()
         }
+        return ck
     }
+
 
     override fun getCookie(url: String): String {
-       // println("获取cookie:$url")
-        var key = geturl(url)
-       // println("获取cookie:$key")
-       // println("surl:${getsurl(key)}")
-        var cookiemap1= cookieToMap(getcookie(key))  //当前域名
-        var cookiemap2= cookieToMap(getcookie("."+key))  //上级域名
-        var cookiemap3= cookieToMap(getcookie(getsurl(key)))  //下级域名
-        cookiemap2.putAll(cookiemap3)
-        cookiemap2.putAll(cookiemap1)
-        if(CookieList.manager != null){
-           // println(userid+" "+CookieList.manager!!.getCookie(userid,key)+" "+key)
-            val cookiemap4= cookieToMap(CookieList.manager!!.getCookie(userid,key))
-            cookiemap2.putAll(cookiemap4)
-        }else{
-            println("用户cookie加载失败")
+        logger.info("getCookie:$url")
+        var ck=getcookie(url)
+        val cookieMap=cookieToMap(ck)
+        while (ck.length > 4096) {
+            val removeKey = cookieMap.keys.random()
+            removeCookie(url, removeKey)
+            cookieMap.remove(removeKey)
+            ck = mapToCookie(cookieMap) ?: ""
         }
-        //println("getCookie($key):"+mapToCookie(cookiemap2))
-        return mapToCookie(cookiemap2)?:""
+        return ck
+    }
+
+    fun removeCookie(url: String,key: String) {
+        var ck=getcookie(url)
+        if(ck.isEmpty()){
+            return
+        }
+        val cookieMap=cookieToMap(ck)
+        cookieMap.remove(key)
+        setCookie(url,mapToCookie(cookieMap))
     }
 
     override fun removeCookie(url: String) {
-        val file = File(cookiepath+"/" + url)
+        logger.info("removeCookie :$url")
+        val key=getkey(url)
+        val file =  File("$mycookiepath/$key")
         if (file.exists()) {
             file.delete()
         }
-        CookieList.manager!!.removeCookie(userid, url)
     }
 
     override fun cookieToMap(cookie: String): MutableMap<String, String> {
@@ -224,15 +250,21 @@ class CookieStore(val userid:String,key: String?) : CookieManager {
             return null
         }
         val builder = StringBuilder()
+        var isadd=false;
         for (key in cookieMap.keys) {
             val value = cookieMap[key]
+            if(key.trim() == "path"){
+                continue
+            }
             if (value?.isNotBlank() == true) {
+                isadd=true;
                 builder.append(key)
                     .append("=")
                     .append(value)
                     .append(";")
             }
         }
+        if(!isadd){return  null}
         return builder.deleteCharAt(builder.lastIndexOf(";")).toString()
     }
 

@@ -2,6 +2,10 @@ package book.util.http
 
 
 
+import book.util.AppConst
+import book.util.NetworkUtils
+import book.util.help.CookieStore
+import book.util.help.cookieJarHeader
 import book.webBook.DebugLog
 import okhttp3.ConnectionSpec
 import okhttp3.Credentials
@@ -18,6 +22,8 @@ import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.TimeUnit
 import kotlin.coroutines.resume
 import java.io.IOException
+import java.util.concurrent.ThreadFactory
+import java.util.concurrent.ThreadPoolExecutor
 
 private val proxyClientCache: ConcurrentHashMap<String, OkHttpClient> by lazy {
     ConcurrentHashMap()
@@ -33,27 +39,62 @@ val okHttpClient: OkHttpClient by lazy {
     val builder = OkHttpClient.Builder()
         .connectTimeout(15, TimeUnit.SECONDS)
         .writeTimeout(15, TimeUnit.SECONDS)
-        .readTimeout(15, TimeUnit.SECONDS)
+        .readTimeout(60, TimeUnit.SECONDS)
+        .callTimeout(60, TimeUnit.SECONDS)
         .sslSocketFactory(SSLHelper.unsafeSSLSocketFactory, SSLHelper.unsafeTrustManager)
         .retryOnConnectionFailure(true)
         .hostnameVerifier(SSLHelper.unsafeHostnameVerifier)
         .connectionSpecs(specs)
         .followRedirects(true)
         .followSslRedirects(true)
+        .addInterceptor(OkHttpExceptionInterceptor)
         .addInterceptor(Interceptor { chain ->
             val request = chain.request()
-                .newBuilder()
-                .addHeader("Keep-Alive", "300")
-                .addHeader("Connection", "Keep-Alive")
-                .addHeader("Cache-Control", "no-cache")
-                .build()
-            chain.proceed(request)
+            val builder = request.newBuilder()
+            if (request.header(AppConst.UA_NAME) == null) {
+                builder.addHeader(AppConst.UA_NAME, AppConst.userAgent)
+            } else if (request.header(AppConst.UA_NAME) == "null") {
+                builder.removeHeader(AppConst.UA_NAME)
+            }
+            builder.addHeader("Keep-Alive", "300")
+            builder.addHeader("Connection", "Keep-Alive")
+            builder.addHeader("Cache-Control", "no-cache")
+            chain.proceed(builder.build())
         })
+        .addNetworkInterceptor { chain ->
+            val request = chain.request()
+            val enableCookieJar = request.header(cookieJarHeader)
+
+            if (!enableCookieJar.isNullOrEmpty() && CookieStore.Stores.containsKey(enableCookieJar)) {
+                val store=CookieStore.Stores[enableCookieJar]
+                store?.loadRequest(request)
+            }
+
+            val networkResponse = chain.proceed(request)
+
+            if (!enableCookieJar.isNullOrEmpty() && CookieStore.Stores.containsKey(enableCookieJar)) {
+                //println("saveCookie ${networkResponse.request.url}")
+                val store=CookieStore.Stores[enableCookieJar]
+                store?.saveResponse(networkResponse);
+            }
+            networkResponse
+        }
     // if (AppConfig.isCronet) {
     //     builder.addInterceptor(CronetInterceptor())
     // }
-
-    builder.build()
+    builder.addInterceptor(DecompressInterceptor)
+    builder.build().apply {
+        val okHttpName =
+            OkHttpClient::class.java.name.removePrefix("okhttp3.").removeSuffix("Client")
+        val executor = dispatcher.executorService as ThreadPoolExecutor
+        val threadName = "$okHttpName Dispatcher"
+        executor.threadFactory = ThreadFactory { runnable ->
+            Thread(runnable, threadName).apply {
+                isDaemon = false
+                uncaughtExceptionHandler = OkhttpUncaughtExceptionHandler
+            }
+        }
+    }
 }
 
 /**

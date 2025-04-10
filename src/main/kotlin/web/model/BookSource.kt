@@ -45,6 +45,7 @@ class BookSource {
     @ColumnType(value = "LONGTEXT")
     var json: String? = null                 // 发现url
 
+
     @ONodeAttr(format = "yyyy-MM-dd HH:mm:ss", timezone = "GMT+8")
     @TableField(fill = FieldFill.INSERT,value = "createtime")
     var createtime: LocalDateTime? = null

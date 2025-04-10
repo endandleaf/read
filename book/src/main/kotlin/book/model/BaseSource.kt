@@ -180,7 +180,7 @@ interface BaseSource : JsExtensions {
             bindings["java"] = this
             bindings["source"] = this
             bindings["baseUrl"] = getKey()
-            bindings["cookie"] =  CookieStore(userid?:"",getKey())
+            bindings["cookie"] =  getCookieManger()
             bindings["cache"] = CacheManager
             binding(bindings)
         }
@@ -208,6 +208,20 @@ interface BaseSource : JsExtensions {
      */
     fun get(key: String): String {
         return CacheManager.get("getv_${getKey()}_${key}_userid_${userid}") ?: ""
+    }
+
+
+    fun getcookieJarHeaderid():String{
+        return MD5Utils.md5Encode(userid!!)
+    }
+
+    fun  getCookieManger() :CookieStore{
+        val store=CookieStore(userid!!)
+        val key=getcookieJarHeaderid()
+        if(!CookieStore.Stores.containsKey(key)){
+            CookieStore.Stores.put(key, store)
+        }
+        return store
     }
 
 }

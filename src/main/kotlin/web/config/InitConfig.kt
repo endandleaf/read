@@ -1,7 +1,5 @@
 package web.config
 
-import book.CookieList
-import book.CookieManager
 import book.app.Response
 import book.app.ToastMessage
 import book.app.WebMessage
@@ -22,33 +20,12 @@ class InitConfig {
 
     val logger = LoggerFactory.getLogger(InitConfig::class.java)
 
-    class Cookie(val userCookieMapper: UserCookieMapper) : CookieManager {
-        override fun getCookie(id: String, url: String): String {
-            if(url.isEmpty()) return ""
-            var cookies: String = ""
-            runCatching {
-                userCookieMapper.getcookiemo(id, url).let {
-                    if (it != null) {
-                        cookies = it.value ?: ""
-                    }
-                }
-            }.onFailure {
-                it.printStackTrace()
-            }
-            return cookies
-        }
-
-        override fun removeCookie(id: String, url: String) {
-            userCookieMapper.removeCookie(id, url)
-        }
-    }
 
 
 
     @Bean
     fun cookieinit(userCookieMapper: UserCookieMapper) {
         checkfile()
-        CookieList.manager=Cookie(userCookieMapper)
         Response.startBrowserAwait=fun (urlStr: String,title: String,tocken:String,hide:Boolean,header:String):Response = runBlocking{
             println(tocken)
             var socket=ApiWebSocket.get(tocken)
@@ -113,7 +90,30 @@ class InitConfig {
             }
             return@runBlocking Response(body = "",url =  url?:"", code = 200)
         }
-
+        Response.getVerificationCode= fun (url : String,tocken:String)  = runBlocking {
+            var socket=ApiWebSocket.get(tocken)
+            if(socket!=null){
+                var id= UUID.randomUUID().toString()
+                socket.send(Gson().toJson(WebMessage(
+                    msg = "getVerificationCode", url = url ?: "", id = id,
+                    title = "getVerificationCode",
+                )))
+                var z=false
+                thread {
+                    for(i in 0.. 2){
+                        sleep(1000*60)
+                        if(z) break
+                    }
+                    if(!z){
+                        runBlocking {  ApiWebSocket.addhtml(id,"") }
+                    }
+                }
+                ApiWebSocket.lock(id).let {  z=true }
+                val html=ApiWebSocket.gethtml(id)
+                return@runBlocking html
+            }
+            ""
+        }
         Response.toast = fun (str : String,tocken:String)  = runBlocking {
             var socket=ApiWebSocket.get(tocken)
             if(socket!=null){

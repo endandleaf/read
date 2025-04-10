@@ -3,17 +3,14 @@ package book.webBook.analyzeRule
 import book.model.BaseSource
 import book.model.Book
 import book.model.BookChapter
-import book.model.BookSource
 import book.util.*
 import book.util.AppConst.UA_NAME
 import book.util.AppPattern.JS_PATTERN
 import book.util.AppPattern.dataUriRegex
 import book.util.help.CacheManager
-import book.util.help.CookieStore
 import book.util.help.cookieJarHeader
 import book.util.http.*
 import book.webBook.DebugLog
-import book.webBook.exception.ConcurrentException
 import com.script.buildScriptBindings
 import kotlinx.coroutines.runBlocking
 import okhttp3.MediaType.Companion.toMediaType
@@ -48,6 +45,7 @@ class AnalyzeUrl(
     private var coroutineContext: CoroutineContext = EmptyCoroutineContext,
     headerMapF: Map<String, String>? = null,
     val needanalyzeUrl :Boolean=true,
+    var debugLog: DebugLog?,
 ) :JsExtensions {
 
     companion object {
@@ -115,7 +113,14 @@ class AnalyzeUrl(
         //处理URL
         if(needanalyzeUrl) analyzeUrl()
 
-       logger.info("ruleUrl3 $ruleUrl")
+        logger.info("ruleUrl3 $ruleUrl")
+        debugLog?.log(source?. getKey(), ruleUrl)
+    }
+
+    override fun log(msg: String?): String? {
+        logger.info("log:  $msg")
+        debugLog?.log(source?. getKey(), msg)
+        return msg
     }
 
     private fun analyzeJs() {
@@ -267,7 +272,7 @@ class AnalyzeUrl(
         val bindings = buildScriptBindings { bindings ->
             bindings["java"] = this
             bindings["baseUrl"] = baseUrl
-            bindings["cookie"] = CookieStore(userid,source?.getKey())
+            bindings["cookie"] =source?.getCookieManger()
             bindings["cache"] = CacheManager
             bindings["page"] = page
             bindings["key"] = key
@@ -299,28 +304,16 @@ class AnalyzeUrl(
 
     private fun setCookie() {
         //println("setCookie domain:$url")
-        var userid=""
-        if(source != null){
-            userid = source.userid?:""
-        }
-        var store=CookieStore(userid,source?.getKey())
-        val cookie = store.getCookie(urlNoQuery)
+        val store=source?.getCookieManger()
+        val cookie = (store?.getCookie(urlNoQuery))?:""
         //println("cookie : $cookie")
         if (cookie.isNotEmpty()) {
-            /*val cookieMap = store.cookieToMap(cookie)
-            val customCookieMap = store.cookieToMap(headerMap["Cookie"] ?: "")
-            customCookieMap.putAll(cookieMap)
-            val newCookie = store.mapToCookie(customCookieMap)
-            newCookie?.let {
-                //println("putcookie : $it,url:${url}")
-                headerMap.put("Cookie", it)
-            }*/
-            store.mergeCookies(cookie, headerMap["Cookie"])?.let {
+            store?.mergeCookies(cookie, headerMap["Cookie"])?.let {
                 headerMap.put("Cookie", it)
             }
         }
         if (enabledCookieJar) {
-            headerMap[cookieJarHeader] = "1"
+            headerMap[cookieJarHeader] = source?.getcookieJarHeaderid()?:""
         } else {
             headerMap.remove(cookieJarHeader)
         }
@@ -362,15 +355,6 @@ class AnalyzeUrl(
                         }
                         else -> get(urlNoQuery, fieldMap, true)
                     }
-                }
-                if(enabledCookieJar) strResponse.headers().values("Set-Cookie").forEach {
-                    //println("enabledCookieJar")
-                    var userid=""
-                    if(source != null){
-                        userid = source.userid?:""
-                    }
-                    var store=CookieStore(userid,source?.getKey())
-                    store.setCookienourl(it,(source?.getKey())?:urlNoQuery)
                 }
                 return strResponse
             }
@@ -416,15 +400,7 @@ class AnalyzeUrl(
                     else -> get(urlNoQuery, fieldMap, true)
                 }
             }
-            if(enabledCookieJar) response.headers.values("Set-Cookie").forEach {
-                //println("enabledCookieJar")
-                var userid=""
-                if(source != null){
-                    userid = source.userid?:""
-                }
-                var store=CookieStore(userid,source?.getKey())
-                store.setCookienourl(it,(source?.getKey())?:urlNoQuery)
-            }
+
             return response
         }
     }
