@@ -35,6 +35,19 @@ class Booklist {
     var customIntro: String? = null      // 简介内容(用户修改)
     var charset: String? = null                // 自定义字符集名称(仅适用于本地书籍)
     var type: Int? = null                       // @BookType
+        set(value) {
+            when(value){
+                32,1 ->{
+                    field=1
+                }
+                64,2 ->{
+                    field=2
+                }
+                else ->{
+                    field=0
+                }
+            }
+        }
     var bookgroup: String? = null                  // 自定义分组索引号
     var latestChapterTitle: String? = null     // 最新章节标题
     var latestChapterTime: Long? = null            // 最新章节标题更新时间
@@ -78,6 +91,7 @@ class Booklist {
         if((book.charset?:"").isNotBlank()) this.charset = book.charset
         if(canchangename) this.type = book.type
         if((book.wordCount?:"").isNotBlank()) this.wordCount = book.wordCount
+
         return this
     }
 

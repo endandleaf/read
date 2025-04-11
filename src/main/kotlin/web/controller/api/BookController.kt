@@ -189,22 +189,8 @@ open class BookController:BaseController() {
                     new.latestChapterTitle=list.last().title
                 }
             }
-            println("type:${new.type}")
-            when(new.type){
-                32,1 ->{
-                    new.type=1
-                }
-                64,2 ->{
-                    new.type=2
-                }
-                else ->{
-                    new.type=0
-                }
-            }
-            println("type:${new.type}")
             val mybook=Booklist.tobooklist(book,user.id!!)
-            mybook.bookto(new,false)
-            JsonResponse(true,SUCCESS).Data(mybook)
+            JsonResponse(true,SUCCESS).Data( mybook.bookto(new,false))
         }.onFailure {
            JsonResponse(false,BOOKSEARCHERROR)
         }
