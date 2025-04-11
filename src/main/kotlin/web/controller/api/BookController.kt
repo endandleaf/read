@@ -26,6 +26,7 @@ import web.model.BookGroup
 import web.model.Booklist
 import web.model.UserCookie
 import web.response.*
+import web.util.hash.EncryptUtils
 import web.util.read.Bookcache
 import web.util.read.getlist
 import web.util.read.updatebook
@@ -228,7 +229,7 @@ open class BookController:BaseController() {
             }
         }!!
         if (booktolist.origin == "loc_book"){
-            val file= File(booktolist.bookUrl?:"666")
+            val file= File(booktolist.bookUrl)
             if (file.exists()){
                 file.delete()
             }
@@ -348,6 +349,11 @@ open class BookController:BaseController() {
             throw DataThrowable().data(JsonResponse(false,NOT_BANK))
         }
         runCatching {
+            var cookie = cookie
+            if(cookie.isNotEmpty()){
+                cookie= EncryptUtils.aesDecrypted(cookie)
+                logger.info("cookie:解密后长度${cookie.length}")
+            }
             CookieStore(user.id!!).replaceCookie(url,cookie)
         }.onFailure {
             it.printStackTrace()
@@ -359,6 +365,21 @@ open class BookController:BaseController() {
             }
         }
         JsonResponse(true)
+    }
+
+    @Mapping("/getCookies")
+    open fun getCookies( accessToken:String?, url: String?)=run{
+        val user=getuserbytocken(accessToken).also {
+            if(it == null){
+                throw DataThrowable().data(JsonResponse(false,NEED_LOGIN))
+            }
+        }!!
+        if (url.isNullOrEmpty()){
+            throw DataThrowable().data(JsonResponse(false,NOT_BANK))
+        }
+        val cookie=CookieStore(user.id!!).getCookie(url)
+        logger.info("cookie加密后:$cookie")
+        JsonResponse(true).Data(EncryptUtils.aesEncode(cookie))
     }
 
     //@CacheRemove(tags = "search\${accessToken}")

@@ -184,6 +184,7 @@ class CookieStore(val userid:String) : CookieManager {
 
     private fun getcookie(url: String):String {
         val key=getkey(url)
+        logger.info("cookie url:$key")
         var ck=""
         runCatching {
             ck =  File("$mycookiepath/$key").readText()

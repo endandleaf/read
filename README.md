@@ -28,7 +28,6 @@ fun webViewGetOverrideUrl(
     js: String?,
     overrideUrlRegex: String
 ): String?
-fun getVerificationCode(imageUrl: String): String 
 fun un7zFile(zipPath: String): String 
 fun unrarFile(zipPath: String): String
 fun unArchiveFile(zipPath: String): String
@@ -54,7 +53,7 @@ F11 无边框 F12恢复边框(仅windows支持)
 将后端文件（下载web*.zip）上传到root目录，确保root/read/read.jar存在，确保root/read/conf.yml存在（conf.yml中可修改后台管理的账号密码），然后安装docker,
 网上有一键安装脚本可自行百度，docker一键部署命令如下，如需用mysql数据库请自行修改配置文件。
 ````
-docker run -tid --name read  -v /root/read:/app -p 8080:8080 --restart=always docker-0.unsee.tech/bitnami/java java -jar /app/read.jar
+docker run -tid  -e TZ=Asia/Shanghai --name read  -v /root/read:/app -p 8080:8080 --restart=always docker-0.unsee.tech/bitnami/java java -jar /app/read.jar
 ````
 如需使用其他端口可修改第一个8080为想要的端口。当然/root/read可以换成其他路径，只要确保这个路径下有read.jar和conf.yml。
 

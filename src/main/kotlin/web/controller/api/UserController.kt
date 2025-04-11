@@ -30,9 +30,9 @@ open class UserController:BaseController() {
         if (user == null || !user.password.equals(passsign( password))) {
             throw DataThrowable().data(JsonResponse(false,PASS_ERROR))
         }
-        if(v < 2){
+        if(v < apiversion){
             throw DataThrowable().data(JsonResponse(false,"当前app版本已不在支持，请更新版本"))
-        }else  if(v > 2){
+        }else  if(v > apiversion){
             throw DataThrowable().data(JsonResponse(false,"当前后端不支持您的app，请联系管理员更新后端"))
         }
 

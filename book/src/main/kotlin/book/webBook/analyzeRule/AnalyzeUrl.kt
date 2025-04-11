@@ -303,10 +303,8 @@ class AnalyzeUrl(
     }
 
     private fun setCookie() {
-        //println("setCookie domain:$url")
         val store=source?.getCookieManger()
         val cookie = (store?.getCookie(urlNoQuery))?:""
-        //println("cookie : $cookie")
         if (cookie.isNotEmpty()) {
             store?.mergeCookies(cookie, headerMap["Cookie"])?.let {
                 headerMap.put("Cookie", it)
@@ -334,7 +332,7 @@ class AnalyzeUrl(
         concurrentRateLimiter.withLimit{
             setCookie()
             if (this.useWebView && useWebView) {
-                var s=startBrowserHideAwait(url,"webview")
+                val s=startBrowserHideAwait(url,"webview")
                 return StrResponse(url,s.body)
             } else {
                 strResponse = getClient().newCallStrResponse(retry) {

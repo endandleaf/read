@@ -371,9 +371,9 @@ open class ReadController : BaseController() {
    // @Cache(key = "getBookshelf:\${accessToken}", tags = "getBookshelf", seconds = 20)
     @Mapping("/getBookshelf")
     open fun getBookshelf(accessToken: String?,@Path v:Int) = run {
-       if(v < 2){
+       if(v < apiversion){
            throw DataThrowable().data(JsonResponse(false,NEED_LOGIN))
-       }else  if(v > 2){
+       }else  if(v > apiversion){
            throw DataThrowable().data(JsonResponse(false,NEED_LOGIN))
        }
         val user = getuserbytocken(accessToken).also {
@@ -403,9 +403,9 @@ open class ReadController : BaseController() {
     //@Cache(key = "getBookSources", tags = "getBookSources", seconds = 600)
     @Mapping("/getBookSources")
     open fun getBookSources(accessToken: String?,isall: String?,@Path v:Int ) = run {
-        if(v < 2){
+        if(v < apiversion){
             throw DataThrowable().data(JsonResponse(false,NEED_LOGIN))
-        }else  if(v > 2){
+        }else  if(v > apiversion){
             throw DataThrowable().data(JsonResponse(false,NEED_LOGIN))
         }
         val user = getuserbytocken(accessToken).also {

@@ -33,6 +33,8 @@ open class BaseController {
     @Inject
     lateinit var userBookSourceMapper: UserBookSourceMapper
 
+    var apiversion = 3
+
 
     fun getuserbytocken(accessToken:String?): Users?{
         if (accessToken == null || accessToken.isBlank()) {
