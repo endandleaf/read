@@ -102,6 +102,11 @@ function Decode(str){
 }
 ````
 
+ios端如果需要过一些盾如cf盾需要设置ua为ios
+````
+Mozilla/5.0 (iPhone; CPU iPhone OS 15_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/15.0 Mobile/15E148 Safari/604.1
+````
+
 
 # mysql数据库
 后端支持修改为mysql数据库，部署好数据库后参考mysqlconf.yml文件来修改conf.yml，默认的sqlite文件数据库性能弱不适合高强度使用。
