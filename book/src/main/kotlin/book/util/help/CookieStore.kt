@@ -2,6 +2,7 @@
 package book.util.help
 
 
+import book.util.GSON
 import book.util.MD5Utils
 import book.util.NetworkUtils
 import book.util.TextUtils
@@ -92,7 +93,7 @@ class CookieStore(val userid:String) : CookieManager {
         if(cookieString != null){
             replaceCookie(url, cookieString)
         }
-        //println("savejsonResponse $url, $cookieString")
+        logger.info("savejsonResponse $url, $cookieString,${GSON.toJson(response.cookies())}")
     }
 
     fun saveResponse(response: Response) {

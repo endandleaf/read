@@ -412,7 +412,7 @@ open class ReadController : BaseController() {
             if (it == null) throw DataThrowable().data(JsonResponse(false, NEED_LOGIN))
         }!!
         var source: List<web.model.BaseSource>? = null
-        if(isall != null && isall == "1" && user.source == 1){
+        if(isall != null && isall == "1" && user.source != 0){
             source=getallBookSourcelist(user)
         }else{
             source=getBookSourcelist(true,user)

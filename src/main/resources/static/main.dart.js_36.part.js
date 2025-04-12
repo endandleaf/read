@@ -9,7 +9,7 @@ s=A.ad(["isall",""+d],t,t)
 q=C.t
 p=C.w
 x=3
-return A.c(G.dR(F.ch("/getBookSources"),s),$async$yG)
+return A.c(G.dS(F.ch("/getBookSources"),s),$async$yG)
 case 3:r=q.an(0,p.an(0,f))
 t=J.a1(r)
 if(t.h(r,"isSuccess")){t=J.fB(t.h(r,"data"),new B.alL(),y.l)
@@ -21,7 +21,7 @@ break}else throw A.d(A.aX(E.cz(t.h(r,"errorMsg"))))
 case 1:return A.h(v,w)}})
 return A.i($async$yG,w)},
 alL:function alL(){},
-bdZ(d){var x,w,v,u,t,s=null,r=J.a1(d),q=r.h(d,"bookSourceUrl")
+be0(d){var x,w,v,u,t,s=null,r=J.a1(d),q=r.h(d,"bookSourceUrl")
 q=q==null?s:J.al(q)
 if(q==null)q=""
 x=r.h(d,"bookSourceName")
@@ -57,10 +57,10 @@ D=c[76]
 B.ef.prototype={}
 var z=a.updateTypes(["ef(@)"])
 B.alL.prototype={
-$1(d){return B.bdZ(d)},
+$1(d){return B.be0(d)},
 $S:z+0};(function inheritance(){var x=a.inherit
 x(B.alL,A.bC)
 x(B.ef,A.v)})()
 var y={n:A.w("D<ef>"),l:A.w("ef"),g:A.w("l")}};
 ((a,b)=>{a[b]=a.current
-a.eventLog.push({p:"main.dart.js_36",e:"endPart",h:b})})($__dart_deferred_initializers__,"kI83bN8lqoZITLzO1NYXuRuYd/M=");
+a.eventLog.push({p:"main.dart.js_36",e:"endPart",h:b})})($__dart_deferred_initializers__,"v60W8/FoSqCzB6eNFW/ZQ85jAhY=");

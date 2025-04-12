@@ -257,10 +257,11 @@ interface JsExtensions: JsEncodeUtils  {
      * js实现重定向拦截,网络访问get
      */
     fun get(urlStr: String, headers: Map<String, String>): Connection.Response {
-        logger.info("get:$urlStr")
+
         val requestHeaders = if (getSource()?.enabledCookieJar == true) {
             headers.toMutableMap().apply { put(cookieJarHeader, (getSource()?.getcookieJarHeaderid())?:"") }
         } else headers
+        logger.info("get:$urlStr,headers:${GSON.toJson(requestHeaders)}")
         val rateLimiter = ConcurrentRateLimiter(getSource())
         val response = rateLimiter.withLimitBlocking {
             Jsoup.connect(urlStr)
@@ -271,8 +272,14 @@ interface JsExtensions: JsEncodeUtils  {
                 .method(Connection.Method.GET)
                 .execute()
         }
+        val source=getSource()
+        if(source?.enabledCookieJar == true) {
+            val store=getSource()?.getCookieManger()
+            store?.savejsonResponse(response)
+        }
         return response
     }
+
 
 
     /**
@@ -293,17 +300,21 @@ interface JsExtensions: JsEncodeUtils  {
                 .method(Connection.Method.HEAD)
                 .execute()
         }
+        val source=getSource()
+        if(source?.enabledCookieJar == true) {
+            val store=getSource()?.getCookieManger()
+            store?.savejsonResponse(response)
+        }
         return response
     }
 
     /**
      * 打开图片验证码对话框，等待返回验证结果
      */
-    fun getVerificationCode(imageUrl: String): String {
+    fun getVerificationCode(imageUrl: String): String = runBlocking{
         logger.info("getVerificationCode:$imageUrl")
-        val img=this.get(imageUrl,hashMapOf())
-        val store=getSource()?.getCookieManger()
-        store?.savejsonResponse(img)
+        val analyzeUrl = AnalyzeUrl(imageUrl, source = getSource(),debugLog = null)
+        val img=analyzeUrl.getByteArrayAwait()
         val coverFile = "${MD5Utils.md5Encode16(getSource()?.getKey() +getSource()?.userid +"VerificationCode")}.jpg"
         val relativeCoverUrl = Paths.get("assets", "", "codes", coverFile).toString()
         val url="/" + relativeCoverUrl
@@ -312,10 +323,10 @@ interface JsExtensions: JsEncodeUtils  {
         if (file.exists()) {
             file.delete()
         }
-        FileUtils.writeBytes(coverUrl, img.bodyAsBytes())
+        FileUtils.writeBytes(coverUrl,img)
         val code=Response.getVerificationCode(url+"?time=${LocalDateTime.now()}",getSource()?.usertocken?:"").trim()
         logger.info("获取到code:$code")
-        return code
+        code
     }
 
     /**
@@ -337,6 +348,12 @@ interface JsExtensions: JsEncodeUtils  {
                 .method(Connection.Method.POST)
                 .execute()
         }
+        val source=getSource()
+        if(source?.enabledCookieJar == true) {
+            val store=getSource()?.getCookieManger()
+            store?.savejsonResponse(response)
+        }
+
         return response
     }
 

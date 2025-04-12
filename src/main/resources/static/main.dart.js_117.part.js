@@ -2,7 +2,7 @@
 a[b][c]=a[b][c]||[]
 a[b][c].push({p:"main.dart.js_117",e:"beginPart"})})(self,"$__dart_deferred_initializers__","eventLog")
 $__dart_deferred_initializers__.current=function(a,b,c,$){var J,B,C,A={
-bic(d,e,f,g,h,i,j,k,l,m,n,o,p,q,r,s,t,u,v,w,x){return new A.bQ(e,s,t,u,r,d,n,h,m,g,q,p,v,k,o,l,i,j,x,f,w)},
+bie(d,e,f,g,h,i,j,k,l,m,n,o,p,q,r,s,t,u,v,w,x){return new A.bQ(e,s,t,u,r,d,n,h,m,g,q,p,v,k,o,l,i,j,x,f,w)},
 EN(a1){var x,w,v,u,t,s,r,q,p,o,n,m,l,k,j,i,h,g,f,e=null,d=J.a1(a1),a0=d.h(a1,"bookUrl")
 a0=a0==null?e:J.al(a0)
 if(a0==null)a0=""
@@ -49,7 +49,7 @@ g=C.fp(d.h(a1,"type"))
 f=d.h(a1,"bookgroup")
 f=f==null?e:J.al(f)
 if(f==null)f=""
-return A.bic(t,a0,f,i,r,l,k,j,m,q,s,C.fp(d.h(a1,"lastCheckTime")),o,p,u,x,w,v,n,g,h)},
+return A.bie(t,a0,f,i,r,l,k,j,m,q,s,C.fp(d.h(a1,"lastCheckTime")),o,p,u,x,w,v,n,g,h)},
 bQ:function bQ(d,e,f,g,h,i,j,k,l,m,n,o,p,q,r,s,t,u,v,w,x){var _=this
 _.a=d
 _.b=e
@@ -76,7 +76,7 @@ E0(d){var x
 if(d==null)return 0
 if(B.lR(d))return d
 if(typeof d=="number")return d
-if(typeof d=="string"){x=B.bdE(d)
+if(typeof d=="string"){x=B.bdG(d)
 return x==null?0:x}return 0}}
 J=c[1]
 B=c[0]
@@ -85,15 +85,16 @@ A=a.updateHolder(c[60],A)
 A.bQ.prototype={
 dM(){var x=this
 return B.ad(["bookUrl",x.a,"origin",x.b,"originName",x.c,"name",x.e,"author",x.f,"kind",x.r,"coverUrl",x.w,"intro",x.x,"charset",x.y,"latestChapterTitle",x.z,"latestChapterTime",x.Q,"totalChapterNum",x.as,"durChapterTitle",x.ay,"durChapterIndex",x.ch,"durChapterTime",x.at,"durChapterPos",x.CW,"wordCount",x.cx,"type",x.db,"bookgroup",x.cy,"lastCheckTime",x.ax],y.g,y.b)},
-UB(){var x=this
+UC(){var x=this
 return B.ad(["bookUrl",x.a,"origin",x.b,"originName",x.c,"name",x.e,"author",x.f,"kind",x.r,"coverUrl",x.w,"intro",x.x,"charset",x.y,"latestChapterTitle",x.z,"latestChapterTime",""+x.Q,"totalChapterNum",""+x.as,"durChapterTitle",x.ay,"durChapterIndex",""+x.ch,"durChapterPos",B.n(x.CW),"durChapterTime",""+x.at,"wordCount",x.cx,"type",""+x.db,"bookgroup",x.cy,"lastCheckTime",""+x.ax],y.g,y.b)},
-Rs(d,e,f){var x=this,w=x.a,v=x.b,u=x.c,t=x.z,s=f==null?x.ay:f,r=d==null?x.ch:d,q=x.at,p=e==null?x.CW:e,o=x.db,n=x.cy
-return A.bic(x.f,w,n,x.y,x.w,r,p,q,s,x.x,x.r,x.ax,x.Q,t,x.e,v,u,x.d,x.as,o,x.cx)},
-jy(){return this.Rs(null,null,null)},
-Ax(d){return this.Rs(d,null,null)}}
+HL(d,e,f){var x=this,w=x.a,v=x.b,u=x.c,t=x.z,s=f==null?x.ay:f,r=d==null?x.ch:d,q=x.at,p=e==null?x.CW:e,o=x.db,n=x.cy
+return A.bie(x.f,w,n,x.y,x.w,r,p,q,s,x.x,x.r,x.ax,x.Q,t,x.e,v,u,x.d,x.as,o,x.cx)},
+jy(){return this.HL(null,null,null)},
+a6y(d,e){return this.HL(d,null,e)},
+Ro(d){return this.HL(d,null,null)}}
 var z=a.updateTypes(["ao<l,@>()"]);(function installTearOffs(){var x=a._instance_0u
 x(A.bQ.prototype,"gl6","dM",0)})();(function inheritance(){var x=a.inherit
 x(A.bQ,B.v)})()
 var y={g:B.w("l"),b:B.w("@")}};
 ((a,b)=>{a[b]=a.current
-a.eventLog.push({p:"main.dart.js_117",e:"endPart",h:b})})($__dart_deferred_initializers__,"95o6szM8t9Zv5cebNlkeF9r4eZg=");
+a.eventLog.push({p:"main.dart.js_117",e:"endPart",h:b})})($__dart_deferred_initializers__,"qUMfT7EiM844NAeGQRXIBXYnR4I=");
