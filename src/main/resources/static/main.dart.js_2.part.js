@@ -5,8 +5,8 @@ $__dart_deferred_initializers__.current=function(a,b,c,$){var J,A,B={
 Bx(){var x=0,w=A.j(y.b),v=1,u,t,s,r,q,p
 var $async$Bx=A.d(function(d,e){if(d===1){u=e
 x=v}while(true)switch(x){case 0:v=3
-s=C.bq7()
-$.bBn=s
+s=C.bqc()
+$.bBs=s
 p=$
 x=6
 return A.c(s.mV(0,"BookStorage",new B.aIG(),1),$async$Bx)
@@ -33,10 +33,10 @@ C=c[69]
 var z=a.updateTypes(["aL(BZ)"])
 B.aIG.prototype={
 $1(d){var x=d.gRR(d)
-J.bca(x,"storage")},
+J.bcf(x,"storage")},
 $S:z+0};(function inheritance(){var x=a.inherit
 x(B.aIG,A.bP)})()
-var y={b:A.w("~")};(function staticFields(){$.bBn=null
+var y={b:A.w("~")};(function staticFields(){$.bBs=null
 $.Bw=null})()};
 ((a,b)=>{a[b]=a.current
-a.eventLog.push({p:"main.dart.js_2",e:"endPart",h:b})})($__dart_deferred_initializers__,"F8e+iXP89y9eQTVYy3MDN41HNYk=");
+a.eventLog.push({p:"main.dart.js_2",e:"endPart",h:b})})($__dart_deferred_initializers__,"B/N26/wtC8dgYrQlk9SM+FLjHPw=");

@@ -21,7 +21,7 @@ break}else throw A.e(A.aU(E.ct(t.h(r,"errorMsg"))))
 case 1:return A.h(v,w)}})
 return A.i($async$yJ,w)},
 alX:function alX(){},
-beB(d){var x,w,v,u,t,s=null,r=J.a0(d),q=r.h(d,"bookSourceUrl")
+beG(d){var x,w,v,u,t,s=null,r=J.a0(d),q=r.h(d,"bookSourceUrl")
 q=q==null?s:J.al(q)
 if(q==null)q=""
 x=r.h(d,"bookSourceName")
@@ -57,10 +57,10 @@ D=c[70]
 B.ee.prototype={}
 var z=a.updateTypes(["ee(@)"])
 B.alX.prototype={
-$1(d){return B.beB(d)},
+$1(d){return B.beG(d)},
 $S:z+0};(function inheritance(){var x=a.inherit
 x(B.alX,A.bP)
 x(B.ee,A.v)})()
 var y={n:A.w("E<ee>"),l:A.w("ee"),g:A.w("m")}};
 ((a,b)=>{a[b]=a.current
-a.eventLog.push({p:"main.dart.js_36",e:"endPart",h:b})})($__dart_deferred_initializers__,"N02lMZDnFEjCvC/Bk8C9xwJs+cM=");
+a.eventLog.push({p:"main.dart.js_36",e:"endPart",h:b})})($__dart_deferred_initializers__,"IMuq4npFkFa4+KoAExYyJtgzcK8=");

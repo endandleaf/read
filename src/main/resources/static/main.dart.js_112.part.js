@@ -2,7 +2,7 @@
 a[b][c]=a[b][c]||[]
 a[b][c].push({p:"main.dart.js_112",e:"beginPart"})})(self,"$__dart_deferred_initializers__","eventLog")
 $__dart_deferred_initializers__.current=function(a,b,c,$){var J,B,C,A={
-biN(d,e,f,g,h,i,j,k,l,m,n,o,p,q,r,s,t,u,v,w,x){return new A.bQ(e,s,t,u,r,d,n,h,m,g,q,p,v,k,o,l,i,j,x,f,w)},
+biS(d,e,f,g,h,i,j,k,l,m,n,o,p,q,r,s,t,u,v,w,x){return new A.bQ(e,s,t,u,r,d,n,h,m,g,q,p,v,k,o,l,i,j,x,f,w)},
 EO(a1){var x,w,v,u,t,s,r,q,p,o,n,m,l,k,j,i,h,g,f,e=null,d=J.a0(a1),a0=d.h(a1,"bookUrl")
 a0=a0==null?e:J.al(a0)
 if(a0==null)a0=""
@@ -49,7 +49,7 @@ g=C.eO(d.h(a1,"type"))
 f=d.h(a1,"bookgroup")
 f=f==null?e:J.al(f)
 if(f==null)f=""
-return A.biN(t,a0,f,i,r,l,k,j,m,q,s,C.eO(d.h(a1,"lastCheckTime")),o,p,u,x,w,v,n,g,h)},
+return A.biS(t,a0,f,i,r,l,k,j,m,q,s,C.eO(d.h(a1,"lastCheckTime")),o,p,u,x,w,v,n,g,h)},
 bQ:function bQ(d,e,f,g,h,i,j,k,l,m,n,o,p,q,r,s,t,u,v,w,x){var _=this
 _.a=d
 _.b=e
@@ -76,7 +76,7 @@ E2(d){var x
 if(d==null)return 0
 if(B.lT(d))return d
 if(typeof d=="number")return d
-if(typeof d=="string"){x=B.beg(d)
+if(typeof d=="string"){x=B.bel(d)
 return x==null?0:x}return 0}}
 J=c[1]
 B=c[0]
@@ -88,7 +88,7 @@ return B.ad(["bookUrl",x.a,"origin",x.b,"originName",x.c,"name",x.e,"author",x.f
 UP(){var x=this
 return B.ad(["bookUrl",x.a,"origin",x.b,"originName",x.c,"name",x.e,"author",x.f,"kind",x.r,"coverUrl",x.w,"intro",x.x,"charset",x.y,"latestChapterTitle",x.z,"latestChapterTime",""+x.Q,"totalChapterNum",""+x.as,"durChapterTitle",x.ay,"durChapterIndex",""+x.ch,"durChapterPos",B.n(x.CW),"durChapterTime",""+x.at,"wordCount",x.cx,"type",""+x.db,"bookgroup",x.cy,"lastCheckTime",""+x.ax],y.g,y.b)},
 HU(d,e,f){var x=this,w=x.a,v=x.b,u=x.c,t=x.z,s=f==null?x.ay:f,r=d==null?x.ch:d,q=x.at,p=e==null?x.CW:e,o=x.db,n=x.cy
-return A.biN(x.f,w,n,x.y,x.w,r,p,q,s,x.x,x.r,x.ax,x.Q,t,x.e,v,u,x.d,x.as,o,x.cx)},
+return A.biS(x.f,w,n,x.y,x.w,r,p,q,s,x.x,x.r,x.ax,x.Q,t,x.e,v,u,x.d,x.as,o,x.cx)},
 j_(){return this.HU(null,null,null)},
 a6K(d,e){return this.HU(d,null,e)},
 Ry(d){return this.HU(d,null,null)}}
@@ -97,4 +97,4 @@ x(A.bQ.prototype,"gl6","dO",0)})();(function inheritance(){var x=a.inherit
 x(A.bQ,B.v)})()
 var y={g:B.w("m"),b:B.w("@")}};
 ((a,b)=>{a[b]=a.current
-a.eventLog.push({p:"main.dart.js_112",e:"endPart",h:b})})($__dart_deferred_initializers__,"btTyy0aWSS05RLB4YK6nXN1D84I=");
+a.eventLog.push({p:"main.dart.js_112",e:"endPart",h:b})})($__dart_deferred_initializers__,"VEdEg0Za8sv3QcIe6+G1iFlkaJw=");
