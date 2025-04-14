@@ -152,8 +152,16 @@ class Debugger(val logMsg: (String) -> Unit) : DebugLog {
                 chapterList?.let {
                     if (it.isNotEmpty()) {
                         log(WBook.sourceUrl, "︽目录页解析完成")
-                        val nextChapterUrl = if (it.size > 1) it[1].url else null
-                        contentDebug(WBook, book, it[0], nextChapterUrl)
+                        if(it.size == 1){
+                            log(WBook.sourceUrl, "开始获取正文：${ it[0].url}")
+                            val nextChapterUrl = if (it.size > 1) it[1].url else null
+                            contentDebug(WBook, book, it[0], nextChapterUrl)
+                        }else{
+                            log(WBook.sourceUrl, "开始获取正文：${ it[1].url}")
+                            val nextChapterUrl = if (it.size > 2) it[2].url else null
+                            contentDebug(WBook, book, it[1], nextChapterUrl)
+                        }
+
                     } else {
                         log(WBook.sourceUrl, "︽目录列表为空")
                     }

@@ -12,6 +12,7 @@ import book.webBook.analyzeRule.AnalyzeUrl
 import kotlinx.coroutines.Dispatchers.IO
 import kotlinx.coroutines.async
 import kotlinx.coroutines.withContext
+import org.apache.commons.text.StringEscapeUtils
 
 object BookContent {
 
@@ -142,8 +143,11 @@ object BookContent {
         val nextUrlList = arrayListOf<String>()
         analyzeRule.chapter = chapter
         //获取正文
-        var content = analyzeRule.getString(contentRule.content)
+        var content = analyzeRule.getString(contentRule.content, unescape = false)
         content = HtmlFormatter.formatKeepImg(content, rUrl)
+        if (content.indexOf('&') > -1) {
+            content = StringEscapeUtils.unescapeHtml4(content)
+        }
         //获取下一页链接
         val nextUrlRule = contentRule.nextContentUrl
         if (!nextUrlRule.isNullOrEmpty()) {

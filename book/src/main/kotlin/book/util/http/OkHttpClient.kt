@@ -6,16 +6,18 @@ import book.util.EncodingDetect
 import book.util.GSON
 import book.util.Utf8BomUtils
 import kotlinx.coroutines.suspendCancellableCoroutine
-import kotlinx.coroutines.withContext
-import kotlinx.coroutines.Dispatchers
 import okhttp3.*
 import okhttp3.HttpUrl.Companion.toHttpUrl
 import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.RequestBody.Companion.asRequestBody
 import okhttp3.RequestBody.Companion.toRequestBody
+import org.jsoup.Jsoup
+import java.io.ByteArrayInputStream
 import java.io.File
 import java.io.IOException
+import java.io.InputStream
 import java.nio.charset.Charset
+import java.util.zip.ZipInputStream
 import kotlin.coroutines.resume
 import kotlin.coroutines.resumeWithException
 
@@ -23,21 +25,19 @@ suspend fun OkHttpClient.newCallResponse(
     retry: Int = 0,
     builder: Request.Builder.() -> Unit
 ): Response {
-    return withContext(Dispatchers.IO) {
-        val requestBuilder = Request.Builder()
-        requestBuilder.apply(builder)
-        var response: Response? = null
-        for (i in 0..retry) {
-            response = newCall(requestBuilder.build()).await()
-            if (response.isSuccessful) {
-                return@withContext response
-            }
+    val requestBuilder = Request.Builder()
+    requestBuilder.apply(builder)
+    var response: Response? = null
+    for (i in 0..retry) {
+        response = newCall(requestBuilder.build()).await()
+        if (response.isSuccessful) {
+            return response
         }
-        return@withContext response!!
     }
+    return response!!
 }
 
-suspend fun OkHttpClient.newCallResponseBody(
+suspend fun OkHttpClient.newCall(
     retry: Int = 0,
     builder: Request.Builder.() -> Unit
 ): ResponseBody {
@@ -46,36 +46,14 @@ suspend fun OkHttpClient.newCallResponseBody(
     }
 }
 
-suspend fun OkHttpClient.newCall(
-    retry: Int = 0,
-    builder: Request.Builder.() -> Unit
-): ResponseBody {
-    val requestBuilder = Request.Builder()
-    requestBuilder.apply(builder)
-    var response: Response? = null
-    for (i in 0..retry) {
-        response = this.newCall(requestBuilder.build()).await()
-        if (response.isSuccessful) {
-            return response.body!!
-        }
-    }
-    return response!!.body ?: throw IOException(response.message)
-}
 
 suspend fun OkHttpClient.newCallStrResponse(
     retry: Int = 0,
     builder: Request.Builder.() -> Unit
 ): StrResponse {
-    val requestBuilder = Request.Builder()
-    requestBuilder.apply(builder)
-    var response: Response? = null
-    for (i in 0..retry) {
-        response = this.newCall(requestBuilder.build()).await()
-        if (response.isSuccessful) {
-            return StrResponse(response, response.body!!.text())
-        }
+    return newCallResponse(retry, builder).let {
+        StrResponse(it, it.body?.text() ?: it.message)
     }
-    return StrResponse(response!!, response.body?.text() ?: response.message)
 }
 
 suspend fun Call.await(): Response = suspendCancellableCoroutine { block ->
@@ -97,21 +75,46 @@ suspend fun Call.await(): Response = suspendCancellableCoroutine { block ->
 }
 
 fun ResponseBody.text(encode: String? = null): String {
-    val responseBytes = Utf8BomUtils.removeUTF8BOM(bytes())
-    var charsetName: String? = encode
+    return unCompress {
+        val responseBytes = Utf8BomUtils.removeUTF8BOM(it.readBytes())
+        var charsetName: String? = encode
 
-    charsetName?.let {
-        return String(responseBytes, Charset.forName(charsetName))
+        charsetName?.let {
+            if(charsetName?.lowercase() == "gb2312".lowercase()) {
+                return@unCompress String(responseBytes,  Charset.forName("gbk"))
+            }
+            return@unCompress String(responseBytes, Charset.forName(charsetName))
+        }
+
+
+        //根据http头判断
+        contentType()?.charset()?.let { charset ->
+            if(charset.name().lowercase() == "gb2312".lowercase()) {
+                return@unCompress String(responseBytes,  Charset.forName("gbk"))
+            }
+            return@unCompress String(responseBytes, charset)
+        }
+
+        //根据内容判断
+        charsetName = EncodingDetect.getHtmlEncode(responseBytes)
+        if(charsetName?.lowercase() == "gb2312".lowercase()) {
+            return@unCompress String(responseBytes,  Charset.forName("gbk"))
+        }
+        return@unCompress String(responseBytes, Charset.forName(charsetName))
     }
+}
 
-    //根据http头判断
-    contentType()?.charset()?.let {
-        return String(responseBytes, it)
+fun <T> ResponseBody.unCompress(success: (inputStream: InputStream) -> T): T {
+    return if (contentType() == "application/zip".toMediaType()) {
+        byteStream().use { byteStream ->
+            ZipInputStream(byteStream).use {
+                it.nextEntry
+                success.invoke(it)
+            }
+        }
+    } else {
+        byteStream().use(success)
     }
-
-    //根据内容判断
-    charsetName = EncodingDetect.getHtmlEncode(responseBytes)
-    return String(responseBytes, Charset.forName(charsetName))
 }
 
 fun Request.Builder.addHeaders(headers: Map<String, String>) {

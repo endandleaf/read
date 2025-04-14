@@ -11,6 +11,15 @@ fun getRandomString(length: Int) : String {
         .map { charset.random() }
         .joinToString("")
 }
+
+fun getRandomNumString(length: Int) : String {
+    val charset = "0123456789"
+    return (1..length)
+        .map { charset.random() }
+        .joinToString("")
+}
+
+
 fun loginok(username:String, ctx: Context){
     ctx.sessionSet("username", username)
 }
@@ -26,6 +35,12 @@ fun islogin(ctx: Context) :Boolean =run{
         false
     }
 }
+
+fun getMailCode():String{
+    val randoms = getRandomNumString(6)
+    return randoms
+}
+
 
 fun getcodes(num:Int):MutableList<String>{
     var codes = mutableListOf<String>()

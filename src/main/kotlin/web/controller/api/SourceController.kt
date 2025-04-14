@@ -2,6 +2,9 @@ package web.controller.api
 
 
 import book.model.BookSource
+import book.util.GSON
+import book.util.fromJsonArray
+import book.util.fromJsonObject
 import com.google.gson.Gson
 import org.apache.ibatis.solon.annotation.Db
 import org.noear.solon.annotation.Body
@@ -57,6 +60,34 @@ open class SourceController:BaseController() {
             addorupdate(it,user).let {  (ins,ups)->
                 insert += ins
                 update += ups
+            }
+        }
+        JsonResponse(true,"新增${insert}条书源，更新${update}条书源")
+    }
+
+    @Mapping("/saveBookSourcesv2")
+    fun saveBookSourcesv2(accessToken:String?, source:String, urls:String)=run{
+        val user=getuser(accessToken)
+        var insert = 0
+        var update = 0
+        var list= listOf<String>()
+        if(urls.isNotEmpty()){
+            list=GSON.fromJsonArray<String>(urls).getOrNull()?:listOf()
+        }
+        val bookSourcelist= BookSource.fromJsonArray(source).getOrNull()
+        bookSourcelist?.forEach {
+            if(list.isNotEmpty()){
+                if(list.contains(it.bookSourceUrl)){
+                    addorupdate(it,user).let {  (ins,ups)->
+                        insert += ins
+                        update += ups
+                    }
+                }
+            }else{
+                addorupdate(it,user).let {  (ins,ups)->
+                    insert += ins
+                    update += ups
+                }
             }
         }
         JsonResponse(true,"新增${insert}条书源，更新${update}条书源")

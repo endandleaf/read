@@ -40,4 +40,6 @@ object AppPattern {
      */
     val notReadAloudRegex = Regex("^(\\s|\\p{C}|\\p{P}|\\p{Z}|\\p{S})+$")
 
+    val xmlContentTypeRegex = "(application|text)/\\w*\\+?xml.*".toRegex()
+
 }

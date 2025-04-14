@@ -122,6 +122,10 @@ interface JsEncodeUtils {
         return createSymmetricCrypto(transformation, key, iv).decryptStr(str)
     }
 
+    fun getjs(js:String):String{
+        return  js.replace("io.legado.app.help.http.StrResponse","book.util.http.StrResponse")
+    }
+
     /**
      * AES解码为String，算法参数经过Base64加密
      *

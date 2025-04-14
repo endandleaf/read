@@ -17,6 +17,9 @@ interface  UsersMapper : BaseMapper<Users> {
     @Select("SELECT * FROM users WHERE username = #{username}" )
     fun getUserByusername(@Param("username") username: String): Users?
 
+    @Select("SELECT * FROM users WHERE email = #{email}" )
+    fun getUserByemail(@Param("email") email: String): List<Users>
+
     @Update("UPDATE users set password = #{password}   WHERE id = #{id}")
     fun changepass(@Param("id") id: String,@Param("password") password: String):Int
 

@@ -72,7 +72,7 @@ class Booklist {
         return this
     }
 
-    fun bookto(book: Book,canchangename:Boolean =true):Booklist{
+    fun bookto(book: Book,canchangename:Boolean =true ,canchangeindex:Boolean =false):Booklist{
         this.tocUrl=""
         this.bookUrl = book.bookUrl
         if(book.tocUrl.isNotBlank()) this.tocUrl = book.tocUrl
@@ -81,7 +81,7 @@ class Booklist {
         this.originName = book.originName
         this.originOrder = book.originOrder
         if(book.name.isNotBlank() && canchangename)  this.name = book.name
-        if(book.author.isNotBlank() && canchangename) this.author = book.author
+        if(book.author.isNotBlank() ) this.author = book.author
         if((book.kind?:"").isNotBlank()) this.kind = book.kind
         if((book.customTag?:"").isNotBlank())  this.customTag = book.customTag
         if((book.customCoverUrl?:"").isNotBlank()) this.customCoverUrl = book.customCoverUrl
@@ -91,12 +91,34 @@ class Booklist {
         if((book.charset?:"").isNotBlank()) this.charset = book.charset
         if(canchangename) this.type = book.type
         if((book.wordCount?:"").isNotBlank()) this.wordCount = book.wordCount
-
+        if(canchangeindex) this.durChapterIndex = book.durChapterIndex
+        if(canchangeindex) this.durChapterTime = book.durChapterTime
+        if(canchangeindex) this.durChapterTitle = book.durChapterTitle
         return this
     }
 
    companion object{
        fun tobooklist(book: SearchBook, id:String):Booklist{
+           var bookList = Booklist().create()
+           bookList.bookUrl = book.bookUrl
+           bookList.origin = book.origin
+           bookList.originName = book.originName
+           bookList.originOrder = book.originOrder
+           bookList.type = book.type
+           bookList.name = book.name
+           bookList.author = book.author
+           bookList.kind = book.kind
+           bookList.coverUrl = book.coverUrl
+           bookList.intro=book.intro
+           bookList.wordCount = book.wordCount
+           bookList.latestChapterTitle = book.latestChapterTitle
+           bookList.tocUrl = book.tocUrl
+           bookList.id= Md5(id+book.bookUrl)
+           bookList.userid=id
+           return bookList
+       }
+
+       fun tobooklist(book: Book, id:String):Booklist{
            var bookList = Booklist().create()
            bookList.bookUrl = book.bookUrl
            bookList.origin = book.origin

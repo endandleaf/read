@@ -170,7 +170,7 @@ data class SearchBook(
             coverUrl = coverUrl,
             intro = intro,
             tocUrl = tocUrl,
-//            originOrder = originOrder,
+            originOrder = originOrder,
         ).apply {
             this. userid = userid
             this.variable = variable

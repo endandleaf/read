@@ -188,11 +188,11 @@ interface BaseSource : JsExtensions {
         getShareScope()?.let {
             scope.prototype = it
         }
-        return RhinoScriptEngine.eval(jsStr, scope)
+        return RhinoScriptEngine.eval(getjs(jsStr), scope)
     }
 
     fun getShareScope(): Scriptable? {
-        return SharedJsScope.getScope(jsLib)
+        return SharedJsScope.getScope(if(jsLib != null )getjs(jsLib?:"") else jsLib)
     }
 
     /**

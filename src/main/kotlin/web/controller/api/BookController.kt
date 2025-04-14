@@ -2,14 +2,14 @@ package web.controller.api
 
 import book.model.Book
 import book.model.SearchBook
+import book.util.*
 import book.util.help.CookieStore
 import book.webBook.WBook
 import com.google.gson.Gson
+import com.google.gson.reflect.TypeToken
 import kotlinx.coroutines.runBlocking
 import org.apache.ibatis.solon.annotation.Db
-import org.noear.solon.annotation.Controller
-import org.noear.solon.annotation.Inject
-import org.noear.solon.annotation.Mapping
+import org.noear.solon.annotation.*
 import org.noear.solon.core.util.DataThrowable
 import org.noear.solon.data.annotation.Cache
 import org.noear.solon.data.annotation.CacheRemove
@@ -20,19 +20,17 @@ import web.controller.api.ReadController.Companion.setChapterListbycache
 import web.mapper.BookCacheMapper
 import web.mapper.BookGroupMapper
 import web.mapper.BooklistMapper
-import web.mapper.UserCookieMapper
 import web.model.BookCache
 import web.model.BookGroup
 import web.model.Booklist
-import web.model.UserCookie
 import web.response.*
 import web.util.hash.EncryptUtils
 import web.util.read.Bookcache
 import web.util.read.getlist
 import web.util.read.updatebook
 import java.io.File
-import java.net.URI
 import kotlin.concurrent.thread
+
 
 @Controller
 @Mapping(routepath)
@@ -119,6 +117,38 @@ open class BookController:BaseController() {
         JsonResponse(true,SUCCESS)
     }
 
+    @Mapping("/saveBooks")
+    open fun saveBooks( accessToken:String?, @Body content:String) = runBlocking{
+        val user=getuserbytocken(accessToken).also {
+            if(it == null){
+                throw DataThrowable().data(JsonResponse(false,NEED_LOGIN))
+            }
+        }!!
+        if(content.isEmpty()){
+            throw DataThrowable().data(JsonResponse(false, NOT_BANK))
+        }
+        val books= GSON.fromJsonArray<Book>(content).getOrNull()?:listOf()
+
+        var num=0;
+        for (book in books){
+            if(book.origin == "loc_book"){
+                continue
+            }
+            if (book.bookUrl.isBlank() || book.name.isBlank()){
+                continue
+            }
+            if (booklistMapper.getbook(user.id!!,book.bookUrl) != null){
+                continue
+            }
+            if (booklistMapper.getbooklistbynametype(user.id!!,book.name,book.author,book.type).isNotEmpty()){
+                continue
+            }
+            val booktolist=Booklist.tobooklist(book,user.id!!)
+            num+=booklistMapper.insert(booktolist.bookto(book, canchangeindex = true))
+        }
+        JsonResponse(true, errorMsg = "共添加${num}本书")
+    }
+
     @Mapping("/refreshBook")
     open fun refreshBook( accessToken:String?,bookurl: String?) = runBlocking{
         val user=getuserbytocken(accessToken).also {
@@ -182,16 +212,18 @@ open class BookController:BaseController() {
         val webBook = WBook(source!!.json ?: "", user.id!!, accessToken, false)
         runCatching {
             val  new = webBook.getBookInfo(book.bookUrl, canReName = true).also {   setBookbycache(book.bookUrl,it,user.id!!) }
+            val mybook=Booklist.tobooklist(book,user.id!!)
+            mybook.bookto(new,false)
             runCatching {
                 val  list = webBook.getChapterList(new)
                 if(list.isNotEmpty()){
-                    new.lastCheckCount=list.size
-                    new.latestChapterTitle=list.last().title
+                    mybook.lastCheckCount=list.size
+                    mybook.latestChapterTitle=list.last().title
                 }
             }
-            val mybook=Booklist.tobooklist(book,user.id!!)
-            JsonResponse(true,SUCCESS).Data( mybook.bookto(new,false))
+            JsonResponse(true,SUCCESS).Data( mybook)
         }.onFailure {
+            it.printStackTrace()
            JsonResponse(false,BOOKSEARCHERROR)
         }
     }

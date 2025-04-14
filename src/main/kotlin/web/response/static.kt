@@ -6,6 +6,10 @@ val NOT_BANK = "NOT_BANK"
 
 val PASS_ERROR = "用户名或密码错误"
 
+val EMAIL_CHECK_ERROR = "邮箱填写错误"
+
+val EMAIL_IS = "邮箱已存在"
+
 val NOT_SOURCE = "书源不存在"
 
 val IS_WEBVIEW = "webview书源不支持缓存"
@@ -67,3 +71,5 @@ val SOURCE_URL_ERROR="书源URL不呢为空"
 val SOURCE_IS = "书源已存在"
 
 val CACHE_ERROR="最多5个缓存任务"
+
+val CODE_CHECK_ERROR= "验证码错误"

@@ -287,7 +287,7 @@ class AnalyzeUrl(
         source?.getShareScope()?.let {
             scope.prototype = it
         }
-        return RhinoScriptEngine.eval(jsStr, scope, coroutineContext)
+        return RhinoScriptEngine.eval(getjs(jsStr), scope, coroutineContext)
     }
 
     fun put(key: String, value: String): String {
@@ -353,6 +353,12 @@ class AnalyzeUrl(
                         }
                         else -> get(urlNoQuery, fieldMap, true)
                     }
+                }.let {
+                    val isXml = it.raw.body?.contentType()?.toString()
+                        ?.matches(AppPattern.xmlContentTypeRegex) == true
+                    if (isXml && it.body?.trim()?.startsWith("<?xml", true) == false) {
+                        StrResponse(it.raw, "<?xml version=\"1.0\"?>" + it.body)
+                    } else it
                 }
                 return strResponse
             }

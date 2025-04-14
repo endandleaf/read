@@ -94,15 +94,15 @@ class WBook (val bookSource: BookSource, val debugLog: Boolean = true, var debug
 
             var res = analyzeUrl.getStrResponseAwait()
 
-            if(debugger != null){
-                debugger?.log("搜索源码Qwq${res.body}");
-            }
-
             bookSource.loginCheckJs?.let { checkJs ->
                 if (checkJs.isNotBlank()) {
                     res = analyzeUrl.evalJS(checkJs, res) as StrResponse
                 }
             }
+            if(debugger != null){
+                debugger?.log("搜索源码Qwq${res.body}");
+            }
+
             checkRedirect(bookSource, res)
             BookList.analyzeBookList(
                 res.body,
@@ -139,14 +139,14 @@ class WBook (val bookSource: BookSource, val debugLog: Boolean = true, var debug
             headerMapF = bookSource.getHeaderMap(true),debugLog = debugger
         )
         var res = analyzeUrl.getStrResponseAwait()
-        if(debugger != null){
-            debugger?.log("发现源码Qwq${res.body}");
-        }
         //检测书源是否已登录
         bookSource.loginCheckJs?.let { checkJs ->
             if (checkJs.isNotBlank()) {
                 res = analyzeUrl.evalJS(checkJs, result = res) as StrResponse
             }
+        }
+        if(debugger != null){
+            debugger?.log("发现源码Qwq${res.body}");
         }
         checkRedirect(bookSource, res)
         return BookList.analyzeBookList(
@@ -200,14 +200,14 @@ class WBook (val bookSource: BookSource, val debugLog: Boolean = true, var debug
             headerMapF = bookSource.getHeaderMap(true),debugLog = debugger
         )
         var res = analyzeUrl.getStrResponseAwait()
-        if(debugger != null){
-            debugger?.log("书籍源码Qwq${res.body}");
-        }
         //检测书源是否已登录
         bookSource.loginCheckJs?.let { checkJs ->
             if (checkJs.isNotBlank()) {
                 res = analyzeUrl.evalJS(checkJs, result = res) as StrResponse
             }
+        }
+        if(debugger != null){
+            debugger?.log("书籍源码Qwq${res.body}");
         }
         checkRedirect(bookSource, res)
         BookInfo.analyzeBookInfo(book, res.body, bookSource, book.bookUrl, res.url, canReName, debugLog = debugger)
@@ -240,14 +240,14 @@ class WBook (val bookSource: BookSource, val debugLog: Boolean = true, var debug
                 headerMapF = bookSource.getHeaderMap(true),debugLog = debugger
             )
             var res = analyzeUrl.getStrResponseAwait()
-            if(debugger != null){
-                debugger?.log("目录源码Qwq${res.body}");
-            }
             //检测书源是否已登录
             bookSource.loginCheckJs?.let { checkJs ->
                 if (checkJs.isNotBlank()) {
                     res = analyzeUrl.evalJS(checkJs, result = res) as StrResponse
                 }
+            }
+            if(debugger != null){
+                debugger?.log("目录源码Qwq${res.body}");
             }
             checkRedirect(bookSource, res)
             return BookChapterList.analyzeChapterList(book, res.body, bookSource, book.tocUrl, res.url, debugLog = debugger)
@@ -290,6 +290,12 @@ class WBook (val bookSource: BookSource, val debugLog: Boolean = true, var debug
             jsStr = bookSource.getContentRule().webJs,
             sourceRegex = bookSource.getContentRule().sourceRegex,
         )
+        //检测书源是否已登录
+        bookSource.loginCheckJs?.let { checkJs ->
+            if (checkJs.isNotBlank()) {
+                res = analyzeUrl.evalJS(checkJs, result = res) as StrResponse
+            }
+        }
         if(debugger != null){
             debugger?.log("正文源码Qwq${res.body}");
         }

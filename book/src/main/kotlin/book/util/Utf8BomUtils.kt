@@ -1,6 +1,5 @@
 package book.util
 
-@Suppress("unused")
 object Utf8BomUtils {
     private val UTF8_BOM_BYTES = byteArrayOf(0xEF.toByte(), 0xBB.toByte(), 0xBF.toByte())
 

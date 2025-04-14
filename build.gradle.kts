@@ -36,6 +36,9 @@ dependencies {
     implementation("org.jetbrains.kotlin:kotlin-stdlib-jdk8:$kotlin_version")
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.10.1")
 
+    implementation("javax.mail:mail:1.4.7")
+
+
     implementation(platform("org.noear:solon-parent:3.0.5"))
 
     implementation("org.noear:solon-web"){

@@ -18,13 +18,14 @@ import org.mozilla.javascript.NativeObject
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 import java.net.URL
-import java.util.ArrayList
 import java.util.regex.Pattern
 import kotlin.coroutines.ContinuationInterceptor
 import kotlin.coroutines.CoroutineContext
 import kotlin.coroutines.EmptyCoroutineContext
 import org.apache.commons.text.StringEscapeUtils
 import org.jsoup.nodes.Node
+import java.util.*
+import kotlin.collections.HashMap
 
 
 class AnalyzeRule(
@@ -241,6 +242,12 @@ class AnalyzeRule(
         return getString(ruleList, mContent, isUrl)
     }
 
+    fun getString(ruleStr: String?, unescape: Boolean): String {
+        if (TextUtils.isEmpty(ruleStr)) return ""
+        val ruleList = splitSourceRule(ruleStr)
+        return getString(ruleList, unescape = unescape)
+    }
+
 
     @JvmOverloads
     fun getString(
@@ -273,11 +280,7 @@ class AnalyzeRule(
                     result?.let {
                         if (sourceRule.rule.isNotBlank() || sourceRule.replaceRegex.isEmpty()) {
                             result = when (sourceRule.mode) {
-                                Mode.Js -> run{
-                                    var s:Any? = null
-                                    kotlin.runCatching { s=evalJS(sourceRule.rule, it) }.onFailure { it.printStackTrace() }
-                                    s
-                                }
+                                Mode.Js -> evalJS(sourceRule.rule, it)
                                 Mode.Json -> getAnalyzeByJSonPath(it).getString(sourceRule.rule)
                                 Mode.XPath -> getAnalyzeByXPath(it).getString(sourceRule.rule)
                                 Mode.Default -> if (isUrl) {
@@ -312,6 +315,7 @@ class AnalyzeRule(
         }
         return str
     }
+
 
 
     /**
@@ -619,6 +623,7 @@ class AnalyzeRule(
                                 }
                             } ?: infoVal.insert(0, ruleParam[index])
                         }
+
                         regType == jsRuleType -> {
                             if (isRule(ruleParam[index])) {
                                 getString(arrayListOf(SourceRule(ruleParam[index]))).let {
@@ -631,15 +636,18 @@ class AnalyzeRule(
                                     jsEval is String -> infoVal.insert(0, jsEval)
                                     jsEval is Double && jsEval % 1.0 == 0.0 -> infoVal.insert(
                                         0,
-                                        String.format("%.0f", jsEval)
+                                        String.format(Locale.ROOT, "%.0f", jsEval)
                                     )
+
                                     else -> infoVal.insert(0, jsEval.toString())
                                 }
                             }
                         }
+
                         regType == getRuleType -> {
                             infoVal.insert(0, get(ruleParam[index]))
                         }
+
                         else -> infoVal.insert(0, ruleParam[index])
                     }
                 }
@@ -705,11 +713,11 @@ class AnalyzeRule(
             book?.userid = userid
             ruleData?.userid = userid
         }
-        return chapter?.getVariable(key)?.takeIf { it.isNotEmpty() }
+        return ( chapter?.getVariable(key)?.takeIf { it.isNotEmpty() }
             ?: book?.getVariable(key)?.takeIf { it.isNotEmpty() }
             ?: ruleData?.getVariable(key)?.takeIf { it.isNotEmpty() }
             ?:source?.get(key)?.takeIf { it.isNotEmpty() }
-            ?: ""
+            ?: "").also { logger.info("get:$key : $it") }
     }
 
     /**
@@ -741,7 +749,7 @@ class AnalyzeRule(
         source?.getShareScope()?.let {
             scope.prototype = it
         }
-        return RhinoScriptEngine.eval(jsStr, scope, coroutineContext)
+        return RhinoScriptEngine.eval(getjs(jsStr), scope, coroutineContext)
     }
 
     override fun getSource(): BaseSource? {

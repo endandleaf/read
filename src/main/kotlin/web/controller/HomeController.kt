@@ -2,7 +2,6 @@ package web.controller
 
 import org.apache.ibatis.solon.annotation.Db
 import org.noear.solon.annotation.*
-import org.noear.solon.core.handle.Context
 import org.noear.solon.core.handle.ModelAndView
 import org.noear.solon.core.util.DataThrowable
 import org.noear.solon.data.annotation.Tran
@@ -12,8 +11,10 @@ import web.mapper.CodeMapper
 import web.mapper.UsersMapper
 import web.model.Users
 import web.response.*
+import web.util.admin.getMailCode
 import web.util.admin.getcodes
-import web.util.mapper.mapper.Companion.mapper
+import web.util.admin.passsign
+import web.util.mail.Mail
 
 @CrossOrigin(origins = "*")
 @Controller
@@ -51,10 +52,10 @@ open class HomeController {
     @Post
     @Mapping("/regester")
     fun regester(@Param("username") _username:String? ,@Param("password") _password:String? ,@Param("phone") _phone:String?,@Param("email") _email:String?,@Param("code") _code:String?) = run {
-        if (_username.isNullOrBlank() || _password.isNullOrBlank()  || _code.isNullOrBlank()  )  {
+        if (_username.isNullOrBlank() || _password.isNullOrBlank()  || _code.isNullOrBlank()  || _email.isNullOrBlank()  )  {
             throw DataThrowable().data(JsonResponse(false,NOT_BANK))
         }
-        var user=Users().apply {
+        val user=Users().apply {
             username = _username
             password = _password
             code = _code
@@ -73,6 +74,10 @@ open class HomeController {
         }
         if(usersMapper.getUserByusername(user.username?:"") != null) {
             throw DataThrowable().data(JsonResponse(isSuccess = false, errorMsg = USER_IS))
+        }
+
+        if(usersMapper.getUserByemail(_email).isNotEmpty()) {
+            throw DataThrowable().data(JsonResponse(isSuccess = false, errorMsg = EMAIL_IS))
         }
 
         if(c == _code){
@@ -94,8 +99,41 @@ open class HomeController {
         JsonResponse(true)
     }
 
+    @Mapping("/sendResetCode")
+    fun sendResetCode( email: String?)=run {
+        if (email.isNullOrBlank() )  {
+            throw DataThrowable().data(JsonResponse(isSuccess = false, errorMsg = EMAIL_ERROR))
+        }
+        val c= getMailCode()
+        cacheService.store("code_$email",c,60*10)
+        Mail.SendCode(c,email)
+        JsonResponse(true)
+    }
+
+    @Mapping("/resetPassword")
+    fun  resetPassword(username:String? , password:String? , code:String? ,email:String?)=run {
+        if(username.isNullOrBlank() || password.isNullOrBlank() || email.isNullOrBlank() || code.isNullOrBlank()){
+            throw DataThrowable().data(JsonResponse(false,NOT_BANK))
+        }
+        if(password.length <6 || password.length > 15 ){
+            throw DataThrowable().data(JsonResponse(false,PASS_VAIL_ERROR))
+        }
+        val user=usersMapper.getUserByusername(username)?:throw DataThrowable().data(JsonResponse(false,USER_NOT))
+        if(user.email != email){
+            throw DataThrowable().data(JsonResponse(false,EMAIL_CHECK_ERROR))
+        }
+        val c=cacheService.get("code_$email",String::class.java)
+        if(c != code){
+            throw DataThrowable().data(JsonResponse(false, CODE_CHECK_ERROR))
+        }
+        cacheService.remove("code_$email")
+        usersMapper.changepass(user.id!!, passsign( password))
+
+        JsonResponse(true)
+    }
+
     @Mapping("/getcode")
-    fun getcode(ctx: Context, code: String?)=run {
+    fun getcode(code: String?)=run {
         if (mycode.isBlank() )  {
             throw DataThrowable().data(JsonResponse(isSuccess = false, errorMsg = "当前未在配置文件中设置code"))
         }
