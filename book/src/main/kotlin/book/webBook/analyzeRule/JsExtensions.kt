@@ -1,13 +1,12 @@
 package book.webBook.analyzeRule
 
-import book.app.Response
+import book.app.App
 import book.appCtx
 import book.model.BaseSource
 import book.util.*
 import book.util.AppConst.dateFormat
 import book.util.Base64
 import book.util.help.CacheManager
-import book.util.help.CookieStore
 import book.util.help.cookieJarHeader
 import book.util.http.*
 import book.webBook.Debug
@@ -30,7 +29,6 @@ import java.text.SimpleDateFormat
 import cn.hutool.core.util.HexUtil
 import com.script.ScriptBindings
 import org.slf4j.Logger
-import org.slf4j.LoggerFactory
 import java.nio.file.Paths
 import java.time.LocalDateTime
 import kotlin.concurrent.thread
@@ -122,6 +120,23 @@ interface JsExtensions: JsEncodeUtils  {
         }
     }
 
+    fun webview(html: String?, url: String?, js: String?): StrResponse{
+        val headerMap =getSource()?.getHeaderMap(true,false)?: hashMapOf()
+        runCatching {
+            if(!url.isNullOrBlank() && ( url.startsWith("http://") || url.startsWith("https://"))){
+                val store=getSource()?.getCookieManger()
+                val cookie = (store?.getCookie(url))?:""
+                if (cookie.isNotEmpty()) {
+                    store?.mergeCookies(cookie, headerMap["Cookie"])?.let {
+                        headerMap.put("Cookie", it)
+                    }
+                }
+            }
+        }
+        val header= GSON.toJson(headerMap)
+        return App.webview(html,url,js,getSource()?.usertocken?:"",header)
+    }
+
     /**
      * 使用webView访问网络
      * @param html 直接用webView载入的html, 如果html为空直接访问url
@@ -130,13 +145,15 @@ interface JsExtensions: JsEncodeUtils  {
      * @return 返回js获取的内容
      */
     fun webView(html: String?, url: String?, js: String?): String? {
-        val header= GSON.toJson(getSource()?.getHeaderMap(true,false))
-        val str=Response.webview(html,url,js,getSource()?.usertocken?:"",header).body
-        return str
+        return webview(html,url,js).body
     }
 
     fun getWebViewUA(): String {
         return  AppConst.defaultuserAgent;
+    }
+
+    fun getWebViewUANEW(): String {
+        return App.getWebViewUA(getSource()?.usertocken?:"");
     }
 
 
@@ -199,34 +216,44 @@ interface JsExtensions: JsEncodeUtils  {
     }
 
 
-    fun startBrowserAwait(urlStr: String,title: String, refetchAfterSuccess: Boolean,hide:Boolean): Response {
-        var url = urlStr
+    fun startBrowserAwait(url: String,title: String, refetchAfterSuccess: Boolean): StrResponse = runBlocking {
         logger.info("跳转URL：$url")
-        if(url.isEmpty() || url.startsWith("/")) {
-            url = NetworkUtils.getAbsoluteURL(getSource()?.getKey(), url)
+        val headerMap =getSource()?.getHeaderMap(true,false)?: hashMapOf()
+        val headerMapF: HashMap<String, String> = hashMapOf()
+        headerMapF.putAll(headerMap)
+
+        runCatching {
+            val store=getSource()?.getCookieManger()
+            val cookie = (store?.getCookie(url))?:""
+            if (cookie.isNotEmpty()) {
+                store?.mergeCookies(cookie, headerMap["Cookie"])?.let {
+                    headerMap.put("Cookie", it)
+                }
+            }
         }
-        val header= GSON.toJson(getSource()?.getHeaderMap(true,false))
+        val header= GSON.toJson(headerMap)
         logger.info("header:$header")
-       return Response.startBrowserAwait(url,title,getSource()?.usertocken?:"",hide,header)
-    }
-
-
-    fun startBrowserHideAwait(url: String, title: String): Response {
-        return startBrowserAwait(url, title,false,true)
+        var re=App.startBrowserAwait(url,title,getSource()?.usertocken?:"",header)
+        if(refetchAfterSuccess){
+            logger.info("重新加载网页:$url")
+            re = AnalyzeUrl(
+                url,
+                headerMapF = headerMapF,
+                source = getSource(),
+                debugLog = null,
+            ).getStrResponseAwait(useWebView = false)
+        }
+        re
     }
 
     fun startBrowser(url: String, title: String) {
         thread {
-            startBrowserAwait(url, title,false,false)
+            startBrowserAwait(url, title,false)
         }
     }
 
-    fun startBrowserAwait(url: String, title: String, refetchAfterSuccess: Boolean): Response {
-        return startBrowserAwait(url, title,refetchAfterSuccess,false)
-    }
-
-    fun startBrowserAwait(url: String, title: String): Response {
-        return startBrowserAwait(url, title,false,false)
+    fun startBrowserAwait(url: String, title: String): StrResponse {
+        return startBrowserAwait(url, title,true)
     }
 
 
@@ -324,7 +351,7 @@ interface JsExtensions: JsEncodeUtils  {
             file.delete()
         }
         FileUtils.writeBytes(coverUrl,img)
-        val code=Response.getVerificationCode(url+"?time=${LocalDateTime.now()}",getSource()?.usertocken?:"").trim()
+        val code=App.getVerificationCode(url+"?time=${LocalDateTime.now()}",getSource()?.usertocken?:"").trim()
         logger.info("获取到code:$code")
         code
     }
@@ -724,7 +751,7 @@ interface JsExtensions: JsEncodeUtils  {
      */
     fun toast(msg: Any?) {
         logger.info("toast:$msg")
-        Response.toast("$msg",getSource()?.usertocken?:"")
+        App.toast("$msg",getSource()?.usertocken?:"")
     }
 
     /**

@@ -151,6 +151,7 @@ object SourceAnalyzer {
                         content = content,
                         replaceRegex = toNewRule(jsonItem.readString("ruleBookContentReplace")),
                         title = toNewRule(jsonItem.readString("title")),
+                        payAction = toNewRule(jsonItem.readString("payAction")),
                         nextContentUrl = toNewRule(jsonItem.readString("ruleContentUrlNext"))
 
                     )

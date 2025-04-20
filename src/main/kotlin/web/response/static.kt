@@ -26,6 +26,8 @@ val GROUPIS="分组已存在"
 
 val NO_BOOK="书本不存在"
 
+val NO_PAY="购买操作不存在"
+
 val NOT_ALLOW_TXT ="不允许导入图书"
 
 val NOT_TXT ="当前文件格式不支持"
@@ -73,3 +75,5 @@ val SOURCE_IS = "书源已存在"
 val CACHE_ERROR="最多5个缓存任务"
 
 val CODE_CHECK_ERROR= "验证码错误"
+
+val NAME_ERROR="规则名重复"

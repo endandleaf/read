@@ -6,7 +6,7 @@ data class WebMessage (
     val html: String = "",
     val title: String,
     val header:String="",
-    val id: String
+    val id: String,
 )
 
 data class ToastMessage (

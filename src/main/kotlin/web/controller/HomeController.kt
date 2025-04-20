@@ -106,7 +106,11 @@ open class HomeController {
         }
         val c= getMailCode()
         cacheService.store("code_$email",c,60*10)
-        Mail.SendCode(c,email)
+       runCatching {
+            Mail.SendCode(c,email)
+        }.onFailure {
+            throw DataThrowable().data(JsonResponse(isSuccess = false, errorMsg = it.message?:"邮件发送失败"))
+        }
         JsonResponse(true)
     }
 

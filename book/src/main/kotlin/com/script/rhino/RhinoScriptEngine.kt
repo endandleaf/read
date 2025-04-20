@@ -56,6 +56,7 @@ import java.security.AccessControlException
 import java.security.AccessController
 import java.security.AllPermission
 import java.security.PrivilegedAction
+import java.util.concurrent.CancellationException
 import kotlin.coroutines.Continuation
 import kotlin.coroutines.CoroutineContext
 import kotlin.coroutines.intrinsics.suspendCoroutineUninterceptedOrReturn
@@ -74,6 +75,7 @@ object RhinoScriptEngine : AbstractScriptEngine(), Invocable, Compilable {
     private var topLevel: RhinoTopLevel? = null
     private val indexedProps: MutableMap<Any, Any?>
     private val implementor: InterfaceImplementor
+
 
     fun eval(js: String, bindingsConfig: ScriptBindings.() -> Unit = {}): Any? {
         val bindings = ScriptBindings()

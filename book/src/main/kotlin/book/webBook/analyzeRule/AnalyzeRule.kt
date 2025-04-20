@@ -723,7 +723,7 @@ class AnalyzeRule(
     /**
      * 执行JS
      */
-    fun evalJS(jsStr: String, result: Any?): Any? {
+    fun evalJS(jsStr: String, result: Any? =null): Any? {
         var userid=""
         if(source != null){
             userid = source.userid?:""

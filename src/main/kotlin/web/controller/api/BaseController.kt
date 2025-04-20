@@ -33,7 +33,7 @@ open class BaseController {
     @Inject
     lateinit var userBookSourceMapper: UserBookSourceMapper
 
-    var apiversion = 3
+    var apiversion = 4
 
 
     fun getuserbytocken(accessToken:String?): Users?{
@@ -78,6 +78,22 @@ open class BaseController {
                 return Pair(null, JsonResponse(false,NEED_LOGIN))
             }
         }!!
+        if(bookSourceUrl == null){
+            return Pair(null, JsonResponse(false,NOT_BANK))
+        }
+        val source:BaseSource?= if(user.source == 2){
+            userBookSourceMapper.getBookSource(bookSourceUrl,user.id!!)?.toBaseSource()
+        }else{
+            bookSourcemapper.getBookSource(bookSourceUrl)?.toBaseSource()
+        }.also {
+            if(it == null){
+                return Pair(null, JsonResponse(false,NOT_SOURCE))
+            }
+        }!!
+        return Pair(source,null)
+    }
+
+    fun getsource(user: Users,  bookSourceUrl:String?): Pair<BaseSource?, JsonResponse?>{
         if(bookSourceUrl == null){
             return Pair(null, JsonResponse(false,NOT_BANK))
         }

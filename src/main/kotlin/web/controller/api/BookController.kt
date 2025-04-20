@@ -24,6 +24,7 @@ import web.model.BookCache
 import web.model.BookGroup
 import web.model.Booklist
 import web.response.*
+import web.util.ResponseManager
 import web.util.hash.EncryptUtils
 import web.util.read.Bookcache
 import web.util.read.getlist
@@ -87,7 +88,7 @@ open class BookController:BaseController() {
 
 
     @Mapping("/saveBook")
-    open fun saveBook( accessToken:String?,book: SearchBook) = runBlocking{
+    open fun saveBook( accessToken:String?,book: SearchBook,useReplaceRule: Int) = runBlocking{
         with(book){
             if (bookUrl.isBlank() || name.isBlank()){
                 throw DataThrowable().data(JsonResponse(false,NOT_BANK))
@@ -110,7 +111,9 @@ open class BookController:BaseController() {
             return@runBlocking JsonResponse(false,BOOKIS)
         }
         new!!.type=book.type
-        booklistMapper.insert(booktolist.bookto(new!!,false))
+        booklistMapper.insert(booktolist.bookto(new!!,false).apply {
+            this.useReplaceRule=(useReplaceRule == 1)
+        })
         thread {
             updatebook(booktolist, source,user.id!!)
         }
@@ -179,17 +182,21 @@ open class BookController:BaseController() {
         }.onFailure {
             return@runBlocking JsonResponse(false,BOOKSEARCHERROR)
         }
-        val chapters=getlist(book.bookUrl!!, source, user.id!!, accessToken ?: "").also {
-            setChapterListbycache(book.bookUrl!!, it,user.id!!)
+        runCatching {
+            val chapters=getlist(book.bookUrl!!, source, user.id!!, accessToken ?: "").also {
+                setChapterListbycache(book.bookUrl!!, it,user.id!!)
+            }
+            if(book.totalChapterNum != chapters.size){
+                book.totalChapterNum = chapters.size
+                book.latestChapterTitle=chapters[chapters.size-1].title
+                book.latestChapterTime=System.currentTimeMillis()
+                book.lastCheckCount=chapters.size
+            }
+            book.lastCheckTime=System.currentTimeMillis()
+            booklistMapper.updateById(book.bookto(new!!,false))
+        }.onFailure {
+            return@runBlocking JsonResponse(false,it.message?:BOOKSEARCHERROR)
         }
-        if(book.totalChapterNum != chapters.size){
-            book.totalChapterNum = chapters.size
-            book.latestChapterTitle=chapters[chapters.size-1].title
-            book.latestChapterTime=System.currentTimeMillis()
-            book.lastCheckCount=chapters.size
-        }
-        book.lastCheckTime=System.currentTimeMillis()
-        booklistMapper.updateById(book.bookto(new!!,false))
         JsonResponse(true,SUCCESS).Data(book)
     }
 
@@ -229,6 +236,8 @@ open class BookController:BaseController() {
     }
 
 
+
+
     @Mapping("/deleteBook")
     open fun deleteBook( accessToken:String?, book: SearchBook)= runBlocking{
         val user=getuserbytocken(accessToken).also {
@@ -259,6 +268,26 @@ open class BookController:BaseController() {
             }
         }
        JsonResponse(true,SUCCESS)
+    }
+
+    @Mapping("/updateuseReplaceRule")
+    fun  updateuseReplaceRule( accessToken:String?, url: String ,useReplaceRule:Int?){
+        val user=getuserbytocken(accessToken).also {
+            if(it == null){
+                throw DataThrowable().data(JsonResponse(false,NEED_LOGIN))
+            }
+        }!!
+        val book=booklistMapper.getbook(user.id!!,url).also {
+            if(it == null){
+                throw DataThrowable().data(JsonResponse(true))
+            }
+        }!!
+        if (useReplaceRule == 1){
+            booklistMapper.uprule(book.id!!,true)
+        }else{
+            booklistMapper.uprule(book.id!!,false)
+        }
+        JsonResponse(true,SUCCESS)
     }
 
     @Mapping("/getcancache")
@@ -376,10 +405,10 @@ open class BookController:BaseController() {
         }.onFailure {
             it.printStackTrace()
         }
-        if((id?:"").isNotEmpty()){
+        if(!id.isNullOrBlank()){
             runBlocking {
-                println("webview:$id,加载完成")
-                ApiWebSocket.addhtml(id = id?:"",html = html?:"")
+                logger.info("webview:$id,加载完成")
+                ResponseManager.completeRequest(id,html?:"")
             }
         }
         JsonResponse(true)
@@ -408,10 +437,10 @@ open class BookController:BaseController() {
                 throw DataThrowable().data(JsonResponse(false,NEED_LOGIN))
             }
         }!!
-        if((id?:"").isNotEmpty()){
+        if(!id.isNullOrBlank()){
             runBlocking {
-                println("webview:$id,加载完成,htm:$html")
-                ApiWebSocket.addhtml(id = id?:"",html = html?:"")
+                logger.info("webview:$id,加载完成,htm:$html")
+                ResponseManager.completeRequest(id,html?:"")
             }
         }
         JsonResponse(true)
@@ -438,9 +467,9 @@ open class BookController:BaseController() {
                 throw DataThrowable().data(JsonResponse(false,NEED_LOGIN))
             }
         }!!
-       if(id ==  null || id.isEmpty()) throw DataThrowable().data(JsonResponse(false, NOT_BANK))
+       if(id.isNullOrBlank()) throw DataThrowable().data(JsonResponse(false, NOT_BANK))
         runBlocking {
-            ApiWebSocket.addhtml(id = id?:"",html = "")
+            ResponseManager.completeRequest(id,"")
         }
         JsonResponse(true)
     }

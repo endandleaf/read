@@ -33,7 +33,7 @@ class BookSourceController {
     fun seachbookSource(where:String?, order:String?, @Param(defaultValue = "1") page:Int, @Param(defaultValue = "20")  limit:Int) = run{
         var queryWrapper: QueryWrapper<BookSource> = QueryWrapper()
         if(where != null && where.isNotBlank()){
-            queryWrapper.like("book_source_url",where).or().like("book_source_name",where).or().like("book_source_group",where).or().like("tag",where)
+            queryWrapper.like("book_source_url",where).or().like("book_source_name",where).or().like("book_source_group",where)
         }
         PageByAjax(booksourcemapper,queryWrapper,page,limit,order)
     }
@@ -180,11 +180,11 @@ class BookSourceController {
                     source.createtime=it.createtime
                 }
                 bookSource.lastUpdateTime= Date().time
-                update=insert+booksourcemapper.updateById(source)
+                update=update+booksourcemapper.updateById(source)
             }else{
                 source.enabled=true
                 source.sourceorder=9999
-                insert=update+booksourcemapper.insert(source)
+                insert=insert+booksourcemapper.insert(source)
             }
         }
         Pair(insert, update)

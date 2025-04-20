@@ -406,11 +406,11 @@ open class SourceController:BaseController() {
                        source.createtime=it.createtime
                    }
                    bookSource.lastUpdateTime=Date().time
-                   update=insert+userBookSourceMapper.updateById(source)
+                   update=update+userBookSourceMapper.updateById(source)
                }else{
                    source.enabled=true
                    source.sourceorder=9999
-                   insert=update+userBookSourceMapper.insert(source)
+                   insert=insert+userBookSourceMapper.insert(source)
                }
            }
        }else{
@@ -422,11 +422,11 @@ open class SourceController:BaseController() {
                        source.createtime=it.createtime
                    }
                    bookSource.lastUpdateTime=Date().time
-                   update=insert+bookSourcemapper.updateById(source)
+                   update=update+bookSourcemapper.updateById(source)
                }else{
                    source.enabled=true
                    source.sourceorder=9999
-                   insert=update+bookSourcemapper.insert(source)
+                   insert=insert+bookSourcemapper.insert(source)
                }
            }
        }

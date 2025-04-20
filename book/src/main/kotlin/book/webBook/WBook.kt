@@ -43,39 +43,6 @@ class WBook (val bookSource: BookSource, val debugLog: Boolean = true, var debug
             return null
         }
 
-//    fun getexploreUrl():String = run{
-//        if(bookSource.exploreUrl == null){
-//            return  ""
-//        }else{
-//            val variableBook = SearchBook()
-//            val analyzeUrl = AnalyzeUrl(
-//                mUrl = bookSource.exploreUrl!!,
-//                baseUrl = bookSource.bookSourceUrl,
-//                source = bookSource,
-//                ruleData = variableBook,
-//                headerMapF = bookSource.getHeaderMap(true),
-//                needanalyzeUrl = false
-//            )
-//            return analyzeUrl.ruleUrl
-//        }
-//    }
-
-    fun getexploreUrl():String = run{
-        val jsMatcher = JS_PATTERN.matcher(bookSource.exploreUrl!!)
-        if(bookSource.exploreUrl == null){
-            return  ""
-        }else if (jsMatcher.find()) {
-
-            val jsEval = bookSource.evalJS(jsMatcher.group(2) ?: jsMatcher.group(1))
-            when {
-                jsEval is String -> return@run jsEval
-                jsEval is Double && jsEval % 1.0 == 0.0 -> return@run  String.format("%.0f", jsEval)
-                else -> return@run  jsEval.toString()
-            }
-        }else{
-            return bookSource.exploreUrl!!
-        }
-    }
 
     suspend fun searchBook(key: String, page: Int? = 1): List<SearchBook> {
         val variableBook = SearchBook(origin = sourceUrl)
@@ -94,11 +61,13 @@ class WBook (val bookSource: BookSource, val debugLog: Boolean = true, var debug
 
             var res = analyzeUrl.getStrResponseAwait()
 
+
             bookSource.loginCheckJs?.let { checkJs ->
                 if (checkJs.isNotBlank()) {
                     res = analyzeUrl.evalJS(checkJs, res) as StrResponse
                 }
             }
+
             if(debugger != null){
                 debugger?.log("搜索源码Qwq${res.body}");
             }

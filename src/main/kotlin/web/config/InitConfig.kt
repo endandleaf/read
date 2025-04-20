@@ -1,8 +1,10 @@
 package web.config
 
-import book.app.Response
+import book.app.App
 import book.app.ToastMessage
 import book.app.WebMessage
+import book.util.AppConst
+import book.util.http.StrResponse
 import com.google.gson.Gson
 import kotlinx.coroutines.runBlocking
 import org.noear.solon.annotation.Bean
@@ -26,71 +28,29 @@ class InitConfig {
     @Bean
     fun cookieinit(userCookieMapper: UserCookieMapper) {
         checkfile()
-        Response.startBrowserAwait=fun (urlStr: String,title: String,tocken:String,hide:Boolean,header:String):Response = runBlocking{
+        App.startBrowserAwait=fun (urlStr: String, title: String, tocken:String, header:String):StrResponse = runBlocking{
             println(tocken)
             var socket=ApiWebSocket.get(tocken)
             if(socket!=null){
-                var id= UUID.randomUUID().toString()
-                if(!hide){
-                    logger.info("startBrowser ,url: $urlStr ,title: $title, tocken: $tocken ")
-                    socket.send(Gson().toJson(WebMessage(msg = "startBrowser", url = urlStr,title=title,id=id, header = header )))
-                    var z=false
-                    thread {
-                        for(i in 0.. 2){
-                            sleep(1000*60)
-                            if(z) break
-                        }
-                        if(!z){
-                            runBlocking {  ApiWebSocket.addhtml(id,"") }
-                        }
-                    }
-                    ApiWebSocket.lock(id).let {  z=true }
-                    val html=ApiWebSocket.gethtml(id)
-                    return@runBlocking Response(body = html,url = urlStr, code = 200)
-                }else{
-                    logger.info("hidestartBrowser ,url: $urlStr ,title: $title, tocken: $tocken ")
-                    socket.send(Gson().toJson(WebMessage(msg = "hidestartBrowser", url = urlStr,title=title ,id=id , header = header )))
-                    var z=false
-                    thread {
-                        for(i in 0.. 2){
-                            sleep(1000*60)
-                            if(z) break
-                        }
-                        if(!z){
-                            runBlocking {  ApiWebSocket.addhtml(id,"") }
-                        }
-                    }
-                    ApiWebSocket.lock(id).let {  z=true }
-                    val html=ApiWebSocket.gethtml(id)
-                    return@runBlocking Response(body = html,url = urlStr, code = 200)
-                }
+                val id= UUID.randomUUID().toString()
+                logger.info("startBrowser ,url: $urlStr ,title: $title, tocken: $tocken ")
+                socket.send(Gson().toJson(WebMessage(msg = "startBrowser", url = urlStr,title=title,id=id, header = header )))
+                return@runBlocking  StrResponse(urlStr,ApiWebSocket.WaitForResponse(id)?:"")
             }
-            return@runBlocking Response(body = "",url = urlStr, code = 200)
+            return@runBlocking  StrResponse(urlStr,"")
         }
 
-        Response.webview=fun (html: String?, url: String?, js: String?,tocken:String,header:String):Response = runBlocking{
+        App.webview=fun (html: String?, url: String?, js: String?, tocken:String, header:String):StrResponse = runBlocking{
             var socket=ApiWebSocket.get(tocken)
             if(socket!=null){
                 var id= UUID.randomUUID().toString()
                 //logger.info("webview ,url: $url ,js: $js, html:$html, tocken: $tocken ")
                 socket.send(Gson().toJson(WebMessage(msg = "webview", url = url?:"",title=js?:"", html = html?:"" ,id=id ,header=header)))
-                var z=false
-                thread {
-                    for(i in 0.. 2){
-                        sleep(1000*60)
-                        if(z) break
-                    }
-                    if(!z){
-                        runBlocking {  ApiWebSocket.addhtml(id,"") }
-                    }
-                }
-                ApiWebSocket.lock(id).let {  z=true }
-                val html=ApiWebSocket.gethtml(id)
-                return@runBlocking Response(body = html,url = url?:"", code = 200)
+                return@runBlocking  StrResponse(url?:"",ApiWebSocket.WaitForResponse(id)?:"")
             }
-            return@runBlocking Response(body = "",url =  url?:"", code = 200)
+            return@runBlocking  StrResponse(url?:"","")
         }
-        Response.getVerificationCode= fun (url : String,tocken:String)  = runBlocking {
+        App.getVerificationCode= fun (url : String, tocken:String)  = runBlocking {
             var socket=ApiWebSocket.get(tocken)
             if(socket!=null){
                 var id= UUID.randomUUID().toString()
@@ -98,28 +58,28 @@ class InitConfig {
                     msg = "getVerificationCode", url = url ?: "", id = id,
                     title = "getVerificationCode",
                 )))
-                var z=false
-                thread {
-                    for(i in 0.. 2){
-                        sleep(1000*60)
-                        if(z) break
-                    }
-                    if(!z){
-                        runBlocking {  ApiWebSocket.addhtml(id,"") }
-                    }
-                }
-                ApiWebSocket.lock(id).let {  z=true }
-                val html=ApiWebSocket.gethtml(id)
-                return@runBlocking html
+                return@runBlocking ApiWebSocket.WaitForResponse(id)?:""
             }
             ""
         }
-        Response.toast = fun (str : String,tocken:String)  = runBlocking {
-            var socket=ApiWebSocket.get(tocken)
+        App.toast = fun (str : String, tocken:String)  = runBlocking {
+            val socket=ApiWebSocket.get(tocken)
             if(socket!=null){
                 logger.info("toast:$str")
                 socket.send(Gson().toJson(ToastMessage(msg = "toast", str=str )))
             }
+        }
+        App.getWebViewUA=fun ( tocken:String) = runBlocking{
+            var socket=ApiWebSocket.get(tocken)
+            if(socket!=null){
+                var id= UUID.randomUUID().toString()
+                socket.send(Gson().toJson(WebMessage(
+                    msg = "getWebViewUA", url = "", id = id,
+                    title = "getWebViewUA",
+                )))
+                return@runBlocking ApiWebSocket.WaitForResponse(id)?:""
+            }
+            AppConst.defaultuserAgent;
         }
     }
 }

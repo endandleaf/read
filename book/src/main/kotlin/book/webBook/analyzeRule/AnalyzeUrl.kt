@@ -113,7 +113,7 @@ class AnalyzeUrl(
         //处理URL
         if(needanalyzeUrl) analyzeUrl()
 
-        logger.info("ruleUrl3 $ruleUrl")
+        //logger.info("ruleUrl3 $ruleUrl")
         debugLog?.log(source?. getKey(), ruleUrl)
     }
 
@@ -332,10 +332,27 @@ class AnalyzeUrl(
         concurrentRateLimiter.withLimit{
             setCookie()
             if (this.useWebView && useWebView) {
-                val s=startBrowserHideAwait(url,"webview")
-                return StrResponse(url,s.body)
+                when (method) {
+                    RequestMethod.POST -> {
+                        val res = getClient().newCallStrResponse(retry) {
+                            addHeaders(headerMap)
+                            url(urlNoQuery)
+                            if (fieldMap.isNotEmpty() || body.isNullOrBlank()) {
+                                postForm(fieldMap, true)
+                            } else {
+                                postJson(body)
+                            }
+                        }
+                        return  webview( res.body, res.url,webJs ?: jsStr)
+                    }
+                    else -> {
+                        return  webview("",url,webJs ?: jsStr)
+                    }
+                }
+                //return  webview("",url,"")
             } else {
                 strResponse = getClient().newCallStrResponse(retry) {
+                   // println(GSON.toJson(headerMap))
                     addHeaders(headerMap)
                     when (method) {
                         RequestMethod.POST -> {
