@@ -3,6 +3,7 @@ package web.model
 import book.model.HttpTTS
 import com.baomidou.mybatisplus.annotation.TableId
 import org.dromara.autotable.annotation.AutoTable
+import org.dromara.autotable.annotation.ColumnType
 import org.dromara.autotable.annotation.PrimaryKey
 import web.util.hash.Md5
 
@@ -13,14 +14,19 @@ class HttpTts {
     var id : String? =null
     var userid : String? =null
     var name: String  =""
+    @ColumnType(value = "LONGTEXT")
     var url: String  =""
     var contentType: String? = null
 
     var concurrentRate: String ? =null
+    @ColumnType(value = "LONGTEXT")
     var loginUrl: String? = null
+    @ColumnType(value = "LONGTEXT")
     var loginUi: String? = null
+    @ColumnType(value = "LONGTEXT")
     var header: String? = null
     var enabledCookieJar: Boolean? = false
+    @ColumnType(value = "LONGTEXT")
     var loginCheckJs: String? = null
     var lastUpdateTime: Long = System.currentTimeMillis()
 
