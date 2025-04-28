@@ -8,13 +8,13 @@ import org.apache.ibatis.annotations.Update
 import web.model.Booklist
 
 interface BooklistMapper : BaseMapper<Booklist> {
-    @Select("SELECT * FROM booklist WHERE userid = #{id} and book_url = #{url}")
+    @Select("SELECT * FROM booklist WHERE userid = #{id} and book_url = #{url}  LIMIT 1")
     fun getbook(@Param("id") id: String ,@Param("url") url: String): Booklist?
 
-    @Select("SELECT * FROM booklist WHERE userid = #{id} ")
+    @Select("SELECT * FROM booklist WHERE userid = #{id}  ")
     fun getbooklistbyuserid(@Param("id") id: String ): List<Booklist>?
 
-    @Select("SELECT * FROM booklist WHERE userid = #{id}  and name = #{name} and type = #{type}")
+    @Select("SELECT * FROM booklist WHERE userid = #{id}  and name = #{name}  and author = #{author}  and type = #{type}")
     fun getbooklistbynametype(@Param("id") id: String ,@Param("name") name: String ,@Param("author") author: String ,@Param("type") type: Int): List<Booklist>
 
     @Update("UPDATE booklist set latest_chapter_title= #{latest_chapter_title}  ,latest_chapter_time = #{latest_chapter_time},  last_check_time = #{last_check_time} ,last_check_count= #{last_check_count} ,total_chapter_num = #{total_chapter_num}  WHERE id = #{id}")

@@ -76,4 +76,4 @@ val CACHE_ERROR="最多5个缓存任务"
 
 val CODE_CHECK_ERROR= "验证码错误"
 
-val NAME_ERROR="规则名重复"
+val NAME_ERROR="名字重复"

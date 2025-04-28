@@ -11,6 +11,8 @@ import book.webBook.exception.RegexTimeoutException
 import book.webBook.localBook.LocalBook
 import com.google.gson.Gson
 import com.google.gson.reflect.TypeToken
+import com.script.rhino.RhinoScriptEngine.put
+import com.script.rhino.runScriptWithContext
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.runBlocking
 import org.apache.ibatis.solon.annotation.Db
@@ -36,7 +38,6 @@ import web.response.*
 import web.service.MyCacheService
 import web.util.SslUtils
 import web.util.read.BookContent
-import web.util.read.getbook
 import web.util.read.getlist
 import java.io.ByteArrayOutputStream
 import java.net.HttpURLConnection
@@ -586,17 +587,15 @@ open class ReadController : BaseController() {
         val responseCode = connection.getResponseCode();
         //  读取响应
         if (responseCode == HttpURLConnection.HTTP_OK) { // 200表示请求成功
-            val bos = ByteArrayOutputStream() //创建输出流对象
+            ctx.contentType(connection.getHeaderField("Content-Type"))
             connection.getInputStream().use {
                 val b = ByteArray(4096)
                 var len: Int
                 while ((it.read(b).also { len = it }) != -1) {
-                    bos.write(b, 0, len)
+                    ctx.outputStream().write(b, 0, len)
                 }
             }
-            ctx.contentType(connection.getHeaderField("Content-Type"))
-            ctx.output(bos.toByteArray())
-            ctx.flush()
+            //ctx.flush()
 
         } else {
             logger.info("GET请求失败");
@@ -688,16 +687,20 @@ open class ReadController : BaseController() {
 
     @CacheRemove(tags = "search\${accessToken}")
     @Mapping("/action")
-    open fun action(accessToken: String?, bookSourceUrl: String?, action: String?) = run {
+    open fun action(accessToken: String?, bookSourceUrl: String?, action: String?) = runBlocking {
         val (user,source,jp)=getsourceuser(accessToken,bookSourceUrl)
         if(jp != null){
             throw DataThrowable().data(jp)
         }
+        if(action == null) throw DataThrowable().data(JsonResponse(false, NOT_BANK))
         val bookSource = BookSource.fromJson(source!!.json ?: "").getOrNull()!!
         bookSource.userid = user!!.id
         bookSource.usertocken = accessToken
-        val js =bookSource.getLoginJs() + "\n$action"
-        thread {  bookSource.evalJS(js) }
+        kotlin.runCatching {
+            bookSource.runaction(action);
+        }.onFailure { e ->
+           logger.info("${action} JavaScript error", e)
+        }
         JsonResponse(true)
     }
 

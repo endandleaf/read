@@ -2,20 +2,26 @@ package book.webBook
 
 
 
-import book.model.Book
-import book.model.BookChapter
-import book.model.BookSource
-import book.model.SearchBook
+import book.model.*
 import book.util.AppPattern.JS_PATTERN
 import book.util.help.cookieJarHeader
 import book.util.http.ConcurrentRateLimiter
 import book.util.http.SSLHelper
 import book.util.http.StrResponse
+import book.util.printOnDebug
 import book.webBook.analyzeRule.AnalyzeUrl
+import book.webBook.exception.NoStackTraceException
+import com.script.ScriptException
+import okhttp3.Response
 import org.jsoup.Connection
 import org.jsoup.Jsoup
+import org.mozilla.javascript.WrappedException
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
+import java.io.InputStream
+import java.net.ConnectException
+import java.net.SocketTimeoutException
+import kotlin.coroutines.cancellation.CancellationException
 
 private val logger: Logger = LoggerFactory.getLogger(WBook::class.java)
 
@@ -280,6 +286,45 @@ class WBook (val bookSource: BookSource, val debugLog: Boolean = true, var debug
             debugLog = debugger
         )
     }
+
+   companion object{
+       suspend fun  getSpeakStream(
+           httpTts: HttpTTS,
+           speakText: String,
+           speechRate:Int): InputStream {
+           try {
+               val analyzeUrl = AnalyzeUrl(
+                   httpTts.url,
+                   speakText = speakText,
+                   speakSpeed = speechRate,
+                   source = httpTts,
+                   readTimeout = 300 * 1000L,
+                   debugLog = null
+               )
+               var response = analyzeUrl.getResponseAwait()
+               val checkJs = httpTts.loginCheckJs
+               if (checkJs?.isNotBlank() == true) {
+                   response = analyzeUrl.evalJS(checkJs, response) as Response
+               }
+               response.headers["Content-Type"]?.let { contentType ->
+                   val ct = httpTts.contentType
+                   if (contentType == "application/json") {
+                       throw NoStackTraceException(response.body!!.string())
+                   } else if (ct?.isNotBlank() == true) {
+                       if (!contentType.matches(ct.toRegex())) {
+                           throw NoStackTraceException("TTS服务器返回错误：" + response.body!!.string())
+                       }
+                   }
+               }
+               response.body!!.byteStream().let { stream ->
+                   return stream
+               }
+           } catch (e: Exception) {
+               e.printStackTrace()
+               throw e
+           }
+       }
+   }
 
     /**
      * 检测重定向

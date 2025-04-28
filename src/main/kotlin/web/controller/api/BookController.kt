@@ -143,7 +143,19 @@ open class BookController:BaseController() {
             if (booklistMapper.getbook(user.id!!,book.bookUrl) != null){
                 continue
             }
-            if (booklistMapper.getbooklistbynametype(user.id!!,book.name,book.author,book.type).isNotEmpty()){
+            var type=0;
+            when(book.type){
+                32,1 ->{
+                    type=1
+                }
+                64,2 ->{
+                    type=2
+                }
+                else ->{
+                    type=0
+                }
+            }
+            if (booklistMapper.getbooklistbynametype(user.id!!,book.name,book.author,type).isNotEmpty()){
                 continue
             }
             val booktolist=Booklist.tobooklist(book,user.id!!)
@@ -193,7 +205,8 @@ open class BookController:BaseController() {
                 book.lastCheckCount=chapters.size
             }
             book.lastCheckTime=System.currentTimeMillis()
-            booklistMapper.updateById(book.bookto(new!!,false))
+            book.bookto(new!!,false)
+            booklistMapper.updateById(book)
         }.onFailure {
             return@runBlocking JsonResponse(false,it.message?:BOOKSEARCHERROR)
         }

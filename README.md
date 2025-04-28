@@ -19,11 +19,7 @@ http://ip:8080/admin(轻阅读后台)
 
 http://ip:8080/(web阅读)
 
-web端不支持cookie的保存，不支持朗读功能，不支持webview，但支持听书类型，漫画或者图片或者听书链接回因资源服务器禁止跨域而无法显示，app版才支持cookie的保存
-
-# cookies
-web端不支持webview所以不支持保存cookies，windows端用的js获取的cookies所以不支持httponly的cookie
-
+web端不支持cookie的保存，不支持webview，漫画或者图片或者听书链接回因资源服务器禁止跨域而无法显示，app版才支持cookie的保存
 
 
 # 推荐书源
@@ -77,8 +73,8 @@ docker run -tid  -e TZ=Asia/Shanghai --name read  -v /root/read:/app -p 8080:808
 
 # 反向代理
 如果需要使用nginx反向代理后端必须要注意websocket配置，目前websocket有两个：
-/api/*/ws
-/api/*/debug
+/api/接口版本号/ws
+/api/接口版本号/debug
 
 # 已知问题
 RSA加密，RSA加密安卓端和JAVA端加密标准不同，所以有可能安卓版本轻阅读能解密的web版本不能解密，如果安卓端能解密的web不行请修改代码

@@ -7,6 +7,7 @@ import book.webBook.analyzeRule.JsExtensions
 import com.script.ScriptBindings
 import com.script.buildScriptBindings
 import com.script.rhino.RhinoScriptEngine
+import com.script.rhino.runScriptWithContext
 import org.mozilla.javascript.Scriptable
 
 /**
@@ -133,6 +134,9 @@ interface BaseSource : JsExtensions {
         return GSON.fromJsonObject<Map<String, String>>(getLoginInfo()).getOrNull()
     }
 
+
+
+
     /**
      * 保存用户信息,aes加密
      */
@@ -169,6 +173,12 @@ interface BaseSource : JsExtensions {
         return s?:""
     }
 
+    suspend fun runaction(action:String){
+        val js =getLoginJs() + "\n$action"
+        evalJS(js) {
+            put("result", getLoginInfoMap()?: mapOf<String,String>())
+        }
+    }
 
     /**
      * 执行JS

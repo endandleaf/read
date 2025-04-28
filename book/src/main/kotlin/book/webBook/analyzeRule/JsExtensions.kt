@@ -340,20 +340,29 @@ interface JsExtensions: JsEncodeUtils  {
      */
     fun getVerificationCode(imageUrl: String): String = runBlocking{
         logger.info("getVerificationCode:$imageUrl")
-        val analyzeUrl = AnalyzeUrl(imageUrl, source = getSource(),debugLog = null)
-        val img=analyzeUrl.getByteArrayAwait()
-        val coverFile = "${MD5Utils.md5Encode16(getSource()?.getKey() +getSource()?.userid +"VerificationCode")}.jpg"
-        val relativeCoverUrl = Paths.get("assets", "", "codes", coverFile).toString()
-        val url="/" + relativeCoverUrl
-        val coverUrl = Paths.get("", "storage", relativeCoverUrl).toString()
-        val file=File(coverUrl)
-        if (file.exists()) {
-            file.delete()
+
+        if(imageUrl.startsWith("data:image")){
+            val code=App.getVerificationCode(imageUrl,getSource()?.usertocken?:"").trim()
+            logger.info("获取到code:$code")
+            code
+        }else{
+            val analyzeUrl = AnalyzeUrl(imageUrl, source = getSource(),debugLog = null)
+            val img=analyzeUrl.getByteArrayAwait()
+            val coverFile = "${MD5Utils.md5Encode16(getSource()?.getKey() +getSource()?.userid +"VerificationCode")}.jpg"
+            val relativeCoverUrl = Paths.get("assets", "", "codes", coverFile).toString()
+            val  url="/" + relativeCoverUrl
+            val coverUrl = Paths.get("", "storage", relativeCoverUrl).toString()
+            val file=File(coverUrl)
+            if (file.exists()) {
+                file.delete()
+            }
+            FileUtils.writeBytes(coverUrl,img)
+            logger.info("url:$url")
+            val code=App.getVerificationCode(url+"?time=${LocalDateTime.now()}",getSource()?.usertocken?:"").trim()
+            logger.info("获取到code:$code")
+            code
         }
-        FileUtils.writeBytes(coverUrl,img)
-        val code=App.getVerificationCode(url+"?time=${LocalDateTime.now()}",getSource()?.usertocken?:"").trim()
-        logger.info("获取到code:$code")
-        code
+
     }
 
     /**

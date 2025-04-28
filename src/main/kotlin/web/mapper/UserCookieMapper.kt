@@ -9,10 +9,10 @@ import web.model.UserCookie
 
 interface UserCookieMapper: BaseMapper<UserCookie> {
 
-    @Select("SELECT * FROM user_cookie WHERE userid = #{id} and host = #{url}")
+    @Select("SELECT * FROM user_cookie WHERE userid = #{id} and host = #{url} LIMIT 1")
     fun getcookie(@Param("id") id: String, @Param("url") url: String): UserCookie?
 
-    @Select("SELECT * FROM user_cookie WHERE userid = #{id} and host like '%\${url}%' ")
+    @Select("SELECT * FROM user_cookie WHERE userid = #{id} and host like '%\${url}%'  LIMIT 1")
     fun getcookiemo(@Param("id") id: String, @Param("url") url: String): UserCookie?
 
     @Delete("Delete FROM user_cookie WHERE userid = #{id} and host = #{url}")

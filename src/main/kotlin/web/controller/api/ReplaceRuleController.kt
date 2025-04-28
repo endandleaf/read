@@ -29,7 +29,7 @@ open class ReplaceRuleController:BaseController() {
 
     @Tran
     @Mapping("/addReplaceRule")
-   open fun addReplaceRule(accessToken:String?, @Body rule: ReplaceRule)=run{
+    open fun addReplaceRule(accessToken:String?, @Body rule: ReplaceRule)=run{
         val user = getuserbytocken(accessToken).also {
             if (it == null) throw DataThrowable().data(JsonResponse(false, NEED_LOGIN))
         }!!

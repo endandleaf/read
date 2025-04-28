@@ -12,7 +12,7 @@ interface BookGroupMapper : BaseMapper<BookGroup> {
     @Select("SELECT * FROM book_group WHERE userid = #{id} ")
     fun getGroupbyuserid(@Param("id") id: String ): List<BookGroup>
 
-    @Select("SELECT * FROM book_group WHERE bookgroup = #{bookgroup} and userid = #{id}" )
+    @Select("SELECT * FROM book_group WHERE bookgroup = #{bookgroup} and userid = #{id} LIMIT 1" )
     fun getGroupbyName(@Param("id") id: String ,@Param("bookgroup") bookgroup: String): BookGroup?
 
     @Delete("Delete  FROM book_group WHERE userid = #{id}")
