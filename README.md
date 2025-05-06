@@ -55,9 +55,6 @@ fun getMediaItem(): MediaItem
 esc键返回 左右键翻页
 F11 无边框 F12恢复边框(仅windows支持)
 
-# 暂不支持
-暂不支持除后台外的任何地方修改添加书源，暂不支持web端朗读，web端不支持修改部分header头，所以web端涉及带修改header的都由后端代理。
-目前flutter多数插件不支持鸿蒙，等以后flutter鸿蒙版出正式版了再编译鸿蒙应用。
 
 # 快速部署
 将后端文件（下载web*.zip）上传到root目录，确保root/read/read.jar存在，确保root/read/conf.yml存在（conf.yml中可修改后台管理的账号密码），然后安装docker,
@@ -125,6 +122,8 @@ ios端如果需要过一些盾如cf盾需要设置ua为ios，其他平台也可�
 ````
 Mozilla/5.0 (iPhone; CPU iPhone OS 15_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/15.0 Mobile/15E148 Safari/604.1
 ````
+
+Android TTS 本身不支持暂停功能，因此我们实施了一种解决方法。我们利用本机方法来确定调用时的 start 索引。我们使用该索引在下次调用时创建新文本。由于使用 ，暂停适用于 >= 26 的 SDK 版本。此外，如果使用 和 offsets 在 of 内，则需要跟踪它们，因为在暂停后调用时，一旦创建新文本，它们就会更新。已知部分系统的引擎不会适配这个接口所以部分安卓暂停后可能会重新读本句或者直接读下一句。
 
 
 # mysql数据库

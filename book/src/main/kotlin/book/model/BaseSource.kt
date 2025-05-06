@@ -3,6 +3,7 @@ package book.model
 import book.util.*
 import book.util.help.CacheManager
 import book.util.help.CookieStore
+import book.webBook.DebugLog
 import book.webBook.analyzeRule.JsExtensions
 import com.script.ScriptBindings
 import com.script.buildScriptBindings
@@ -28,6 +29,7 @@ interface BaseSource : JsExtensions {
      * 启用cookieJar
      */
     var enabledCookieJar: Boolean?
+
 
     fun getTag(): String
 

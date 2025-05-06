@@ -1,5 +1,6 @@
 package web.controller.api
 
+import book.app.App
 import book.model.Book
 import book.model.BookChapter
 import book.model.BookSource
@@ -191,6 +192,7 @@ open class ReadController : BaseController() {
                 }
             }
         }.getOrElse {
+            App.log("目录加载出错:"+it.message,accessToken!!)
             throw DataThrowable().data(JsonResponse(false, it.message?:"目录加载出错"))
         }
         chapters
@@ -289,9 +291,11 @@ open class ReadController : BaseController() {
                 } catch (e: RegexTimeoutException) {
                     replaceRuleMapper.changeEnabled(item.id!!,false)
                     logger.info(e.message)
+                    App.log("替换净化:"+e.message,accessToken!!)
                 } catch (_: CancellationException) {
                     logger.info("取消了")
                 } catch (e: Exception) {
+                    App.log("替换净化: 规则 ${item.name}替换出错.",accessToken!!)
                     logger.info("替换净化: 规则 ${item.name}替换出错.\n", e)
                 }
             }
@@ -330,9 +334,11 @@ open class ReadController : BaseController() {
                             } catch (e: RegexTimeoutException) {
                                 replaceRuleMapper.changeEnabled(item.id!!,false)
                                 logger.info(e.message)
+                                App.log("替换净化:"+e.message,accessToken!!)
                             } catch (_: CancellationException) {
                                 logger.info("取消了")
                             } catch (e: Exception) {
+                                App.log("替换净化: 规则 ${item.name}替换出错.",accessToken!!)
                                 logger.info("替换净化: 规则 ${item.name}替换出错.\n", e)
                             }
                         }

@@ -14,6 +14,8 @@ import web.controller.api.ApiWebSocket
 import web.mapper.UserCookieMapper
 import web.util.cache.checkfile
 import java.lang.Thread.sleep
+import java.time.LocalDateTime
+import java.time.format.DateTimeFormatter
 import java.util.*
 import kotlin.concurrent.thread
 
@@ -67,6 +69,13 @@ class InitConfig {
             if(socket!=null){
                 logger.info("toast:$str")
                 socket.send(Gson().toJson(ToastMessage(msg = "toast", str=str )))
+            }
+        }
+        App.log = fun (str : String, tocken:String)  = runBlocking {
+            val socket=ApiWebSocket.get(tocken)
+            
+            if(socket!=null){
+                socket.send(Gson().toJson(ToastMessage(msg = "log", str="${LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss"))}\n$str" )))
             }
         }
         App.getWebViewUA=fun ( tocken:String) = runBlocking{

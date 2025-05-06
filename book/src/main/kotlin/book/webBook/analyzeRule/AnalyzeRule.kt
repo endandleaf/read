@@ -30,7 +30,7 @@ import kotlin.collections.HashMap
 
 class AnalyzeRule(
     var ruleData: RuleDataInterface? =null,
-    var debugLog: DebugLog?,
+    override  var debugLog: DebugLog?,
     private val source: BaseSource? = null
 ):JsExtensions {
 
@@ -96,11 +96,7 @@ class AnalyzeRule(
     }
 
 
-    override fun log(msg: String?): String? {
-        logger.info("log:  $msg")
-        debugLog?.log(source?. getKey(), msg)
-        return msg
-    }
+
 
     fun setBaseUrl(baseUrl: String?): AnalyzeRule {
         baseUrl?.let {

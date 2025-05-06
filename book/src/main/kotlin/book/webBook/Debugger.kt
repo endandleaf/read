@@ -49,6 +49,7 @@ class Debugger(val logMsg: (String) -> Unit) : DebugLog {
     suspend fun startDebug(WBook: WBook, key: String) {
         val bookSource = WBook.bookSource
         WBook.debugLogger = this@Debugger
+        WBook.bookSource.debugLog=this@Debugger
         startTime = System.currentTimeMillis()
         when {
             key.isAbsUrl() -> {

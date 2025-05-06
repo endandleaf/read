@@ -1,5 +1,6 @@
 package web.util.read
 
+import book.app.App
 import book.model.Book
 import book.webBook.WBook
 import book.webBook.exception.ConcurrentException
@@ -42,6 +43,7 @@ object  BookContent {
         runCatching {
            return@runBlocking deferred!!.await().also { logger.info(key+"完成");remove(key) }
         }.onFailure {
+            App.log("正文获取失败:"+it.message,accessToken)
             it.printStackTrace()
         }
         logger.error(key+"失败")

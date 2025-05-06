@@ -7,6 +7,7 @@ import book.util.fromJsonArray
 import book.util.fromJsonObject
 import book.util.help.SourceAnalyzer
 import book.util.isJsonArray
+import book.webBook.DebugLog
 import book.webBook.analyzeRule.AnalyzeRule
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties
 import com.google.gson.Gson
@@ -16,7 +17,7 @@ import org.slf4j.LoggerFactory
 import java.io.InputStream
 
 
-@JsonIgnoreProperties("headerMap", "source")
+@JsonIgnoreProperties("headerMap", "source","debugLog")
 class BookSource(
     var bookSourceName: String = "",           // 名称
     var bookSourceGroup: String? = null,       // 分组
@@ -65,6 +66,8 @@ class BookSource(
     //    @Ignore
 //    @IgnoredOnParcel
     private var tocRuleV: TocRule? = null
+
+    override var debugLog: DebugLog? = null
 
     //    @Ignore
 //    @IgnoredOnParcel

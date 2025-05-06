@@ -19,5 +19,8 @@ object App  {
     var getWebViewUA =fun  (tocken:String):String{
         return ""
     }
+    var log =fun  (str: String,tocken:String){
+
+    }
 }
 

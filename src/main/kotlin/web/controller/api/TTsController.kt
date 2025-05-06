@@ -112,14 +112,18 @@ open class TTsController : BaseController() {
             if (it == null) throw Exception(NEED_LOGIN)
         }!!
         if(id.isNullOrBlank() || speakText.isNullOrBlank() ) throw Exception(NOT_BANK)
-        var rate=speechRate?:0.0
+        var rate=speechRate?:5.0
         if (rate < 5) rate=5.0
         if(rate > 50) rate=50.0
-        val tts=(httpTTSMapper.selectById(id)?:throw Exception(NOT_BANK)).let {
-            it.totts()
-        }
+        val tts= (httpTTSMapper.selectById(id)?:throw Exception(NOT_BANK)).totts()
         tts.userid=user.id
         tts.usertocken=accessToken
+        if(tts.contentType.isNullOrBlank()){
+            ctx.contentType("audio/mpeg")
+        }else{
+            ctx.contentType(tts.contentType)
+        }
+        //ctx.headerSet("Content-Disposition","attachment;filename=tts.mp3");
         WBook.getSpeakStream(tts,speakText,rate.toInt()).use {
             val b = ByteArray(4096)
             var len: Int
@@ -127,7 +131,6 @@ open class TTsController : BaseController() {
                 ctx.outputStream().write(b, 0, len)
             }
         }
-        //ctx.flush()
     }
 
 

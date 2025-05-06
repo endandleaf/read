@@ -10,6 +10,7 @@ import book.util.help.CacheManager
 import book.util.help.cookieJarHeader
 import book.util.http.*
 import book.webBook.Debug
+import book.webBook.DebugLog
 import book.webBook.exception.NoStackTraceException
 import cn.hutool.core.codec.Base64Decoder
 import kotlinx.coroutines.Dispatchers.IO
@@ -43,6 +44,8 @@ interface JsExtensions: JsEncodeUtils  {
 
     val logger: Logger
 
+    var debugLog: DebugLog?
+
     fun getSource(): BaseSource?
 
     fun androidId(): String {
@@ -60,7 +63,7 @@ interface JsExtensions: JsEncodeUtils  {
         logger.info("ajax url: $urlStr")
         return runBlocking {
             kotlin.runCatching {
-                val analyzeUrl = AnalyzeUrl(urlStr, source = getSource(),debugLog = null)
+                val analyzeUrl = AnalyzeUrl(urlStr, source = getSource(),debugLog = debugLog)
                 analyzeUrl.getStrResponse(urlStr).body
             }.onFailure {
                 it.printOnDebug()
@@ -78,7 +81,7 @@ interface JsExtensions: JsEncodeUtils  {
             val asyncArray = Array(urlList.size) {
                 async(IO) {
                     val url = urlList[it]
-                    val analyzeUrl = AnalyzeUrl(url, source = getSource(),debugLog = null)
+                    val analyzeUrl = AnalyzeUrl(url, source = getSource(),debugLog = debugLog)
                     analyzeUrl.getStrResponse(url)
                 }
             }
@@ -95,7 +98,7 @@ interface JsExtensions: JsEncodeUtils  {
     fun connect(urlStr: String): StrResponse {
         logger.info("connect:$urlStr")
         return runBlocking {
-            val analyzeUrl = AnalyzeUrl(urlStr, source = getSource(),debugLog = null)
+            val analyzeUrl = AnalyzeUrl(urlStr, source = getSource(),debugLog = debugLog)
             kotlin.runCatching {
                 analyzeUrl.getStrResponseAwait()
             }.onFailure {
@@ -774,8 +777,9 @@ interface JsExtensions: JsEncodeUtils  {
      * 输出调试日志
      */
     fun log(msg: String?): String? {
-        logger.info("log:  $msg")
-        Debug.log(msg)
+        logger.info("sourceUrl: {}, msg: {}", getSource()?. getKey(), msg)
+        debugLog?.log(getSource()?. getKey(), msg)
+        App.log("${getSource()?. getKey()}:$msg",getSource()?.usertocken?:"")
         return msg
     }
 

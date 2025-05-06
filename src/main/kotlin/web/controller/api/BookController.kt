@@ -1,5 +1,6 @@
 package web.controller.api
 
+import book.app.App
 import book.model.Book
 import book.model.SearchBook
 import book.util.*
@@ -70,6 +71,7 @@ open class BookController:BaseController() {
         }.onFailure {
             it.printStackTrace()
             throw DataThrowable().data(JsonResponse(false, it.message?:"搜索出错"))
+            App.log("搜索出错:"+it.message,accessToken!!)
         }
         if(re.size == 0 &&( page == 1 || page == 0)){
             throw DataThrowable().data(JsonResponse(false,"search is empty"))
@@ -233,7 +235,6 @@ open class BookController:BaseController() {
         runCatching {
             val  new = webBook.getBookInfo(book.bookUrl, canReName = true).also {   setBookbycache(book.bookUrl,it,user.id!!) }
             val mybook=Booklist.tobooklist(book,user.id!!)
-            mybook.bookto(new,false)
             runCatching {
                 val  list = webBook.getChapterList(new)
                 if(list.isNotEmpty()){
@@ -241,6 +242,8 @@ open class BookController:BaseController() {
                     mybook.latestChapterTitle=list.last().title
                 }
             }
+            mybook.bookto(new,false)
+
             JsonResponse(true,SUCCESS).Data( mybook)
         }.onFailure {
             it.printStackTrace()

@@ -45,7 +45,7 @@ class AnalyzeUrl(
     private var coroutineContext: CoroutineContext = EmptyCoroutineContext,
     headerMapF: Map<String, String>? = null,
     val needanalyzeUrl :Boolean=true,
-    var debugLog: DebugLog?,
+    override  var debugLog: DebugLog?,
 ) :JsExtensions {
 
     companion object {
@@ -113,15 +113,10 @@ class AnalyzeUrl(
         //处理URL
         if(needanalyzeUrl) analyzeUrl()
 
-        //logger.info("ruleUrl3 $ruleUrl")
+        logger.info("ruleUrl $ruleUrl")
         debugLog?.log(source?. getKey(), ruleUrl)
     }
 
-    override fun log(msg: String?): String? {
-        logger.info("log:  $msg")
-        debugLog?.log(source?. getKey(), msg)
-        return msg
-    }
 
     private fun analyzeJs() {
         var start = 0

@@ -4,6 +4,7 @@ import book.util.GSON
 import book.util.jsonPath
 import book.util.readLong
 import book.util.readString
+import book.webBook.DebugLog
 import com.jayway.jsonpath.DocumentContext
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
@@ -22,8 +23,10 @@ class HttpTTS(
     var loginCheckJs: String? = null,
     var lastUpdateTime: Long = System.currentTimeMillis(),
     override var userid: String? = null,
-    override var usertocken: String? = null,
+    override var usertocken: String? = null
 ) : BaseSource {
+
+    override var debugLog: DebugLog? = null
 
     override val logger: Logger
         get() =  LoggerFactory.getLogger(HttpTTS::class.java)

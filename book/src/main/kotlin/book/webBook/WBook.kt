@@ -2,6 +2,7 @@ package book.webBook
 
 
 
+import book.app.App
 import book.model.*
 import book.util.AppPattern.JS_PATTERN
 import book.util.help.cookieJarHeader
@@ -32,6 +33,7 @@ class WBook (val bookSource: BookSource, val debugLog: Boolean = true, var debug
     init {
         bookSource.userid = userid
         bookSource.usertocken = usertocken
+        bookSource.debugLog = debugLogger
     }
 
     val sourceUrl: String
@@ -295,7 +297,7 @@ class WBook (val bookSource: BookSource, val debugLog: Boolean = true, var debug
            try {
                val analyzeUrl = AnalyzeUrl(
                    httpTts.url,
-                   speakText = speakText,
+                   speakText = speakText.trim().replace(" ","").replace("\\s+".toRegex(), " ").replace("\"","").replace("'",""),
                    speakSpeed = speechRate,
                    source = httpTts,
                    readTimeout = 300 * 1000L,
@@ -321,6 +323,7 @@ class WBook (val bookSource: BookSource, val debugLog: Boolean = true, var debug
                }
            } catch (e: Exception) {
                e.printStackTrace()
+               App.log("TTS出错：" + e.message,httpTts.usertocken!!)
                throw e
            }
        }
