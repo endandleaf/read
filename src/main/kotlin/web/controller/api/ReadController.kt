@@ -17,10 +17,7 @@ import com.script.rhino.runScriptWithContext
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.runBlocking
 import org.apache.ibatis.solon.annotation.Db
-import org.noear.solon.annotation.Controller
-import org.noear.solon.annotation.Inject
-import org.noear.solon.annotation.Mapping
-import org.noear.solon.annotation.Path
+import org.noear.solon.annotation.*
 import org.noear.solon.core.handle.Context
 import org.noear.solon.core.util.DataThrowable
 import org.noear.solon.data.annotation.Cache
@@ -66,6 +63,7 @@ open class ReadController : BaseController() {
     @Db("db")
     @Inject
     lateinit var replaceRuleMapper: ReplaceRuleMapper
+
 
     companion object {
         private val logger: Logger = LoggerFactory.getLogger(BaseController::class.java)
@@ -602,6 +600,66 @@ open class ReadController : BaseController() {
                 }
             }
             //ctx.flush()
+
+        } else {
+            logger.info("GET请求失败");
+            JsonResponse(isSuccess = false,errorMsg ="GET请求失败")
+        }
+
+    }
+
+
+    @Mapping("/imageDecode")
+    open fun imageDecode(ctx: Context, accessToken: String?, bookSourceUrl: String?, @Param("book")  _book: String?, url: String?, header: String?) = runBlocking {
+        //logger.info("imageDecode:$url")
+        val (user,source,jp)=getsourceuser(accessToken,bookSourceUrl)
+        if(jp != null){
+            throw DataThrowable().data(jp)
+        }
+        if (url.isNullOrBlank()) throw DataThrowable().data(JsonResponse(false, NOT_BANK))
+        val geturl = URL(url)
+        SslUtils.ignoreSsl();
+        val connection = geturl.openConnection() as HttpURLConnection
+        connection.setRequestMethod("GET")
+        runCatching {
+            val json= Gson().fromJson<Map<String, String>>(header, Map::class.java)
+            json.forEach{(k,v)->
+                connection.setRequestProperty(k,v);
+            }
+        }
+        val responseCode = connection.getResponseCode();
+        //  读取响应
+        if (responseCode == HttpURLConnection.HTTP_OK) { // 200表示请求成功
+            ctx.contentType(connection.getHeaderField("Content-Type"))
+            val s= BookSource.fromJson(source!!.json).getOrNull()!!
+            if(!s.ruleContent?.imageDecode .isNullOrBlank()){
+                s.userid = user!!.id
+                s.usertocken = accessToken
+                var book:Book?=null
+                if(!_book.isNullOrBlank()){
+                   runCatching { book= GSON.fromJson<Book>(_book, Book::class.java) }.onFailure {
+                       App.log("格式化book失败:${it.message}",accessToken!!)
+                   }
+                }
+               runCatching {
+                    val bytes = s.imageDecode(src = url, inputStream = connection.getInputStream(),book=book)
+                    ctx.outputStream().write(bytes)
+                    ctx.flush()
+                    //logger.info("解密成功")
+                }.onFailure {
+                    it.printStackTrace()
+                    App.log("图片解密失败:${it.message}",accessToken!!)
+                    JsonResponse(isSuccess = false,errorMsg ="解密失败")
+                }
+            } else {
+                connection.getInputStream().use {
+                    val b = ByteArray(4096)
+                    var len: Int
+                    while ((it.read(b).also { len = it }) != -1) {
+                        ctx.outputStream().write(b, 0, len)
+                    }
+                }
+            }
 
         } else {
             logger.info("GET请求失败");

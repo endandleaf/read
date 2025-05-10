@@ -25,6 +25,16 @@ web端不支持cookie的保存，不支持webview，漫画或者图片或者听�
 # 推荐书源
 [晴天](https://api.qingtian618.com/)
 
+
+# 快捷获取注册码api
+接口地址：/getcode?code=$code。  
+code参数在conf.yml文件中设置
+
+# 开发中
+订阅源功能   
+编辑书本信息   
+和开源阅读进度同步   
+
 # 书源权限
 书源可以直接调用java代码，所以给予书源权限时一定要小心！
 

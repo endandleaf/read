@@ -174,6 +174,15 @@ class BookSource(
         var title: String,
         var url: String? = null
     )
+    fun  imageDecode(src: String, inputStream: InputStream, book: Book? = null):ByteArray{
+        val bytes = this.evalJS(this.ruleContent?.imageDecode!!) {
+            put("book", book)
+            put("result", inputStream)
+            put("src", src)
+        } as ByteArray
+        return bytes
+    }
+
 
     companion object {
 

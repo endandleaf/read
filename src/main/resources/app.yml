@@ -27,4 +27,7 @@ solon.serialization.json:
 server.http:
   coreThreads: x2
   ioBound: true
-
+server.request:
+  maxBodySize: 50mb
+  maxFileSize: 50mb
+  maxHeaderSize: 10mb

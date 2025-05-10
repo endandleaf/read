@@ -2,6 +2,7 @@ package web.controller.api
 
 import book.app.App
 import book.model.Book
+import book.model.BookSource
 import book.model.SearchBook
 import book.util.*
 import book.util.help.CookieStore
@@ -76,6 +77,12 @@ open class BookController:BaseController() {
         if(re.size == 0 &&( page == 1 || page == 0)){
             throw DataThrowable().data(JsonResponse(false,"search is empty"))
         }
+        val s= BookSource.fromJson(source.json).getOrNull()
+        if(!s?.ruleContent?.imageDecode .isNullOrBlank() ){
+            re.forEach{
+                it.imageDecode=true
+            }
+        }
         Gson().toJson(JsonResponse(true).Data(re))
     }
 
@@ -113,8 +120,13 @@ open class BookController:BaseController() {
             return@runBlocking JsonResponse(false,BOOKIS)
         }
         new!!.type=book.type
+
         booklistMapper.insert(booktolist.bookto(new!!,false).apply {
             this.useReplaceRule=(useReplaceRule == 1)
+            val s= BookSource.fromJson(source.json).getOrNull()
+            if(!s?.ruleContent?.imageDecode .isNullOrBlank() ){
+                this.imageDecode=true
+            }
         })
         thread {
             updatebook(booktolist, source,user.id!!)
@@ -208,6 +220,12 @@ open class BookController:BaseController() {
             }
             book.lastCheckTime=System.currentTimeMillis()
             book.bookto(new!!,false)
+            val s= BookSource.fromJson(source.json).getOrNull()
+            if(!s?.ruleContent?.imageDecode .isNullOrBlank() ){
+                book.imageDecode=true
+            }else{
+                book.imageDecode=false
+            }
             booklistMapper.updateById(book)
         }.onFailure {
             return@runBlocking JsonResponse(false,it.message?:BOOKSEARCHERROR)
@@ -243,6 +261,12 @@ open class BookController:BaseController() {
                 }
             }
             mybook.bookto(new,false)
+            val s= BookSource.fromJson(source.json).getOrNull()
+            if(!s?.ruleContent?.imageDecode .isNullOrBlank() ){
+                mybook.imageDecode=true
+            }else{
+                book.imageDecode=false
+            }
 
             JsonResponse(true,SUCCESS).Data( mybook)
         }.onFailure {

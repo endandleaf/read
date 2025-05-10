@@ -25,6 +25,7 @@ class HttpTTS(
     override var userid: String? = null,
     override var usertocken: String? = null
 ) : BaseSource {
+    var sqlid: String = ""
 
     override var debugLog: DebugLog? = null
 
@@ -36,7 +37,7 @@ class HttpTTS(
     }
 
     override fun getKey(): String {
-        return "httpTts:$id"
+        return "httpTts:$sqlid"
     }
 
     @Suppress("MemberVisibilityCanBePrivate")

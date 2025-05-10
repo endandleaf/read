@@ -124,7 +124,7 @@ interface JsExtensions: JsEncodeUtils  {
     }
 
     fun webview(html: String?, url: String?, js: String?): StrResponse{
-        val headerMap =getSource()?.getHeaderMap(true,false)?: hashMapOf()
+        val headerMap =getSource()?.getHeaderMap(true)?: hashMapOf()
         runCatching {
             if(!url.isNullOrBlank() && ( url.startsWith("http://") || url.startsWith("https://"))){
                 val store=getSource()?.getCookieManger()
@@ -221,7 +221,7 @@ interface JsExtensions: JsEncodeUtils  {
 
     fun startBrowserAwait(url: String,title: String, refetchAfterSuccess: Boolean): StrResponse = runBlocking {
         logger.info("跳转URL：$url")
-        val headerMap =getSource()?.getHeaderMap(true,false)?: hashMapOf()
+        val headerMap =getSource()?.getHeaderMap(true)?: hashMapOf()
         val headerMapF: HashMap<String, String> = hashMapOf()
         headerMapF.putAll(headerMap)
 

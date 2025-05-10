@@ -62,7 +62,7 @@ class Booklist {
     @ColumnType(value = "LONGTEXT")
     var readchapter: String? = null
     var useReplaceRule: Boolean? = null         // 正文使用净化替换规则
-
+    var imageDecode: Boolean = false
 
     fun create():Booklist{
         this.id = UUID.randomUUID().toString()

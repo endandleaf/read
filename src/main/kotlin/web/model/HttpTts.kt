@@ -51,6 +51,7 @@ class HttpTts {
             enabledCookieJar = this.enabledCookieJar,
             loginCheckJs = this.loginCheckJs
         )
+        httpTTS.sqlid=id?:""
         return httpTTS
     }
 }

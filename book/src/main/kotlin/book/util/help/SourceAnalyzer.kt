@@ -152,8 +152,9 @@ object SourceAnalyzer {
                         replaceRegex = toNewRule(jsonItem.readString("ruleBookContentReplace")),
                         title = toNewRule(jsonItem.readString("title")),
                         payAction = toNewRule(jsonItem.readString("payAction")),
-                        nextContentUrl = toNewRule(jsonItem.readString("ruleContentUrlNext"))
-
+                        nextContentUrl = toNewRule(jsonItem.readString("ruleContentUrlNext")),
+                        imageStyle = toNewRule(jsonItem.readString("imageStyle")),
+                        imageDecode = toNewRule(jsonItem.readString("imageDecode")),
                     )
                 }
             } else {

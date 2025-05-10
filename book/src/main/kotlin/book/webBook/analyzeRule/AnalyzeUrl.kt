@@ -1,5 +1,6 @@
 package book.webBook.analyzeRule
 
+import book.app.App
 import book.model.BaseSource
 import book.model.Book
 import book.model.BookChapter
@@ -338,10 +339,10 @@ class AnalyzeUrl(
                                 postJson(body)
                             }
                         }
-                        return  webview( res.body, res.url,webJs ?: jsStr)
+                        return  App.webview(res.body,res.url,webJs ?: jsStr,getSource()?.usertocken?:"",GSON.toJson(headerMap))
                     }
                     else -> {
-                        return  webview("",url,webJs ?: jsStr)
+                        return  App.webview("",url,webJs ?: jsStr,getSource()?.usertocken?:"",GSON.toJson(headerMap))
                     }
                 }
                 //return  webview("",url,"")

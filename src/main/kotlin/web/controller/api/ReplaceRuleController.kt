@@ -27,6 +27,15 @@ open class ReplaceRuleController:BaseController() {
     @Inject
     lateinit var replaceRuleMapper: ReplaceRuleMapper
 
+    @Inject(value = "\${default.rule:}", autoRefreshed=true)
+    var rule:String=""
+
+    @Mapping("/getdefaultrule")
+    fun getdefaultrule(accessToken:String?) = run{
+        JsonResponse(true).Data(rule)
+    }
+
+
     @Tran
     @Mapping("/addReplaceRule")
     open fun addReplaceRule(accessToken:String?, @Body rule: ReplaceRule)=run{

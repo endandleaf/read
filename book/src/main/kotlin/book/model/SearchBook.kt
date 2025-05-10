@@ -24,8 +24,9 @@ data class SearchBook(
     var time: Long = 0,
     var variable: String? = null,
     var originOrder: Int = 0,
-) : BaseBook {
 
+) : BaseBook {
+    var imageDecode: Boolean = false
     override var userid: String = ""
         set(value) {
             if (value.isNotBlank() && value != field) {

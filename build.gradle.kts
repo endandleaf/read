@@ -39,6 +39,7 @@ dependencies {
     implementation("javax.mail:mail:1.4.7")
 
 
+
     implementation(platform("org.noear:solon-parent:3.0.5"))
 
     implementation("org.noear:solon-web"){

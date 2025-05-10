@@ -2,17 +2,10 @@
 a[b][c]=a[b][c]||[]
 a[b][c].push({p:"main.dart.js_148",e:"beginPart"})})(self,"$__dart_deferred_initializers__","eventLog")
 $__dart_deferred_initializers__.current=function(a,b,c,$){var A={
-bvI(){var y=$.bA
-C.e2(y==null?null:y.d0(0,"imgmax"))
-return 5},
-bvH(){if(!$.d2())return!1
-var y=$.bA
-y=y==null?null:y.d0(0,"setting:fontSizevalue")
-return y==="true"}},B,C,D
-A=a.updateHolder(c[39],A)
-B=c[133]
-C=c[105]
-D=c[96]
-var z=a.updateTypes([]);(function constants(){B.mL=new D.be(58121,!0)})()};
+bEd(){var y=$.br,x=B.eb(y==null?null:y.d4(0,"setting:cachebook"))
+return x<0?0:x}},B
+A=a.updateHolder(c[49],A)
+B=c[113]
+var z=a.updateTypes([])};
 ((a,b)=>{a[b]=a.current
-a.eventLog.push({p:"main.dart.js_148",e:"endPart",h:b})})($__dart_deferred_initializers__,"3YXCLnMSnMK2p7l3U5P+iD1wZbw=");
+a.eventLog.push({p:"main.dart.js_148",e:"endPart",h:b})})($__dart_deferred_initializers__,"yUrksW6dpxu8yDl3aYakH9XIwQ0=");

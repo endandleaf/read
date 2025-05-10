@@ -22,3 +22,6 @@ smtp:
   personal:  #发送人的昵称
   codesubject: 验证码 #验证码邮件的主题
   codetext: 您的验证码是$code,当前验证码十分钟有效请尽快使用  #验证码邮件的内容，必须有$code，发送邮件时会把$code替换成验证码
+default:
+  tts: #默认tts链接
+  rule: #默认净化链接

@@ -1,7 +1,9 @@
 package web.controller.api
 
 import book.model.BookSource
+import book.util.FileUtils
 import book.util.GSON
+import book.util.MD5Utils
 import book.util.fromJsonArray
 import book.webBook.WBook
 import kotlinx.coroutines.runBlocking
@@ -20,7 +22,9 @@ import web.model.HttpTts
 import web.model.ReplaceRule
 import web.model.Users
 import web.response.*
-import java.io.ByteArrayOutputStream
+import java.io.File
+import java.nio.file.Paths
+
 
 @Controller
 @Mapping(routepath)
@@ -29,6 +33,15 @@ open class TTsController : BaseController() {
     @Db("db")
     @Inject
     lateinit var httpTTSMapper: HttpTTSMapper
+
+    @Inject(value = "\${default.tts:}", autoRefreshed=true)
+    var tts:String=""
+
+    @Mapping("/getdefaulttts")
+    fun getdefaulttts(accessToken:String?) = run{
+        JsonResponse(true).Data(tts)
+    }
+
 
     @Tran
     @Mapping("/addtts")
@@ -84,8 +97,19 @@ open class TTsController : BaseController() {
         val user = getuserbytocken(accessToken).also {
             if (it == null) throw DataThrowable().data(JsonResponse(false, NEED_LOGIN))
         }!!
-        val ttss=httpTTSMapper.getalltts(user.id!!)
-        JsonResponse(true).Data(ttss)
+        var list:MutableList<HttpTts> = mutableListOf()
+        httpTTSMapper.getalltts(user.id!!).forEach{
+            var loginUi=it.loginUi;
+            if(loginUi != null && loginUi.isNotEmpty()){
+                kotlin.runCatching {
+                    val r=GSON.fromJsonArray<Any>(loginUi).getOrNull()
+                    loginUi= GSON.toJson(r)
+                }
+            }
+            it.loginUi=loginUi
+            list.add(it)
+        }
+        JsonResponse(true).Data(list)
     }
 
     @Mapping("/savettss")
@@ -180,6 +204,22 @@ open class TTsController : BaseController() {
         JsonResponse(true)
     }
 
+    @Mapping("/upjson")
+    fun upjson(accessToken:String?, @Body content:String)=run{
+        val user = getuserbytocken(accessToken).also {
+            if (it == null) throw DataThrowable().data(JsonResponse(false, NEED_LOGIN))
+        }!!
+        val jsonFile = "${MD5Utils.md5Encode(content)}.json"
+        val relativeCoverUrl = Paths.get("assets", "", "json", jsonFile).toString()
+        val  url="/" + relativeCoverUrl
+        val jsonUrl = Paths.get("", "storage", relativeCoverUrl).toString()
+        val file= File(jsonUrl)
+        if (file.exists()) {
+            file.delete()
+        }
+        FileUtils.writeText(jsonUrl,content)
+        JsonResponse(true,url)
+    }
 
     private fun addorupdate(tts: HttpTts, user: Users) = run{
         var insert = 0

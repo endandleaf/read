@@ -112,8 +112,12 @@ object CacheManager {
             }
         }
         if(re == null){
-           // println("get cache error,key:$key")
+            //println("get cache error,key:$key")
         }
+        if(re == "undefined"){
+            return null
+        }
+        //println(re)
         return re
     }
 

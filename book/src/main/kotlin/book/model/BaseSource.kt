@@ -10,6 +10,7 @@ import com.script.buildScriptBindings
 import com.script.rhino.RhinoScriptEngine
 import com.script.rhino.runScriptWithContext
 import org.mozilla.javascript.Scriptable
+import java.io.InputStream
 
 /**
  * 可在js里调用,source.xxx()
@@ -68,7 +69,7 @@ interface BaseSource : JsExtensions {
     /**
      * 解析header规则
      */
-    fun getHeaderMap(hasLoginHeader: Boolean = false,needua: Boolean = true) = HashMap<String, String>().apply {
+    fun getHeaderMap(hasLoginHeader: Boolean = false) = HashMap<String, String>().apply {
 
         //this[AppConst.UA_NAME] = AppConst.userAgent
         header?.let {
@@ -84,7 +85,7 @@ interface BaseSource : JsExtensions {
                 putAll(map)
             }
         }
-        if (!has(AppConst.UA_NAME, true) && needua) {
+        if (!has(AppConst.UA_NAME, true) ) {
             put(AppConst.UA_NAME, AppConst.userAgent)
         }
         if (hasLoginHeader) {
@@ -206,6 +207,8 @@ interface BaseSource : JsExtensions {
     fun getShareScope(): Scriptable? {
         return SharedJsScope.getScope(if(jsLib != null )getjs(jsLib?:"") else jsLib)
     }
+
+
 
     /**
      * 保存数据
