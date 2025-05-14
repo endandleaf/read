@@ -4,8 +4,10 @@ import book.util.GSON
 import book.util.NetworkUtils
 import book.util.fromJsonObject
 import book.util.help.CacheManager
+import book.util.help.RuleBigDataHelp
 import book.webBook.analyzeRule.AnalyzeUrl
 import book.webBook.analyzeRule.RuleDataInterface
+import com.google.gson.annotations.Expose
 
 data class BookChapter(
     var url: String = "",               // 章节地址
@@ -23,96 +25,27 @@ data class BookChapter(
     var end: Long? = null,               // 章节终止位置
     var startFragmentId: String? = null,  //EPUB书籍当前章节的fragmentId
     var endFragmentId: String? = null,    //EPUB书籍下一章节的fragmentId
+    @Expose(serialize = false, deserialize = false)
     var variable: String? = null ,       //变量
-    var lastCheckTime: Long? = null
-): RuleDataInterface {
-    override var isinit: Boolean = false
-
+    var lastCheckTime: Long? = null,
     override var userid: String = ""
-        set(value) {
-            if (value.isNotBlank() && value != field) {
-                field = value
-                init()
-            }
-        }
-
-    fun init(){
-        if(isinit || userid.isEmpty()){
-            return
-        }
-        if(url.isNotEmpty()){
-            if(variable.isNullOrBlank()){
-                variable=getvariableMap(userid)
-            }else{
-                runCatching {
-                    var old=GSON.fromJsonObject<HashMap<String, String>>(variable).getOrNull() ?: hashMapOf()
-                    GSON.fromJsonObject<HashMap<String, String>>(getvariableMap(userid)).getOrNull() ?: hashMapOf<String, String>().forEach{(k,v)->
-                        old[k] = v
-                    }
-                    val json=GSON.toJson(old)
-                    variable = json
-                    putVariable(json)
-                }
-            }
-            isinit = true
-        }
-    }
-
-    private fun getCachename(userid:String):String{
-        return "BookChaptervariableMap${url}_userid_${userid}"
-    }
-
-    override val variableMap: HashMap<String, String>
-        get() {
-            return GSON.fromJsonObject<HashMap<String, String>>(getvariableMap(userid)).getOrNull() ?: hashMapOf()
-        }
+): RuleDataInterface {
 
 
-    fun getvariableMap(userid:String):String?{
-        try {
-            val cache = CacheManager.get(getCachename(userid))
-            return cache
-        } catch (e: Exception) {
-            e.printStackTrace()
-            return null
-        }
+
+    @delegate:Expose(serialize = false, deserialize = false)
+    override val variableMap: HashMap<String, String> by lazy {
+        GSON.fromJsonObject<HashMap<String, String>>(variable).getOrNull() ?: hashMapOf()
     }
 
 
-    private fun putVariable(info: String): Boolean {
-        return try {
-            CacheManager.put(getCachename(userid), info)
-            true
-        } catch (e: Exception) {
-            e.printStackTrace()
-            false
-        }
-    }
-
-    override fun putVariable(key: String, value: String?) {
-        if(!isinit) init()
-        val variableMap=this.variableMap
-        if (value != null) {
-            variableMap[key] = value
-        } else {
-            variableMap.remove(key)
-        }
-        if(userid.isEmpty()){
-            variable = GSON.toJson(variableMap)
-            return
-        }
-        if(url.isNotEmpty()){
-            variable = GSON.toJson(variableMap)
-            putVariable(variable?:"")
-        }else{
+    override fun putVariable(key: String, value: String?): Boolean {
+        if (super.putVariable(key, value)) {
             variable = GSON.toJson(variableMap)
         }
+        return true
     }
 
-    override fun getVariable(key: String): String {
-        if(!isinit) init()
-        return (variableMap[key]?:"")
-    }
 
 
     override fun hashCode() = url.hashCode()
@@ -133,5 +66,14 @@ data class BookChapter(
     }
 
 
-    //fun getFileName(): String = String.format("%05d-%s.nb", index, MD5Utils.md5Encode16(title))
+    override fun putBigVariable(key: String, value: String?) {
+        if(userid.isEmpty()) return;
+        RuleBigDataHelp.putChapterVariable(bookUrl,userid, url, key, value)
+    }
+
+    override fun getBigVariable(key: String): String? {
+        if(userid.isEmpty()) return ""
+        return RuleBigDataHelp.getChapterVariable(bookUrl,userid, url, key)
+    }
+
 }

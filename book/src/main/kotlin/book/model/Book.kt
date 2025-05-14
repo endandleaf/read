@@ -2,8 +2,10 @@ package book.model
 
 import book.util.*
 import book.util.help.CacheManager
+import book.util.help.RuleBigDataHelp
 import book.webBook.localBook.*
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties
+import com.google.gson.annotations.Expose
 import org.jsoup.Jsoup
 import java.io.File
 import java.nio.charset.Charset
@@ -12,7 +14,7 @@ import kotlin.math.min
 
 @JsonIgnoreProperties("variableMap", "infoHtml", "tocHtml", "config", "rootDir", "readConfig", "localBook", "epub", "epubRootDir", "onLineTxt", "localTxt", "umd", "realAuthor", "unreadChapterNum", "folderName", "localFile", "kindList", "_userNameSpace", "bookDir", "userNameSpace")
 data class Book(
-    private var _bookUrl: String = "",          // 详情页Url(本地书源存储完整文件路径)
+    override var bookUrl: String = "",     // 详情页Url(本地书源存储完整文件路径)
     var tocUrl: String = "",                    // 目录页Url (toc=table of Contents)
     var origin: String = BookType.local,        // 书源URL(默认BookType.local)
     var originName: String = "",                //书源名称
@@ -41,47 +43,15 @@ data class Book(
     var order: Int = 0,                         // 手动排序
     var originOrder: Int = 0,                   //书源排序
     var useReplaceRule: Boolean = true,         // 正文使用净化替换规则
-    var variable: String? = null,                // 自定义书籍变量信息(用于书源规则检索书籍信息)
+    @Expose(serialize = false, deserialize = false)
+    override var variable: String? = null,                // 自定义书籍变量信息(用于书源规则检索书籍信息)
     var readConfig: ReadConfig? = null,
-
-): BaseBook  {
-    override var isinit: Boolean = false
-
-    override var bookUrl: String = _bookUrl
-        set(value) {
-            field = value
-            init()
-        }
-
     override var userid: String = ""
-        set(value) {
-            if (value.isNotBlank() && value != field) {
-                field = value
-                init()
-            }
-        }
+): BaseBook  {
 
-    fun init(){
-        if(isinit || userid.isEmpty()){
-            return
-        }
-        if(bookUrl.isNotEmpty()){
-            if(variable.isNullOrBlank()){
-                variable=getvariableMap(userid)
-            }else{
-                runCatching {
-                    var old=GSON.fromJsonObject<HashMap<String, String>>(variable).getOrNull() ?: hashMapOf()
-                    GSON.fromJsonObject<HashMap<String, String>>(getvariableMap(userid)).getOrNull() ?: hashMapOf<String, String>().forEach{(k,v)->
-                        old[k] = v
-                    }
-                    val json=GSON.toJson(old)
-                    variable = json
-                    putVariable(json)
-                }
-            }
-            isinit = true
-        }
-    }
+
+
+
 
     companion object {
         const val hTag = 2L
@@ -142,86 +112,15 @@ data class Book(
         return bookUrl.hashCode()
     }
 
-    private fun getCachename(userid:String):String{
-        return "bookvariableMap${bookUrl}_userid_${userid}"
+    @delegate:Expose(serialize = false, deserialize = false)
+    override val variableMap: HashMap<String, String> by lazy {
+        GSON.fromJsonObject<HashMap<String, String>>(variable).getOrNull() ?: hashMapOf()
     }
 
-
-    override val variableMap: HashMap<String, String>
-        get() {
-            return GSON.fromJsonObject<HashMap<String, String>>(getvariableMap(userid)).getOrNull() ?: hashMapOf()
-        }
-
-
-    fun getvariableMap(userid:String):String?{
-        try {
-            val cache = CacheManager.get(getCachename(userid))
-            //println("get ${cache}")
-            return cache
-        } catch (e: Exception) {
-            e.printStackTrace()
-            return null
-        }
-    }
-
-    private fun putVariable(info: String): Boolean {
-        return try {
-            CacheManager.put(getCachename(userid), info)
-            true
-        } catch (e: Exception) {
-            e.printStackTrace()
-            false
-        }
-    }
-
-    override fun putVariable(key: String, value: String?) {
-        //println("book putVariable,key:$key,value:$value")
-        if(!isinit) init()
-        val variableMap=this.variableMap
-        if (value != null) {
-            variableMap[key] = value
-        } else {
-            variableMap.remove(key)
-        }
-        if(userid.isEmpty()){
-            variable = GSON.toJson(variableMap)
-            return
-        }
-        if(bookUrl.isNotEmpty()){
-            variable = GSON.toJson(variableMap)
-            putVariable(variable?:"")
-        }else{
-            variable = GSON.toJson(variableMap)
-        }
-    }
-
-    override fun getVariable(key: String): String {
-        if(!isinit) init()
-        return (variableMap[key]?:SearchBook(origin = origin).let {
-            it.userid=userid
-            it.searchinit()
-            it.variableMap[key]
-        })?:""
-    }
-
-    fun getbookVariable(): String {
-        var key="custom"
-        if(!isinit) init()
-        return (variableMap[key]?:SearchBook(origin = origin).let {
-            it.userid=userid
-            it.searchinit()
-            it.variableMap[key]
-        })?:""
-    }
-
-    fun setbookVariable(info: String) {
-        var key="custom"
-        putVariable(key,info)
-    }
-
-
+    @Expose(serialize = false, deserialize = false)
     override var infoHtml: String? = null
 
+    @Expose(serialize = false, deserialize = false)
     override var tocHtml: String? = null
 
     fun getRealAuthor() = author.replace(AppPattern.authorRegex, "")
@@ -235,6 +134,7 @@ data class Book(
     fun fileCharset(): Charset {
         return charset(charset ?: "UTF-8")
     }
+
 
     private fun config(): ReadConfig {
         if (readConfig == null) {
@@ -274,6 +174,7 @@ data class Book(
         return File( originName)
     }
 
+    @Expose(serialize = false, deserialize = false)
     @Transient
     private var rootDir: String = ""
 
@@ -285,6 +186,7 @@ data class Book(
         }
     }
 
+    @Expose(serialize = false, deserialize = false)
     @Transient
     private var _userNameSpace: String = ""
 
@@ -310,7 +212,7 @@ data class Book(
             name = name,
             author = author,
             kind = kind,
-            _bookUrl = bookUrl,
+            bookUrl = bookUrl,
             origin = origin,
             originName = originName,
             type = type,
@@ -391,5 +293,13 @@ data class Book(
         fun readConfigToString(config: ReadConfig?): String = GSON.toJson(config)
 
         fun stringToReadConfig(json: String?) = GSON.fromJsonObject<ReadConfig>(json)
+    }
+
+    override fun getVariable(key: String): String {
+        val value = super.getVariable(key)
+        if(value.isEmpty()){
+            return  SearchBook.getSearchBook(userid,origin).getVariable(key)
+        }
+        return  value
     }
 }

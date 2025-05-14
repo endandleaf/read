@@ -179,6 +179,7 @@ class BookSourceController {
                 if(it.createtime != null){
                     source.createtime=it.createtime
                 }
+                source.sourceorder=it.sourceorder
                 bookSource.lastUpdateTime= Date().time
                 update=update+booksourcemapper.updateById(source)
             }else{

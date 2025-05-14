@@ -11,6 +11,7 @@ import book.webBook.DebugLog
 import book.webBook.analyzeRule.AnalyzeRule
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties
 import com.google.gson.Gson
+import com.google.gson.annotations.Expose
 import com.google.gson.reflect.TypeToken
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
@@ -53,20 +54,25 @@ class BookSource(
     //    @Ignore
 //    @IgnoredOnParcel
     private var searchRuleV: SearchRule? = null
+
     override val logger: Logger
         get() =  LoggerFactory.getLogger(BookSource::class.java)
     //    @Ignore
 //    @IgnoredOnParcel
+    @Expose(serialize = false, deserialize = false)
     private var exploreRuleV: ExploreRule? = null
 
     //    @Ignore
 //    @IgnoredOnParcel
+    @Expose(serialize = false, deserialize = false)
     private var bookInfoRuleV: BookInfoRule? = null
 
     //    @Ignore
 //    @IgnoredOnParcel
+    @Expose(serialize = false, deserialize = false)
     private var tocRuleV: TocRule? = null
 
+    @Expose(serialize = false, deserialize = false)
     override var debugLog: DebugLog? = null
 
     //    @Ignore
@@ -174,7 +180,7 @@ class BookSource(
         var title: String,
         var url: String? = null
     )
-    fun  imageDecode(src: String, inputStream: InputStream, book: Book? = null):ByteArray{
+    fun  DeimageDecode(src: String, inputStream: InputStream, book: Book? = null):ByteArray{
         val bytes = this.evalJS(this.ruleContent?.imageDecode!!) {
             put("book", book)
             put("result", inputStream)
@@ -231,5 +237,15 @@ class BookSource(
         fun stringToContentRule(json: String?) =
             GSON.fromJsonObject<ContentRule>(json).getOrNull()
 
+    }
+
+    fun hasimageDecode():Boolean{
+        if(ruleContent == null){
+            return false;
+        }
+        if(ruleContent!!.imageDecode .isNullOrBlank()){
+            return false;
+        }
+        return true
     }
 }

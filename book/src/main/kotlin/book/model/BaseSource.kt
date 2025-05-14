@@ -3,6 +3,7 @@ package book.model
 import book.util.*
 import book.util.help.CacheManager
 import book.util.help.CookieStore
+import book.util.help.RuleBigDataHelp
 import book.webBook.DebugLog
 import book.webBook.analyzeRule.JsExtensions
 import com.script.ScriptBindings
@@ -70,7 +71,6 @@ interface BaseSource : JsExtensions {
      * 解析header规则
      */
     fun getHeaderMap(hasLoginHeader: Boolean = false) = HashMap<String, String>().apply {
-
         //this[AppConst.UA_NAME] = AppConst.userAgent
         header?.let {
             GSON.fromJsonObject<Map<String, String>>(
@@ -99,7 +99,7 @@ interface BaseSource : JsExtensions {
      * 获取用于登录的头部信息
      */
     fun getLoginHeader(): String? {
-        return CacheManager.get("loginHeader_${getKey()}_userid_${userid}")
+        return  RuleBigDataHelp.getSourceVariable(getKey(),userid?:"","loginHeader")
     }
 
     fun getLoginHeaderMap(): Map<String, String>? {
@@ -111,11 +111,11 @@ interface BaseSource : JsExtensions {
      * 保存登录头部信息,map格式,访问时自动添加
      */
     fun putLoginHeader(header: String) {
-        CacheManager.put("loginHeader_${getKey()}_userid_${userid}", header)
+        RuleBigDataHelp.putSourceVariable(getKey(),userid?:"","loginHeader",header)
     }
 
     fun removeLoginHeader() {
-        CacheManager.delete("loginHeader_${getKey()}_userid_${userid}")
+        RuleBigDataHelp.putSourceVariable(getKey(),userid?:"","loginHeader",null)
     }
 
     /**
@@ -124,7 +124,7 @@ interface BaseSource : JsExtensions {
      */
     fun getLoginInfo(): String? {
         try {
-            val cache = CacheManager.get("userInfo_${getKey()}_userid_${userid}")
+            val cache = RuleBigDataHelp.getSourceVariable(getKey(),userid?:"","userInfo")
             return cache
         } catch (e: Exception) {
             e.printStackTrace()
@@ -145,7 +145,7 @@ interface BaseSource : JsExtensions {
      */
     fun putLoginInfo(info: String): Boolean {
         return try {
-            CacheManager.put("userInfo_${getKey()}_userid_${userid}", info)
+            RuleBigDataHelp.putSourceVariable(getKey(),userid?:"","userInfo",info)
             true
         } catch (e: Exception) {
             e.printStackTrace()
@@ -155,25 +155,17 @@ interface BaseSource : JsExtensions {
     }
 
     fun removeLoginInfo() {
-        CacheManager.delete("userInfo_${getKey()}_userid_${userid}")
+        RuleBigDataHelp.putSourceVariable(getKey(),userid?:"","userInfo",null)
     }
 
-    private fun getCachename():String{
-        return "sourceVariable_${getKey()}_userid_${userid}"
-    }
+
 
     fun setVariable(variable: String?) {
-        //println("setVariable:${getCachename()}")
-        if (variable != null) {
-            CacheManager.put(getCachename(), variable)
-        } else {
-            CacheManager.delete(getCachename())
-        }
+        RuleBigDataHelp.putSourceVariable(getKey(),userid?:"","sourceVariable",variable)
     }
 
     fun getVariable(): String {
-        var s= CacheManager.get(getCachename())
-        return s?:""
+       return RuleBigDataHelp.getSourceVariable(getKey(),userid?:"","sourceVariable")?:""
     }
 
     suspend fun runaction(action:String){
@@ -214,7 +206,7 @@ interface BaseSource : JsExtensions {
      * 保存数据
      */
     fun put(key: String, value: String): String {
-        CacheManager.put("getv_${getKey()}_${key}_userid_${userid}", value)
+        RuleBigDataHelp.putSourceVariable(getKey(),userid?:"","getv_${key}",value)
         return value
     }
 
@@ -222,7 +214,7 @@ interface BaseSource : JsExtensions {
      * 获取保存的数据
      */
     fun get(key: String): String {
-        return CacheManager.get("getv_${getKey()}_${key}_userid_${userid}") ?: ""
+        return  RuleBigDataHelp.getSourceVariable(getKey(),userid?:"","getv_${key}") ?:""
     }
 
 
@@ -237,6 +229,12 @@ interface BaseSource : JsExtensions {
             CookieStore.Stores.put(key, store)
         }
         return store
+    }
+
+    fun loginUi(): List<RowUi>? {
+        return GSON.fromJsonArray<RowUi>(loginUi).onFailure {
+            it.printOnDebug()
+        }.getOrNull()
     }
 
 }

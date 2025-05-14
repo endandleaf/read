@@ -36,6 +36,12 @@ class HomeController {
     }
 
     @get:Get
+    @get:Mapping("/rss")
+    val rss =ModelAndView("admin/rss.html").also {
+        it.put("rss","layui-this")
+    }
+
+    @get:Get
     @get:Mapping("/code")
     val cookie =ModelAndView("admin/code.html").also {
         it.put("code","layui-this")

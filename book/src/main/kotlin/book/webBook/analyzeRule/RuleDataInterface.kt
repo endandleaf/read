@@ -2,17 +2,41 @@ package book.webBook.analyzeRule
 
 interface RuleDataInterface {
 
-    var isinit:Boolean
 
     val variableMap: HashMap<String, String>
 
     var userid: String
 
-    fun putVariable(key: String, value: String?)
+    fun putVariable(key: String, value: String?): Boolean {
+        val keyExist = variableMap.contains(key)
+        return when {
+            value == null -> {
+                variableMap.remove(key)
+                putBigVariable(key, null)
+                keyExist
+            }
 
-    fun getVariable(key: String): String? {
-        return variableMap[key]
+           /* value.length < 10000 -> {
+                putBigVariable(key, value)
+                variableMap[key] = value
+                true
+            }*/
+
+            else -> {
+                variableMap.remove(key)
+                putBigVariable(key, value)
+                keyExist
+            }
+        }
     }
+
+    fun getVariable(key: String): String {
+        return variableMap[key] ?: getBigVariable(key) ?: ""
+    }
+
+    fun putBigVariable(key: String, value: String?)
+
+    fun getBigVariable(key: String): String?
 
 
 }

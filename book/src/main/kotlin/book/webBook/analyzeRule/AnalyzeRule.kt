@@ -3,6 +3,7 @@ package book.webBook.analyzeRule
 import book.model.BaseBook
 import book.model.BaseSource
 import book.model.BookChapter
+import book.model.RssArticle
 import book.util.*
 import book.util.AppPattern.JS_PATTERN
 import book.util.help.CacheManager
@@ -38,6 +39,8 @@ class AnalyzeRule(
         get() =  LoggerFactory.getLogger(AnalyzeRule::class.java)
 
     val book get() = ruleData as? BaseBook
+
+    val rssArticle get() = ruleData as? RssArticle
 
     var chapter: BookChapter? = null
         set(value) {
@@ -694,7 +697,6 @@ class AnalyzeRule(
     }
 
     fun get(key: String): String {
-        logger.info("get: $key")
         when (key) {
             "bookName" -> book?.let {
                 return it.name
@@ -713,7 +715,7 @@ class AnalyzeRule(
             ?: book?.getVariable(key)?.takeIf { it.isNotEmpty() }
             ?: ruleData?.getVariable(key)?.takeIf { it.isNotEmpty() }
             ?:source?.get(key)?.takeIf { it.isNotEmpty() }
-            ?: "").also { logger.info("get:$key : $it") }
+            ?: "")
     }
 
     /**
@@ -739,6 +741,7 @@ class AnalyzeRule(
             bindings["title"] = chapter?.title
             bindings["src"] = content
             bindings["nextChapterUrl"] = nextChapterUrl
+            bindings["rssArticle"] = rssArticle
             binding(bindings)
         }
         val scope = RhinoScriptEngine.getRuntimeScope(bindings)

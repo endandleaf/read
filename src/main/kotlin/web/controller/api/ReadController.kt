@@ -33,7 +33,7 @@ import web.model.BaseSource
 import web.model.ReplaceRule
 import web.model.Users
 import web.response.*
-import web.service.MyCacheService
+import web.util.BigDataHelp
 import web.util.SslUtils
 import web.util.read.BookContent
 import web.util.read.getlist
@@ -69,9 +69,7 @@ open class ReadController : BaseController() {
         private val logger: Logger = LoggerFactory.getLogger(BaseController::class.java)
 
         fun getChapterListbycache(url: String,userid:String): List<BookChapter>? {
-            val key = "getChapterList:${url}"
-            val type = object : TypeToken<List<BookChapter>?>() {}.type
-            var re: List<BookChapter>? = MyCacheService.get(key, type,userid)
+            var re: List<BookChapter>? = BigDataHelp.getChapterList(url,userid)
             if (re != null && re.size > 0) {
                 logger.info("检测到目录缓存：${url}")
                 val lastCheckTime= re[0].lastCheckTime?:0
@@ -84,54 +82,45 @@ open class ReadController : BaseController() {
         }
 
         fun removeChapterListbycache(url: String,userid:String) {
-            val key = "getChapterList:${url}"
-            MyCacheService.remove(key,userid)
+            BigDataHelp.putChapterList(url,userid,null)
         }
 
         fun setChapterListbycache(url: String, re: List<BookChapter>,userid:String) {
-            val key = "getChapterList:${url}"
             if (re.size > 0) {
                 re[0].lastCheckTime= System.currentTimeMillis()
-                MyCacheService.set(key, re,userid)
+                BigDataHelp.putChapterList(url,userid,re)
             }
         }
 
         fun getBookContentbycache(url: String, index: Int,userid:String): String? {
-            val key = "getBookContent:${url},index:${index}"
-            val re: String? = MyCacheService.get(key, String::class.java,userid)
-            /* if (re != null && re.isNotEmpty()) {
-                //logger.info("检测到正文缓存：${url},index:${index}")
-            }*/
-            return re
+            return BigDataHelp.getBookContent(url,userid,index)
         }
 
         fun setBookContentbycache(url: String, re: String, index: Int,userid:String) {
             val key = "getBookContent:${url},index:${index}"
             if (re.length > 50) {
                 logger.info("添加缓存${key}")
-                MyCacheService.set(key, re,userid)
+                BigDataHelp.putBookContent(url,userid,index,re)
             }
         }
 
         fun removeBookContentbycache(url: String, index: Int,userid:String) {
             val key = "getBookContent:${url},index:${index}"
             logger.info("删除缓存${key}")
-            MyCacheService.remove(key,userid)
+            BigDataHelp.putBookContent(url,userid,index,null)
         }
 
         fun removeallBookContentbycache(url: String,userid:String) {
-            MyCacheService.removeBookContentbycache(url,userid)
+            BigDataHelp.removeAllBookContent(url,userid)
         }
 
         fun removeBookcache(url: String,userid:String) {
-            val key = "getBook:${url}"
-            MyCacheService.remove(key,userid)
+            BigDataHelp.putBookInfo(url,userid,null)
         }
 
 
         fun getBookbycache(url: String,userid:String): Book? {
-            val key = "getBook:${url}"
-            val re: Book? = MyCacheService.get(key, Book::class.java,userid)
+            val re: Book? = BigDataHelp.getBookInfo(url,userid)
             if (re != null) {
                 logger.info("检测到书本缓存：${url}")
             }
@@ -139,8 +128,7 @@ open class ReadController : BaseController() {
         }
 
         fun setBookbycache(url: String, book: Book,userid:String) {
-            val key = "getBook:${url}"
-            MyCacheService.set(key, book,userid)
+            BigDataHelp.putBookInfo(url,userid,book)
         }
     }
 
@@ -574,7 +562,7 @@ open class ReadController : BaseController() {
         JsonResponse(true).Data(mapOf("checkKeyWord" to booksource?.ruleSearch?.checkKeyWord,"found" to booksource?.exploreKinds(), "loginUrl" to booksource?.loginUrl, "loginUi" to booksource?.loginUi))
     }
 
-    @Mapping("/proypng")
+    //@Mapping("/proypng")
     open fun proypng(ctx: Context, accessToken: String?, url: String?, header: String?) = run {
         if (accessToken == null) throw DataThrowable().data(JsonResponse(false, NEED_LOGIN))
         if (url.isNullOrBlank()) throw DataThrowable().data(JsonResponse(false, NOT_BANK))
@@ -616,6 +604,10 @@ open class ReadController : BaseController() {
         if(jp != null){
             throw DataThrowable().data(jp)
         }
+        if(!(user?.AllowImg ?:false) ){
+            App.toast("没有权限进行图片解密",accessToken?:"")
+            throw DataThrowable().data(JsonResponse(false, CAN_NOT))
+        }
         if (url.isNullOrBlank()) throw DataThrowable().data(JsonResponse(false, NOT_BANK))
         val geturl = URL(url)
         SslUtils.ignoreSsl();
@@ -627,12 +619,14 @@ open class ReadController : BaseController() {
                 connection.setRequestProperty(k,v);
             }
         }
+        connection.setConnectTimeout(20*1000);
+        connection.setReadTimeout(20*1000);
         val responseCode = connection.getResponseCode();
         //  读取响应
         if (responseCode == HttpURLConnection.HTTP_OK) { // 200表示请求成功
             ctx.contentType(connection.getHeaderField("Content-Type"))
             val s= BookSource.fromJson(source!!.json).getOrNull()!!
-            if(!s.ruleContent?.imageDecode .isNullOrBlank()){
+            if(s.hasimageDecode()){
                 s.userid = user!!.id
                 s.usertocken = accessToken
                 var book:Book?=null
@@ -642,7 +636,7 @@ open class ReadController : BaseController() {
                    }
                 }
                runCatching {
-                    val bytes = s.imageDecode(src = url, inputStream = connection.getInputStream(),book=book)
+                    val bytes = s.DeimageDecode(src = url, inputStream = connection.getInputStream(),book=book)
                     ctx.outputStream().write(bytes)
                     ctx.flush()
                     //logger.info("解密成功")
@@ -716,9 +710,9 @@ open class ReadController : BaseController() {
         val user = getuserbytocken(accessToken).also {
             if (it == null) throw DataThrowable().data(JsonResponse(false, NEED_LOGIN))
         }!!
-        val book =Book(_bookUrl  =bookurl?:"");
+        val book =Book(bookUrl  =bookurl?:"");
         book.userid = user.id?:""
-        val info = book.getbookVariable();
+        val info = book.getCustomVariable();
         JsonResponse(true).Data(info)
     }
 
@@ -728,9 +722,9 @@ open class ReadController : BaseController() {
         val user = getuserbytocken(accessToken).also {
             if (it == null) throw DataThrowable().data(JsonResponse(false, NEED_LOGIN))
         }!!
-        val book =Book(_bookUrl  =bookurl?:"");
+        val book =Book(bookUrl  =bookurl?:"");
         book.userid = user.id?:""
-        book.setbookVariable(info?:"");
+        book.putCustomVariable(info?:"");
         JsonResponse(true)
     }
 

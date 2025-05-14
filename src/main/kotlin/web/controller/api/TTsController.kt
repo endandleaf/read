@@ -51,6 +51,11 @@ open class TTsController : BaseController() {
         }!!
         if(tts.name.isBlank() || tts.url.isNullOrBlank()) throw DataThrowable().data(JsonResponse(false, NOT_BANK))
         if(tts.id.isNullOrBlank()){
+            httpTTSMapper.getttsbyname(user.id!!,tts.name).also {
+                if(it.size > 0){
+                    throw DataThrowable().data(JsonResponse(false, NAME_ERROR))
+                }
+            }
             tts.create(user.id!!,tts.name)
             httpTTSMapper.insert(tts)
         }else{
@@ -59,8 +64,8 @@ open class TTsController : BaseController() {
                     throw DataThrowable().data(JsonResponse(false, NAME_ERROR))
                 }
             }
-            httpTTSMapper.deleteById(tts.id)
             tts.create(user.id!!,tts.name)
+            httpTTSMapper.deleteById(tts.id)
             httpTTSMapper.insert(tts)
         }
         JsonResponse(true)
@@ -84,8 +89,8 @@ open class TTsController : BaseController() {
         }!!
         ids?.forEach {id->
             if (id.isNotBlank()){
-                httpTTSMapper.gettts(id,user.id!!)?.let {
-                    httpTTSMapper.deleteById(id)
+                httpTTSMapper.gettts2(id,user.id!!)?.let {
+                    if(it.size > 0) httpTTSMapper.deleteById(id)
                 }
             }
         }
@@ -126,7 +131,7 @@ open class TTsController : BaseController() {
                 update += ups
             }
         }
-        JsonResponse(true,"新增${insert}条规则，更新${update}条规则")
+        JsonResponse(true,"新增${insert}条引擎，更新${update}条引擎")
     }
 
 

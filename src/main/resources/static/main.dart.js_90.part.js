@@ -1,65 +1,57 @@
 ((a,b,c)=>{a[b]=a[b]||{}
 a[b][c]=a[b][c]||[]
 a[b][c].push({p:"main.dart.js_90",e:"beginPart"})})(self,"$__dart_deferred_initializers__","eventLog")
-$__dart_deferred_initializers__.current=function(a,b,c,$){var J,A,D,G,H,I,K,C,E,L,M,B={
-Ce(d,e,f){var x=0,w=A.j(y.o),v,u,t,s,r,q
-var $async$Ce=A.e(function(g,h){if(g===1)return A.f(h,w)
-while(true)switch(x){case 0:u=y.g
-t=A.a6(["bookSourceUrl",d,"key",e,"page",""+f],u,u)
-r=D.r
-q=D.v
+$__dart_deferred_initializers__.current=function(a,b,c,$){var A,E,D,B={
+JJ(d,e,f,g){var x
+$label0$0:{if(g<=1){x=d
+break $label0$0}if(g<2){x=D.h4(d,e,g-1)
+x.toString
+break $label0$0}if(g<3){x=D.h4(e,f,g-2)
+x.toString
+break $label0$0}x=f
+break $label0$0}return x},
+bG(d){if(d==="NEED_LOGIN"){B.Ix()
+return"\u767b\u9646\u5df2\u8fc7\u671f"}else return d},
+Ix(){var x=0,w=A.i(y.v),v
+var $async$Ix=A.d(function(d,e){if(d===1)return A.e(e,w)
+while(true)switch(x){case 0:$.Ys="\u6211\u8fd8\u6ca1\u6709\u767b\u9646\u5462"
+v=y.k
+$.jV=A.a([],v)
+$.arW=A.a([],v)
+v=y.h
+$.tP=A.a([],v)
+$.bvw=A.a([],v)
+$.arT="\u5168\u90e8"
+$.bvu=A.a(["\u5168\u90e8"],y.x)
+x=2
+return A.c(B.aVr(),$async$Ix)
+case 2:return A.f(null,w)}})
+return A.h($async$Ix,w)},
+aVr(){var x=0,w=A.i(y.e),v,u
+var $async$aVr=A.d(function(d,e){if(d===1)return A.e(e,w)
+while(true)switch(x){case 0:u=$.bu
+u=u==null?null:u.F(0,"accessToken")
 x=3
-return A.c(P.d0(Q.bU("/searchBook"),t),$async$Ce)
-case 3:s=r.U(0,q.U(0,h))
-u=J.W(s)
-if(u.h(s,"isSuccess")){u=J.ej(u.h(s,"data"),new B.auD(),y.b)
-v=A.aa(u,!0,u.$ti.i("aN.E"))
-x=1
-break}else throw A.k(A.aH(H.cf(u.h(s,"errorMsg"))))
-case 1:return A.h(v,w)}})
-return A.i($async$Ce,w)},
-auD:function auD(){},
-cH(d,e){var x=0,w=A.j(y.f),v
-var $async$cH=A.e(function(f,g){if(f===1)return A.f(g,w)
-while(true)switch(x){case 0:if($.iM==="1"){v=I.dl(d,e,K.af)
-x=1
-break}v=F.ei(!0,new B.bpg(e),d,y.f)
+return A.c(y.E.b(u)?u:A.aP(u,y.l),$async$aVr)
+case 3:u=e
+v=u==null?!1:u
 x=1
 break
-case 1:return A.h(v,w)}})
-return A.i($async$cH,w)},
-bpg:function bpg(d){this.a=d},
-bpf:function bpf(d){this.a=d}},F,N,O,P,Q
-J=c[1]
+case 1:return A.f(v,w)}})
+return A.h($async$aVr,w)}},C
 A=c[0]
-D=c[2]
-G=c[116]
-H=c[98]
-I=c[92]
-K=c[132]
-C=c[111]
-E=c[124]
-L=c[126]
-M=c[100]
-B=a.updateHolder(c[69],B)
-F=c[91]
-N=c[93]
-O=c[71]
-P=c[101]
-Q=c[90]
-var z=a.updateTypes(["cn(@)","fg(I)"])
-B.auD.prototype={
-$1(d){return O.Jn(d)},
-$S:z+0}
-B.bpg.prototype={
-$1(d){var x=null,w=M.M(d)?x:L.f,v=C.C("\u63d0\u793a",x,x,x,x,x,x,x,x,x),u=C.C(this.a,x,x,x,x,x,C.a9(x,x,x,x,x,x,x,x,x,x,x,15,x,x,x,x,x,!0,x,x,x,x,x,x,x,x),x,x,x)
-return F.f6(A.a([N.di(!1,C.C("\u786e\u5b9a",x,x,x,x,x,C.a9(x,x,E.aO,x,x,x,x,x,x,x,x,15,x,x,x,x,x,!0,x,x,x,x,x,x,x,x),x,x,x),x,x,E.R,x,x,x,x,new B.bpf(d),x,x)],y.e),w,u,x,x,v)},
-$S:z+1}
-B.bpf.prototype={
-$0(){G.aw(this.a,!1).bn("\u786e\u5b9a")},
-$S:0};(function inheritance(){var x=a.inheritMany,w=a.inherit
-x(A.co,[B.auD,B.bpg])
-w(B.bpf,A.cI)})()
-var y={b:A.z("cn"),e:A.z("w<n>"),o:A.z("y<cn>"),g:A.z("l"),f:A.z("~")}};
+E=c[123]
+D=c[110]
+B=a.updateHolder(c[107],B)
+C=c[194]
+var z=a.updateTypes([])
+var y={E:A.z("O<C?>"),k:A.z("w<cs>"),h:A.z("w<f6>"),x:A.z("w<l>"),e:A.z("C"),l:A.z("C?"),v:A.z("~")};(function constants(){C.aek=new A.Q(64,40)
+C.iP=new E.b7(C.aek,A.z("b7<Q>"))})();(function staticFields(){$.tP=A.a([],y.h)
+$.bvw=A.a([],y.h)
+$.jV=A.a([],y.k)
+$.arW=A.a([],y.k)
+$.arT="\u5168\u90e8"
+$.bvu=A.a(["\u5168\u90e8"],y.x)
+$.Ys="\u6211\u8fd8\u6ca1\u6709\u767b\u9646\u5462"})()};
 ((a,b)=>{a[b]=a.current
-a.eventLog.push({p:"main.dart.js_90",e:"endPart",h:b})})($__dart_deferred_initializers__,"p4UojFnbZbEYWYsAA18cP+ifuvg=");
+a.eventLog.push({p:"main.dart.js_90",e:"endPart",h:b})})($__dart_deferred_initializers__,"vtCrGfLHuEsYSRakAEROxvNdL6I=");

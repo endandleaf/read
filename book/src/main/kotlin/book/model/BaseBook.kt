@@ -1,5 +1,7 @@
 package book.model
 
+import book.util.GSON
+import book.util.help.RuleBigDataHelp
 import book.webBook.analyzeRule.RuleDataInterface
 
 object BookType {
@@ -16,7 +18,7 @@ interface BaseBook: RuleDataInterface {
     var bookUrl: String
     var kind: String?
     var wordCount: String?
-
+    var variable: String?
     var infoHtml: String?
     var tocHtml: String?
 
@@ -31,4 +33,29 @@ interface BaseBook: RuleDataInterface {
 //        }
 //        return kindList
 //    }
+
+    override fun putVariable(key: String, value: String?): Boolean {
+        if (super.putVariable(key, value)) {
+            variable = GSON.toJson(variableMap)
+        }
+        return true
+    }
+
+    fun putCustomVariable(value: String?) {
+        putVariable("custom", value)
+    }
+
+    fun getCustomVariable(): String {
+        return getVariable("custom")
+    }
+
+    override fun putBigVariable(key: String, value: String?) {
+        if(userid.isEmpty()) return
+        RuleBigDataHelp.putBookVariable(bookUrl,userid, key, value)
+    }
+
+    override fun getBigVariable(key: String): String? {
+        if(userid.isEmpty()) return ""
+        return RuleBigDataHelp.getBookVariable(bookUrl,userid, key)
+    }
 }

@@ -170,7 +170,7 @@ object BookChapterList {
             val isVolumeRule = analyzeRule.splitSourceRule(tocRule.isVolume)
             elements.forEachIndexed { index, item ->
                 analyzeRule.setContent(item)
-                val bookChapter = BookChapter(bookUrl = book.bookUrl, baseUrl = redirectUrl)
+                val bookChapter = BookChapter(bookUrl = book.bookUrl, baseUrl = redirectUrl, userid = bookSource.userid?:"")
                 analyzeRule.chapter = bookChapter
                 bookChapter.title = analyzeRule.getString(nameRule)
                 bookChapter.url = analyzeRule.getString(urlRule)

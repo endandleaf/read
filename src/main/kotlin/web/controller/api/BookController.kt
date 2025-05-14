@@ -78,7 +78,7 @@ open class BookController:BaseController() {
             throw DataThrowable().data(JsonResponse(false,"search is empty"))
         }
         val s= BookSource.fromJson(source.json).getOrNull()
-        if(!s?.ruleContent?.imageDecode .isNullOrBlank() ){
+        if(s != null && s.hasimageDecode() ){
             re.forEach{
                 it.imageDecode=true
             }
@@ -124,7 +124,7 @@ open class BookController:BaseController() {
         booklistMapper.insert(booktolist.bookto(new!!,false).apply {
             this.useReplaceRule=(useReplaceRule == 1)
             val s= BookSource.fromJson(source.json).getOrNull()
-            if(!s?.ruleContent?.imageDecode .isNullOrBlank() ){
+            if(s != null && s.hasimageDecode() ){
                 this.imageDecode=true
             }
         })
@@ -221,7 +221,7 @@ open class BookController:BaseController() {
             book.lastCheckTime=System.currentTimeMillis()
             book.bookto(new!!,false)
             val s= BookSource.fromJson(source.json).getOrNull()
-            if(!s?.ruleContent?.imageDecode .isNullOrBlank() ){
+            if(s != null && s.hasimageDecode() ){
                 book.imageDecode=true
             }else{
                 book.imageDecode=false
@@ -249,6 +249,7 @@ open class BookController:BaseController() {
                 throw DataThrowable().data(JsonResponse(false,NOT_SOURCE))
             }
         }
+
         val webBook = WBook(source!!.json ?: "", user.id!!, accessToken, false)
         runCatching {
             val  new = webBook.getBookInfo(book.bookUrl, canReName = true).also {   setBookbycache(book.bookUrl,it,user.id!!) }
@@ -262,7 +263,7 @@ open class BookController:BaseController() {
             }
             mybook.bookto(new,false)
             val s= BookSource.fromJson(source.json).getOrNull()
-            if(!s?.ruleContent?.imageDecode .isNullOrBlank() ){
+            if(s != null && s.hasimageDecode() ){
                 mybook.imageDecode=true
             }else{
                 book.imageDecode=false

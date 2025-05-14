@@ -84,7 +84,7 @@ object BookList {
                     ruleName = ruleName, ruleBookUrl = ruleBookUrl, ruleAuthor = ruleAuthor,
                     ruleCoverUrl = ruleCoverUrl, ruleIntro = ruleIntro, ruleKind = ruleKind,
                     ruleLastChapter = ruleLastChapter, ruleWordCount = ruleWordCount,
-                    debugLog = debugLog
+                    debugLog = debugLog,
                 )?.let { searchBook ->
                     if (baseUrl == searchBook.bookUrl) {
                         searchBook.infoHtml = body
@@ -109,6 +109,7 @@ object BookList {
         debugLog: DebugLog? = null
     ): SearchBook? {
         val book = Book(variable = variable)
+        book.userid = bookSource.userid?:""
         book.bookUrl = analyzeUrl.ruleUrl
         book.origin = bookSource.bookSourceUrl
         book.originName = bookSource.bookSourceName
@@ -149,6 +150,7 @@ object BookList {
         debugLog: DebugLog? = null
     ): SearchBook? {
         val searchBook = SearchBook(variable = variable)
+        searchBook.userid=bookSource.userid?:""
         searchBook.origin = bookSource.bookSourceUrl
         searchBook.originName = bookSource.bookSourceName
         searchBook.type = bookSource.bookSourceType

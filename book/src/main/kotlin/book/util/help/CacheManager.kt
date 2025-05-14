@@ -1,6 +1,8 @@
 package book.util.help
 
+import book.appCtx
 import book.model.Cache
+import book.util.FileUtils
 import book.util.GSON
 import book.util.MyCache
 import book.webBook.analyzeRule.QueryTTF
@@ -38,22 +40,26 @@ fun hash(algorithm: String, srcStr: String): String {
 object CacheManager {
 
     private val queryTTFMap = hashMapOf<String, Pair<Long, QueryTTF>>()
-    private val cachepath="bookcache"
+
+    private val ruleDataDir = FileUtils.createFolderIfNotExist(appCtx.externalFiles, "cache")
+    private val cahceData = FileUtils.createFolderIfNotExist(ruleDataDir, "cache")
 
     /**
      * 最多只缓存50M的数据,防止OOM
      */
      val memoryLruCache:MyCache = MyCache(50)
 
-    private fun setcache(key:String,value:String){
-        val key= Md5(key)
-        File(cachepath+"/" + key).writeText(value)
+    private fun setcache(_key:String,value:String){
+        val key= Md5(_key)
+        val valueFile = FileUtils.createFileIfNotExist(cahceData, "$key.txt")
+        valueFile.writeText(value)
     }
 
-    private fun getcache(key:String):String?{
-        val key= Md5(key)
+    private fun getcache(_key:String):String?{
+        val key= Md5(_key)
         try {
-            val content = File(cachepath+"/" + key).readText()
+            val valueFile = FileUtils.createFileIfNotExist(cahceData, "$key.txt")
+            val content = valueFile.readText()
             return content
         }catch (e: FileNotFoundException){
             return null
@@ -158,9 +164,10 @@ object CacheManager {
         return getcache(key)
     }
 
-    fun delete(key: String) {
+    fun delete(_key: String) {
+        val key= Md5(_key)
         kotlin.runCatching {
-            File(cachepath+"/" + Md5(key)).let {
+            FileUtils.createFileIfNotExist(cahceData, "$key.txt").let {
                 if(it.exists()) it.delete()
             }
             deleteMemory(key)

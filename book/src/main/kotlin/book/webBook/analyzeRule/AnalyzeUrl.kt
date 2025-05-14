@@ -46,7 +46,7 @@ class AnalyzeUrl(
     private var coroutineContext: CoroutineContext = EmptyCoroutineContext,
     headerMapF: Map<String, String>? = null,
     val needanalyzeUrl :Boolean=true,
-    override  var debugLog: DebugLog?,
+    override  var debugLog: DebugLog?,hasLoginHeader: Boolean = true
 ) :JsExtensions {
 
     companion object {
@@ -85,7 +85,7 @@ class AnalyzeUrl(
     init {
         if(source != null) {
             runCatching {
-                headerMap.putAll(source!!.getHeaderMap())
+                headerMap.putAll(source!!.getHeaderMap(hasLoginHeader))
             }
         }
         initUrl()
@@ -115,7 +115,7 @@ class AnalyzeUrl(
         if(needanalyzeUrl) analyzeUrl()
 
         logger.info("ruleUrl $ruleUrl")
-        debugLog?.log(source?. getKey(), ruleUrl)
+        //debugLog?.log(source?. getKey(), ruleUrl)
     }
 
 
@@ -292,7 +292,6 @@ class AnalyzeUrl(
             chapter?.userid = userid
             ruleData?.userid = userid
         }
-        //println("put key:$key,value:$value")
         chapter?.putVariable(key, value)
             ?: ruleData?.putVariable(key, value)
         return value

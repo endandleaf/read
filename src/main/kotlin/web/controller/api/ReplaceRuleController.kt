@@ -44,6 +44,11 @@ open class ReplaceRuleController:BaseController() {
         }!!
         if(rule.name.isBlank()) throw DataThrowable().data(JsonResponse(false, NOT_BANK))
         if(rule.id.isNullOrBlank()){
+            replaceRuleMapper.getrulebyname(user.id!!,rule.name).also {
+                if(it.size > 0){
+                    throw DataThrowable().data(JsonResponse(false, NAME_ERROR))
+                }
+            }
             rule.create(user.id!!,rule.name)
             rule.isEnabled = true;
             replaceRuleMapper.insert(rule)
@@ -53,8 +58,8 @@ open class ReplaceRuleController:BaseController() {
                     throw DataThrowable().data(JsonResponse(false, NAME_ERROR))
                 }
             }
-            replaceRuleMapper.deleteById(rule.id)
             rule.create(user.id!!,rule.name)
+            replaceRuleMapper.deleteById(rule.id)
             replaceRuleMapper.insert(rule)
         }
         JsonResponse(true)
@@ -98,8 +103,8 @@ open class ReplaceRuleController:BaseController() {
         }!!
         ids?.forEach {id->
             if (id.isNotBlank()){
-                replaceRuleMapper.getrule(id,user.id!!)?.let {
-                    replaceRuleMapper.deleteById(id)
+                replaceRuleMapper.getrule2(id,user.id!!)?.let {
+                    if(it.size > 0) replaceRuleMapper.deleteById(id)
                 }
             }
         }

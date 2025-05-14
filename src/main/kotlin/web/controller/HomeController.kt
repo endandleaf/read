@@ -43,6 +43,10 @@ open class HomeController {
     @Inject(value = "\${user.allowcache:false}", autoRefreshed=true)
     var allowcache:Boolean=false
 
+    @Inject(value = "\${user.allowimg:false}", autoRefreshed=true)
+    var allowimg:Boolean=false
+
+
     @Inject(value = "\${user.source:0}", autoRefreshed=true)
     var source:Int =0
 
@@ -86,6 +90,7 @@ open class HomeController {
         user.source=source
         user.AllowCache=allowcache
         user.AllowUpTxt=allowuptxt
+        user.AllowImg=allowimg
 
         if(user.source != 0 && user.source !=1 && user.source !=2){
             user.source=0

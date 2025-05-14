@@ -30,4 +30,3 @@ server.http:
 server.request:
   maxBodySize: 50mb
   maxFileSize: 50mb
-  maxHeaderSize: 10mb

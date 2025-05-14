@@ -60,7 +60,7 @@ interface JsExtensions: JsEncodeUtils  {
      * 访问网络,返回String
      */
     fun ajax(urlStr: String): String? {
-        logger.info("ajax url: $urlStr")
+        //logger.info("ajax url: $urlStr")
         return runBlocking {
             kotlin.runCatching {
                 val analyzeUrl = AnalyzeUrl(urlStr, source = getSource(),debugLog = debugLog)
@@ -96,7 +96,7 @@ interface JsExtensions: JsEncodeUtils  {
      * 访问网络,返回Response<String>
      */
     fun connect(urlStr: String): StrResponse {
-        logger.info("connect:$urlStr")
+        //logger.info("connect:$urlStr")
         return runBlocking {
             val analyzeUrl = AnalyzeUrl(urlStr, source = getSource(),debugLog = debugLog)
             kotlin.runCatching {
@@ -221,29 +221,40 @@ interface JsExtensions: JsEncodeUtils  {
 
     fun startBrowserAwait(url: String,title: String, refetchAfterSuccess: Boolean): StrResponse = runBlocking {
         logger.info("跳转URL：$url")
-        val headerMap =getSource()?.getHeaderMap(true)?: hashMapOf()
+
+        val headerMap : HashMap<String, String> = hashMapOf()
         val headerMapF: HashMap<String, String> = hashMapOf()
-        headerMapF.putAll(headerMap)
+
+
+        val analyzeUrl = AnalyzeUrl(
+            url, source = getSource(),
+            debugLog = debugLog
+        )
+        val baseUrl = analyzeUrl.url
+        headerMap.putAll(analyzeUrl.headerMap)
+        headerMapF.putAll(analyzeUrl.headerMap)
+
 
         runCatching {
             val store=getSource()?.getCookieManger()
-            val cookie = (store?.getCookie(url))?:""
+            val cookie = (store?.getCookie(baseUrl))?:""
             if (cookie.isNotEmpty()) {
                 store?.mergeCookies(cookie, headerMap["Cookie"])?.let {
                     headerMap.put("Cookie", it)
                 }
             }
         }
+
         val header= GSON.toJson(headerMap)
         logger.info("header:$header")
-        var re=App.startBrowserAwait(url,title,getSource()?.usertocken?:"",header)
+        var re=App.startBrowserAwait(baseUrl,title,getSource()?.usertocken?:"",header)
         if(refetchAfterSuccess){
             logger.info("重新加载网页:$url")
             re = AnalyzeUrl(
                 url,
                 headerMapF = headerMapF,
                 source = getSource(),
-                debugLog = null,
+                debugLog = debugLog,
             ).getStrResponseAwait(useWebView = false)
         }
         re

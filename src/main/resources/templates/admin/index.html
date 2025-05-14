@@ -38,6 +38,7 @@
           <th lay-data="{field:'source', title:'书源',templet: '#source'}"></th>
           <th lay-data="{field:'allowUpTxt', title:'txt',templet: '#allowUpTxt'}"></th>
           <th lay-data="{field:'AllowCache', title:'缓存',templet: '#AllowCache'}"></th>
+          <th lay-data="{field:'AllowImg', title:'图片解密',templet: '#AllowImg'}"></th>
           <th lay-data="{field:'comment', title:'备注'}"></th>
           <th lay-data="{field:'updatetime', title:'更新时间', width:200}"></th>
           <th lay-data="{field:'createtime', title:'添加时间'  , width:200}"></th>
@@ -57,6 +58,14 @@
   <span class="layui-badge layui-bg-blue">允许</span>
   {{#  } else if(d.source == 2) { }}
   <span class="layui-badge layui-bg-cyan">独立</span>
+  {{#  } }}
+</script>
+
+<script type="text/html" id="AllowImg">
+  {{#  if(!d.AllowImg){ }}
+  <span class="layui-badge layui-bg-gray">不允许</span>
+  {{#  } else { }}
+  <span class="layui-badge layui-bg-blue">允许</span>
   {{#  } }}
 </script>
 

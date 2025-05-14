@@ -2,10 +2,14 @@ package book.WBook
 
 import book.model.Book
 import book.model.BookChapter
+import book.model.RssArticle
+import book.model.RssSource
 import book.util.HtmlFormatter
 import book.util.isAbsUrl
 import book.webBook.DebugLog
 import book.webBook.WBook
+import book.webBook.rss.Rss
+import book.webBook.sortUrls
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 import java.text.SimpleDateFormat
@@ -15,6 +19,7 @@ private val logger: Logger = LoggerFactory.getLogger(Debugger::class.java)
 class Debugger(val logMsg: (String) -> Unit) : DebugLog {
     private val debugTimeFormat = SimpleDateFormat("[mm:ss.SSS]", Locale.getDefault())
     private var startTime: Long = System.currentTimeMillis()
+    private var debugSource: String? = null
 
     fun log(
         sourceUrl: String?,
@@ -45,6 +50,54 @@ class Debugger(val logMsg: (String) -> Unit) : DebugLog {
         printMsg = "$time $printMsg"
         logMsg(printMsg)
     }
+
+    suspend fun startDebug( rssSource: RssSource) {
+        debugSource = rssSource.sourceUrl
+        log(debugSource, "︾开始解析")
+        val sort = rssSource.sortUrls().first()
+        kotlin.runCatching {
+            Rss(debugLogger = this@Debugger).getArticles( sort.first, sort.second, rssSource, 1)
+        }.onSuccess {
+                if (it.first.isEmpty()) {
+                    log(debugSource, "⇒列表页解析成功，为空")
+                    log(debugSource, "︽解析完成")
+                } else {
+                    val ruleContent = rssSource.ruleContent
+                    if (!rssSource.ruleArticles.isNullOrBlank() && rssSource.ruleDescription.isNullOrBlank()) {
+                        log(rssSource.sourceUrl, "︽列表页解析完成")
+                        if (ruleContent.isNullOrEmpty()) {
+                            log(debugSource, "⇒内容规则为空，默认获取整个网页")
+                        } else {
+                            rssContentDebug( it.first[0], ruleContent, rssSource)
+                        }
+                    } else {
+                        log(debugSource, "⇒存在描述规则，不解析内容页")
+                        log(debugSource, "︽解析完成")
+                    }
+                }
+            }
+            .onFailure {
+                log(debugSource, it.message)
+            }
+    }
+
+    private suspend fun rssContentDebug(
+        rssArticle: RssArticle,
+        ruleContent: String,
+        rssSource: RssSource
+    ) {
+        log(debugSource, "︾开始解析内容页")
+        kotlin.runCatching {
+            Rss(debugLogger = this@Debugger).getContent( rssArticle, ruleContent, rssSource)
+        }.onSuccess {
+                log(debugSource, it)
+                log(debugSource, "︽内容页解析完成")
+        } .onFailure {
+                log(debugSource, it.message)
+            }
+    }
+
+
 
     suspend fun startDebug(WBook: WBook, key: String) {
         val bookSource = WBook.bookSource
@@ -153,14 +206,12 @@ class Debugger(val logMsg: (String) -> Unit) : DebugLog {
                 chapterList?.let {
                     if (it.isNotEmpty()) {
                         log(WBook.sourceUrl, "︽目录页解析完成")
-                        if(it.size == 1){
-                            log(WBook.sourceUrl, "开始获取正文：${ it[0].url}")
-                            val nextChapterUrl = if (it.size > 1) it[1].url else null
-                            contentDebug(WBook, book, it[0], nextChapterUrl)
-                        }else{
-                            log(WBook.sourceUrl, "开始获取正文：${ it[1].url}")
-                            val nextChapterUrl = if (it.size > 2) it[2].url else null
-                            contentDebug(WBook, book, it[1], nextChapterUrl)
+                        for( i in 0..it.size - 1){
+                            if(it[i].isVolume) continue
+                            log(WBook.sourceUrl, "开始获取正文：${ it[i].url}")
+                            val nextChapterUrl = if (it.size > i+1) it[i+1].url else null
+                            contentDebug(WBook, book, it[i], nextChapterUrl)
+                            break
                         }
 
                     } else {

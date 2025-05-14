@@ -56,6 +56,8 @@ class Users {
 
     var AllowCache: Boolean? = null
 
+    var AllowImg: Boolean? = null
+
 
     var comment: String? = null
 

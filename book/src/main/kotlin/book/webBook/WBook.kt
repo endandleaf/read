@@ -53,9 +53,7 @@ class WBook (val bookSource: BookSource, val debugLog: Boolean = true, var debug
 
 
     suspend fun searchBook(key: String, page: Int? = 1): List<SearchBook> {
-        val variableBook = SearchBook(origin = sourceUrl)
-        variableBook.userid=userid?:""
-        variableBook.searchinit()
+        val variableBook =  SearchBook.getSearchBook(userid?:"",sourceUrl)
         return bookSource.searchUrl?.let {searchUrl->
             val analyzeUrl = AnalyzeUrl(
                 mUrl = searchUrl,
@@ -66,9 +64,7 @@ class WBook (val bookSource: BookSource, val debugLog: Boolean = true, var debug
                 ruleData = variableBook,
                 headerMapF = bookSource.getHeaderMap(true),debugLog = debugger
             )
-
             var res = analyzeUrl.getStrResponseAwait()
-
 
             bookSource.loginCheckJs?.let { checkJs ->
                 if (checkJs.isNotBlank()) {
@@ -81,6 +77,8 @@ class WBook (val bookSource: BookSource, val debugLog: Boolean = true, var debug
             }
 
             checkRedirect(bookSource, res)
+
+
             BookList.analyzeBookList(
                 res.body,
                 bookSource,
@@ -104,9 +102,7 @@ class WBook (val bookSource: BookSource, val debugLog: Boolean = true, var debug
         url: String,
         page: Int? = 1
     ): List<SearchBook> {
-        val variableBook =  SearchBook(origin = sourceUrl)
-        variableBook.userid=userid?:""
-        variableBook.searchinit()
+        val variableBook =  SearchBook.getSearchBook(userid?:"",sourceUrl)
         val analyzeUrl = AnalyzeUrl(
             mUrl = url,
             page = page,
@@ -241,6 +237,7 @@ class WBook (val bookSource: BookSource, val debugLog: Boolean = true, var debug
         nextChapterUrl: String? = null
     ): String {
         book.userid=userid?:""
+        bookChapter.userid=userid?:""
         //println(bookSource.ruleContent?.content)
         //println(GSON.toJson(bookChapter))
         if (bookSource.getContentRule().content.isNullOrEmpty()) {
