@@ -283,6 +283,7 @@ class AnalyzeUrl(
         source?.getShareScope()?.let {
             scope.prototype = it
         }
+
         return RhinoScriptEngine.eval(getjs(jsStr), scope, coroutineContext)
     }
 
@@ -329,16 +330,17 @@ class AnalyzeUrl(
             if (this.useWebView && useWebView) {
                 when (method) {
                     RequestMethod.POST -> {
-                        val res = getClient().newCallStrResponse(retry) {
-                            addHeaders(headerMap)
-                            url(urlNoQuery)
+                        if(headerMap["Content-Type"].isNullOrBlank()){
                             if (fieldMap.isNotEmpty() || body.isNullOrBlank()) {
-                                postForm(fieldMap, true)
+                                headerMap["Content-Type"]="application/x-www-form-urlencoded"
+                                body = fieldMap.entries.joinToString("&") {
+                                    "${it.key}=${it.value}"
+                                }
                             } else {
-                                postJson(body)
+                                headerMap["Content-Type"]="application/json; charset=UTF-8"
                             }
                         }
-                        return  App.webview(res.body,res.url,webJs ?: jsStr,getSource()?.usertocken?:"",GSON.toJson(headerMap))
+                        return  App.webviewbody("",url,webJs ?: jsStr,getSource()?.usertocken?:"",GSON.toJson(headerMap),body?:"")
                     }
                     else -> {
                         return  App.webview("",url,webJs ?: jsStr,getSource()?.usertocken?:"",GSON.toJson(headerMap))

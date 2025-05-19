@@ -9,27 +9,18 @@ import org.noear.solon.annotation.Controller
 import org.noear.solon.annotation.Inject
 import org.noear.solon.net.annotation.ServerEndpoint
 import org.noear.solon.net.websocket.WebSocket
-import org.noear.solon.net.websocket.listener.SimpleWebSocketListener
+import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 import web.mapper.BookSourceMapper
 import web.mapper.UserBookSourceMapper
-import web.mapper.UsersMapper
-import web.mapper.UsertockenMapper
 import web.model.BaseSource
-import web.model.Users
 import web.response.JsonResponse
 import java.io.IOException
 
 @Controller
-@ServerEndpoint(routepath+"/debug")
-open  class DebugWebSocket : SimpleWebSocketListener() {
-    @Db("db")
-    @Inject
-    lateinit var usersMapper: UsersMapper
+@ServerEndpoint("$routepath/debug")
+open  class DebugWebSocket : BaseDebug() {
 
-    @Db("db")
-    @Inject
-    lateinit var usertockenMapper: UsertockenMapper
 
     @Db("db")
     @Inject
@@ -39,30 +30,7 @@ open  class DebugWebSocket : SimpleWebSocketListener() {
     @Inject
     lateinit var userBookSourceMapper: UserBookSourceMapper
 
-    private  val logger= LoggerFactory.getLogger(DebugWebSocket::class.java)
-
-    override fun onOpen(socket: WebSocket) {
-        val accessToken: String = socket.param("id")
-        logger.info("websocket Open $accessToken")
-        if (accessToken.isBlank()) {
-            socket.close()
-            return
-        }
-
-        val tocken=usertockenMapper.selectById(accessToken)
-        if (tocken == null) {
-            logger.info("websocket tocken is null")
-            socket.close()
-            return
-        }
-
-        val user=usersMapper.selectById(tocken.userid)
-        if (user == null) {
-            logger.info("websocket user is null")
-            socket.close()
-            return
-        }
-    }
+    override val logger: Logger = LoggerFactory.getLogger(DebugWebSocket::class.java)
 
     @Throws(IOException::class)
     override fun onMessage(socket: WebSocket, text: String): Unit = runBlocking{
@@ -98,12 +66,12 @@ open  class DebugWebSocket : SimpleWebSocketListener() {
             socket.close()
             return@runBlocking
         }
-        val debugger = Debugger { msg ->
-            socket.send( Gson().toJson(mapOf("msg" to msg)) + "\n\n")
-            logger.info( Gson().toJson(mapOf("msg" to msg)) + "\n\n")
+        val debugger = Debugger { msg1 ->
+            socket.send( Gson().toJson(mapOf("msg" to msg1)) + "\n\n")
+            logger.info( Gson().toJson(mapOf("msg" to msg1)) + "\n\n")
         }
         runCatching {
-            val webBook = WBook(bookSource.json ?: "", user.id!!, accessToken, true)
+            val webBook = WBook(bookSource.json , user.id!!, accessToken, true)
             debugger.startDebug(webBook, msg.key!!)
         }
         //socket.send("event: end\n")
@@ -112,23 +80,5 @@ open  class DebugWebSocket : SimpleWebSocketListener() {
     }
 
 
-    fun getuserbytocken(accessToken:String?): Users?{
-        if (accessToken == null || accessToken.isBlank()) {
-            return null
-        }
-        val tocken=usertockenMapper.selectById(accessToken)
-        if (tocken == null) {
-            return null
-        }
-        val user=usersMapper.selectById(tocken.userid)
-        if (user == null) {
-            return null
-        }
-        return user
-    }
 }
 
-class DebugMsg{
-    var url:String?=null
-    var key:String?=null
-}

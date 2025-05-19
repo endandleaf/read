@@ -106,7 +106,6 @@ object CacheManager {
     }
 
     fun get(key: String): String? {
-       //println("get:$key")
         var v=getcache(key)
         var re:String?= null
         runCatching {
@@ -161,7 +160,7 @@ object CacheManager {
     }
 
     fun getFile(key: String): String? {
-        return getcache(key)
+        return get(key)
     }
 
     fun delete(_key: String) {

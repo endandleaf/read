@@ -4,16 +4,14 @@ import book.app.App
 import book.model.Book
 import book.webBook.WBook
 import book.webBook.exception.ConcurrentException
-import web.model.BookSource
+
 import kotlinx.coroutines.Deferred
 import kotlinx.coroutines.async
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
-import org.noear.solon.net.websocket.WebSocket
 import org.slf4j.LoggerFactory
-import web.controller.api.ApiWebSocket.WebMsg
 import web.controller.api.ReadController.Companion.getBookbycache
 import web.controller.api.ReadController.Companion.getChapterListbycache
 import web.controller.api.ReadController.Companion.setBookContentbycache
@@ -29,8 +27,8 @@ object  BookContent {
     private val logger = LoggerFactory.getLogger(BookContent::class.java)
 
     fun  getbookcontent(accessToken:String, user: Users, source: BaseSource, url:String, index:Int, type:Int):String= runBlocking{
-        var key="url:$url,index:$index"
-        var deferred: Deferred<String>? = null
+        val key="url:$url,index:$index"
+        var deferred: Deferred<String>?
         mutex.withLock {
             deferred=ma[key]
         }
@@ -64,17 +62,13 @@ object  BookContent {
                   setChapterListbycache(url,it,user.id!!)
               }
           }
-          var webBook = WBook(source.json?:"",user.id!!,accessToken, false)
-          var book= getBookbycache(url,user.id!!).let {
-              if(it==null){
-                  getbook(webBook,url)!!.also { setBookbycache(url,it,user.id!!) }
-              }else{
-                  it
-              }
+         val webBook = WBook(source.json,user.id!!,accessToken, false)
+         val book= getBookbycache(url,user.id!!).let { it1->
+             it1 ?: getbook(webBook,url)!!.also { setBookbycache(url,it,user.id!!) }
           }
           // println("目录链接1 ${chapterlist[index].baseUrl}")
           //println("目录链接 ${chapterlist[index].url}")
-          var systembook=mapper.get().booklistMapper.getbook(user.id!!,url)
+         val systembook=mapper.get().booklistMapper.getbook(user.id!!,url)
           if(systembook!=null){
              // println("获取阅读进度1:${url},index:${systembook.durChapterIndex}")
               book.durChapterIndex=systembook.durChapterIndex?:0
@@ -87,7 +81,7 @@ object  BookContent {
                   it.printStackTrace()
              }
           }
-         var nexturl=if(index+1 < chapterlist.size) chapterlist[index+1].url else ""
+         val nexturl=if(index+1 < chapterlist.size) chapterlist[index+1].url else ""
           return webBook.getBookContent(book,chapterlist[index],nexturl).also { if( type != 1) setBookContentbycache(url,it,index,user.id!!) }
       }
       return  ""

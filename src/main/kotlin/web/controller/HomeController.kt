@@ -2,6 +2,7 @@ package web.controller
 
 import org.apache.ibatis.solon.annotation.Db
 import org.noear.solon.annotation.*
+import org.noear.solon.core.handle.Context
 import org.noear.solon.core.handle.ModelAndView
 import org.noear.solon.core.util.DataThrowable
 import org.noear.solon.data.annotation.Tran
@@ -152,6 +153,11 @@ open class HomeController {
         val c= getcodes(1)[0]
         cacheService.store(c,c,60*10)
         JsonResponse(true).Data(c)
+    }
+
+    @Mapping("/ua")
+    fun ua(ctx: Context)=run {
+        ctx.outputAsHtml( ctx.userAgent())
     }
 
 }

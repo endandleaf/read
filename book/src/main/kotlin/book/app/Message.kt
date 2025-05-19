@@ -6,6 +6,7 @@ data class WebMessage (
     val html: String = "",
     val title: String,
     val header:String="",
+    val body:String="",
     val id: String,
 )
 

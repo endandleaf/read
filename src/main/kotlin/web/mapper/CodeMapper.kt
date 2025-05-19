@@ -7,6 +7,6 @@ import web.model.Code
 
 interface CodeMapper: BaseMapper<Code> {
 
-    @Select("SELECT * FROM code WHERE code = #{code}")
+    @Select("SELECT * FROM code WHERE code = #{code} LIMIT 1")
     fun getCode(@Param("code") code: String): Code?
 }

@@ -14,7 +14,7 @@ interface RssSourceMapper : BaseMapper<RssSource> {
     @Select("SELECT * FROM rss_source where enabled = true order by sourceorder asc")
     fun getEnabledSourcelist(): List<RssSource>?
 
-    @Select("SELECT * FROM rss_source WHERE source_url = #{source_url}")
+    @Select("SELECT * FROM rss_source WHERE source_url = #{source_url} LIMIT 1")
     fun getRssSource(@Param("source_url") source_url: String): RssSource?
 
     @Update("UPDATE rss_source set sourceorder= #{sourceorder} WHERE source_url = #{source_url}")

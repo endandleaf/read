@@ -11,9 +11,6 @@ import book.webBook.exception.ConcurrentException
 import book.webBook.exception.RegexTimeoutException
 import book.webBook.localBook.LocalBook
 import com.google.gson.Gson
-import com.google.gson.reflect.TypeToken
-import com.script.rhino.RhinoScriptEngine.put
-import com.script.rhino.runScriptWithContext
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.runBlocking
 import org.apache.ibatis.solon.annotation.Db
@@ -37,10 +34,8 @@ import web.util.BigDataHelp
 import web.util.SslUtils
 import web.util.read.BookContent
 import web.util.read.getlist
-import java.io.ByteArrayOutputStream
 import java.net.HttpURLConnection
-import java.net.URL
-import kotlin.concurrent.thread
+import java.net.URI
 import kotlin.coroutines.cancellation.CancellationException
 import kotlin.random.Random
 
@@ -70,12 +65,12 @@ open class ReadController : BaseController() {
 
         fun getChapterListbycache(url: String,userid:String): List<BookChapter>? {
             var re: List<BookChapter>? = BigDataHelp.getChapterList(url,userid)
-            if (re != null && re.size > 0) {
+            if (!re.isNullOrEmpty()) {
                 logger.info("检测到目录缓存：${url}")
                 val lastCheckTime= re[0].lastCheckTime?:0
                 if(System.currentTimeMillis() - lastCheckTime > 24*60*60*1000){
                     logger.info("目录缓存过期：${url}")
-                    re=null;
+                    re=null
                 }
             }
             return re
@@ -86,7 +81,7 @@ open class ReadController : BaseController() {
         }
 
         fun setChapterListbycache(url: String, re: List<BookChapter>,userid:String) {
-            if (re.size > 0) {
+            if (re.isNotEmpty()) {
                 re[0].lastCheckTime= System.currentTimeMillis()
                 BigDataHelp.putChapterList(url,userid,re)
             }
@@ -143,18 +138,15 @@ open class ReadController : BaseController() {
             when {
                 bookSourceUrl == "loc_book" -> getlist(url).let {
                     setChapterListbycache(url, it,user.id!!)
-                    chapters=it;
+                    chapters=it
                 }
 
                 else -> {
-                    val (source, jp) = getsource(user ,bookSourceUrl)
-                    if (jp != null) {
-                        throw DataThrowable().data(jp)
-                    }
-                    getlist(url, source!!, user.id!!, accessToken ?: "").let {
+                    val source = getsource(user ,bookSourceUrl)
+                    getlist(url, source, user.id!!, accessToken ?: "").let {
                         setChapterListbycache(url, it,user.id!!)
                         runCatching {
-                            var book = booklistMapper.getbook(user.id!!, url)
+                            val book = booklistMapper.getbook(user.id!!, url)
                             if(book != null) {
                                 val lastCheckTime=System.currentTimeMillis()
                                 val lastCheckCount=it.size
@@ -163,9 +155,9 @@ open class ReadController : BaseController() {
                                     val latestChapterTitle=it[it.size-1].title
                                     val latestChapterTime=System.currentTimeMillis()
                                     booklistMapper.updatetime(book.id!!,latestChapterTitle,latestChapterTime,lastCheckTime,lastCheckCount, totalChapterNum )
-                                    bookCacheMapper.getCache(book.userid!!,book.id!!).let {
-                                        if(it!=null){
-                                            bookCacheMapper.updatetime(it.id!!,totalChapterNum)
+                                    bookCacheMapper.getCache(book.userid!!,book.id!!).let {it1->
+                                        if(it1!=null){
+                                            bookCacheMapper.updatetime(it1.id!!,totalChapterNum)
                                         }
                                     }
                                 }else{
@@ -187,9 +179,7 @@ open class ReadController : BaseController() {
     @Mapping("/getChapterList")
     fun getChapterList(accessToken: String?, bookSourceUrl: String?, url: String?) = runBlocking {
         if (url == null) throw DataThrowable().data(JsonResponse(false, NOT_BANK))
-        val user = getuserbytocken(accessToken).also {
-            if (it == null) throw DataThrowable().data(JsonResponse(false, NEED_LOGIN))
-        }!!
+        val user = getuserbytocken(accessToken)
         JsonResponse(true).Data(getChapterList(accessToken,bookSourceUrl,url,user))
     }
 
@@ -198,7 +188,7 @@ open class ReadController : BaseController() {
     ) = runBlocking {
         if (type != 1) {
             val txt = getBookContentbycache(url, index ?: 0,user.id!!)
-            if (txt != null && txt.isNotEmpty()) {
+            if (!txt.isNullOrEmpty()) {
                 logger.info("正文缓存使用成功")
                 return@runBlocking txt
             }
@@ -220,11 +210,8 @@ open class ReadController : BaseController() {
             }
 
             else -> {
-                val (source, jp) = getsource(accessToken, bookSourceUrl,user)
-                if (jp != null) {
-                    throw DataThrowable().data(jp)
-                }
-                val re = BookContent.getbookcontent(accessToken ?: "", user, source!!, url, index ?: 0, type ?: 0)
+                val source = getsource(accessToken, bookSourceUrl,user)
+                val re = BookContent.getbookcontent(accessToken ?: "", user, source, url, index ?: 0, type ?: 0)
                 re
             }
         }
@@ -236,9 +223,7 @@ open class ReadController : BaseController() {
         accessToken: String?, bookSourceUrl: String?, url: String?, index: Int?, type: Int?
     ) = runBlocking {
         if (url == null) throw DataThrowable().data(JsonResponse(false, NOT_BANK))
-        val user = getuserbytocken(accessToken).also {
-            if (it == null) throw DataThrowable().data(JsonResponse(false, NEED_LOGIN))
-        }!!
+        val user = getuserbytocken(accessToken)
         JsonResponse(true).Data(getBookContent(accessToken,bookSourceUrl,url,index,type,user))
     }
 
@@ -247,9 +232,7 @@ open class ReadController : BaseController() {
         accessToken: String?, bookSourceUrl: String?, url: String?, index: Int?, type: Int?, bookname: String?,useReplaceRule:Int?
     ) = runBlocking {
         if (url == null) throw DataThrowable().data(JsonResponse(false, NOT_BANK))
-        val user = getuserbytocken(accessToken).also {
-            if (it == null) throw DataThrowable().data(JsonResponse(false, NEED_LOGIN))
-        }!!
+        val user = getuserbytocken(accessToken)
         var re=getBookContent(accessToken,bookSourceUrl,url,index,type,user)
         val  effectiveReplaceRules:MutableList<ReplaceRule> = mutableListOf()
         if(type == 0 && !bookname.isNullOrBlank() && useReplaceRule == 1 ){
@@ -293,17 +276,14 @@ open class ReadController : BaseController() {
     @Mapping("/getChapterListNew")
     fun getChapterListNew(accessToken: String?, bookSourceUrl: String?, url: String?, bookname: String?,useReplaceRule:Int?) = runBlocking {
         if (url == null) throw DataThrowable().data(JsonResponse(false, NOT_BANK))
-        val user = getuserbytocken(accessToken).also {
-            if (it == null) throw DataThrowable().data(JsonResponse(false, NEED_LOGIN))
-        }!!
+        val user = getuserbytocken(accessToken)
         val chapters=getChapterList(accessToken,bookSourceUrl,url,user)
         if(!bookname.isNullOrBlank() && useReplaceRule == 1){
             val rules=replaceRuleMapper.getrulebybookname(user.id!!,"%$bookname%").filter { it.scopeTitle }
-            logger.info("获取到${rules.size}条规则")
-            if(rules.size > 0){
+            if(rules.isNotEmpty()){
                 chapters?.forEach{
                     rules.forEach {item ->
-                        if (!item.pattern.isEmpty()) {
+                        if (item.pattern.isNotEmpty()) {
                             try {
                                 val tmp = if (item.isRegex) {
                                     it.title.replace(
@@ -338,9 +318,7 @@ open class ReadController : BaseController() {
     @Mapping("/fetchBookContent")
     fun fetchBookContent(accessToken: String?,url: String?, index: Int?) = runBlocking {
         if (url == null) throw DataThrowable().data(JsonResponse(false, NOT_BANK))
-        val user = getuserbytocken(accessToken).also {
-            if (it == null) throw DataThrowable().data(JsonResponse(false, NEED_LOGIN))
-        }!!
+        val user = getuserbytocken(accessToken)
         removeBookContentbycache(url, index ?: 0,user.id!!)
         removeChapterListbycache(url, user.id!!)
         JsonResponse(true)
@@ -349,12 +327,10 @@ open class ReadController : BaseController() {
     @Mapping("/fetchBook")
     fun fetchBook(accessToken: String?,url: String?) = runBlocking {
         if (url == null) throw DataThrowable().data(JsonResponse(false, NOT_BANK))
-        val user = getuserbytocken(accessToken).also {
-            if (it == null) throw DataThrowable().data(JsonResponse(false, NEED_LOGIN))
-        }!!
+        val user = getuserbytocken(accessToken)
 
         removeBookcache(url,user.id!!)
-        removeChapterListbycache(url,user.id!!);
+        removeChapterListbycache(url,user.id!!)
         removeallBookContentbycache(url,user.id!!)
         val booktolist=booklistMapper.getbook(user.id!!,url)
         if(booktolist != null){
@@ -370,15 +346,13 @@ open class ReadController : BaseController() {
 
     @Mapping("/saveBookProgress")
     open fun saveBookProgress(accessToken: String?, pos: Double?, url: String?, index: Int?) = runBlocking {
-        val user = getuserbytocken(accessToken).also {
-            if (it == null) throw DataThrowable().data(JsonResponse(false, NEED_LOGIN))
-        }!!
+        val user = getuserbytocken(accessToken)
         val book = booklistMapper.getbook(user.id!!, url.also {
             if (it == null) throw DataThrowable().data(JsonResponse(false, NOT_BANK))
         }!!).also {
             if (it == null) {
                 //println("添加阅读进度到内存${url}")
-                cacheService.store("indexuerid:${user.id},bookurl:${url}",index,10*30);
+                cacheService.store("indexuerid:${user.id},bookurl:${url}",index,10*30)
                 throw DataThrowable().data(JsonResponse(true))
             }
         }!!
@@ -415,9 +389,7 @@ open class ReadController : BaseController() {
 
     @Mapping("/getBookread")
     fun getBookread(accessToken: String?, url: String?) = runBlocking {
-        val user = getuserbytocken(accessToken).also {
-            if (it == null) throw DataThrowable().data(JsonResponse(false, NEED_LOGIN))
-        }!!
+        val user = getuserbytocken(accessToken)
         val book = booklistMapper.getbook(user.id!!, url.also {
             if (it == null) throw DataThrowable().data(JsonResponse(false, NOT_BANK))
         }!!).also {
@@ -439,16 +411,14 @@ open class ReadController : BaseController() {
     open fun setBookSource(
         accessToken: String?, bookUrl: String?, newUrl: String?, bookSourceUrl: String?
     ) = runBlocking {
-        val user = getuserbytocken(accessToken).also {
-            if (it == null) throw DataThrowable().data(JsonResponse(false, NEED_LOGIN))
-        }!!
+        val user = getuserbytocken(accessToken)
         val book = booklistMapper.getbook(user.id!!, bookUrl.also {
             if (it == null) throw DataThrowable().data(JsonResponse(false, NOT_BANK))
         }!!).also {
             if (it == null) throw DataThrowable().data(JsonResponse(false, NO_BOOK))
         }!!
         val source = getsource(bookSourceUrl?:"",user)
-        val webBook = WBook(source!!.json ?: "", user.id!!, accessToken, false)
+        val webBook = WBook(source!!.json , user.id!!, accessToken, false)
         var new: Book? = null
         runCatching {
             new = webBook.getBookInfo(newUrl ?: "", canReName = true)
@@ -482,9 +452,7 @@ open class ReadController : BaseController() {
        }else  if(v > apiversion){
            throw DataThrowable().data(JsonResponse(false,NEED_LOGIN))
        }
-        val user = getuserbytocken(accessToken).also {
-            if (it == null) throw DataThrowable().data(JsonResponse(false, NEED_LOGIN))
-        }!!
+        val user = getuserbytocken(accessToken)
         val book = booklistMapper.getbooklistbyuserid(user.id!!)
         book?.forEach {
             if (it.customCoverUrl != null && it.customCoverUrl!!.isNotBlank()) {
@@ -514,20 +482,17 @@ open class ReadController : BaseController() {
         }else  if(v > apiversion){
             throw DataThrowable().data(JsonResponse(false,NEED_LOGIN))
         }
-        val user = getuserbytocken(accessToken).also {
-            if (it == null) throw DataThrowable().data(JsonResponse(false, NEED_LOGIN))
-        }!!
-        var source: List<BaseSource>? = null
-        if(isall != null && isall == "1" && user.source != 0){
-            source=getallBookSourcelist(user)
+        val user = getuserbytocken(accessToken)
+        val source: List<BaseSource> = if(isall != null && isall == "1" && user.source != 0){
+            getallBookSourcelist(user)
         }else{
-            source=getBookSourcelist(true,user)
+            getBookSourcelist(true,user)
         }
         val list: MutableList<Map<String, Any?>> = mutableListOf()
         source.forEach {
-            val s=BookSource.fromJson(it.json?:"").getOrNull()
-            var loginUi=s?.loginUi;
-            if(loginUi != null && loginUi.isNotEmpty()){
+            val s=BookSource.fromJson(it.json).getOrNull()
+            var loginUi=s?.loginUi
+            if(!loginUi.isNullOrEmpty()){
                 kotlin.runCatching {
                     val r=GSON.fromJsonArray<Any>(loginUi).getOrNull()
                     loginUi= GSON.toJson(r)
@@ -553,90 +518,50 @@ open class ReadController : BaseController() {
     @Cache(key = "ExploreUrl:\${bookSourceUrl},\${accessToken}", tags = "search\${accessToken}", seconds = 600)
     @Mapping("/getBookSourcesExploreUrl")
     open fun getBookSourcesExploreUrl(accessToken: String?, bookSourceUrl: String?) = runBlocking {
-        val (user,source,jp)=getsourceuser(accessToken,bookSourceUrl)
-        if(jp != null){
-            throw DataThrowable().data(jp)
-        }
-        val booksource = BookSource.fromJson(source!!.json ?: "").getOrNull()
-        booksource?.userid=user!!.id
+        val (user,source)=getsourceuser(accessToken,bookSourceUrl)
+        val booksource = BookSource.fromJson(source.json ).getOrNull()
+        booksource?.userid=user.id
         JsonResponse(true).Data(mapOf("checkKeyWord" to booksource?.ruleSearch?.checkKeyWord,"found" to booksource?.exploreKinds(), "loginUrl" to booksource?.loginUrl, "loginUi" to booksource?.loginUi))
-    }
-
-    //@Mapping("/proypng")
-    open fun proypng(ctx: Context, accessToken: String?, url: String?, header: String?) = run {
-        if (accessToken == null) throw DataThrowable().data(JsonResponse(false, NEED_LOGIN))
-        if (url.isNullOrBlank()) throw DataThrowable().data(JsonResponse(false, NOT_BANK))
-        val url = URL(url)
-        SslUtils.ignoreSsl();
-        val connection = url.openConnection() as HttpURLConnection
-        connection.setRequestMethod("GET")
-        runCatching {
-            val json= Gson().fromJson<Map<String, String>>(header, Map::class.java)
-            json.forEach{(k,v)->
-                connection.setRequestProperty(k,v);
-            }
-        }
-        val responseCode = connection.getResponseCode();
-        //  读取响应
-        if (responseCode == HttpURLConnection.HTTP_OK) { // 200表示请求成功
-            ctx.contentType(connection.getHeaderField("Content-Type"))
-            connection.getInputStream().use {
-                val b = ByteArray(4096)
-                var len: Int
-                while ((it.read(b).also { len = it }) != -1) {
-                    ctx.outputStream().write(b, 0, len)
-                }
-            }
-            //ctx.flush()
-
-        } else {
-            logger.info("GET请求失败");
-            JsonResponse(isSuccess = false,errorMsg ="GET请求失败")
-        }
-
     }
 
 
     @Mapping("/imageDecode")
-    open fun imageDecode(ctx: Context, accessToken: String?, bookSourceUrl: String?, @Param("book")  _book: String?, url: String?, header: String?) = runBlocking {
+    open fun imageDecode(ctx: Context, accessToken: String?, bookSourceUrl: String?, @Param("book")  ibook: String?, url: String?, header: String?) = runBlocking {
         //logger.info("imageDecode:$url")
-        val (user,source,jp)=getsourceuser(accessToken,bookSourceUrl)
-        if(jp != null){
-            throw DataThrowable().data(jp)
-        }
-        if(!(user?.AllowImg ?:false) ){
+        val (user,source)=getsourceuser(accessToken,bookSourceUrl)
+        if(user.AllowImg != true){
             App.toast("没有权限进行图片解密",accessToken?:"")
             throw DataThrowable().data(JsonResponse(false, CAN_NOT))
         }
         if (url.isNullOrBlank()) throw DataThrowable().data(JsonResponse(false, NOT_BANK))
-        val geturl = URL(url)
-        SslUtils.ignoreSsl();
+        val geturl = URI(url).toURL()
+        SslUtils.ignoreSsl()
         val connection = geturl.openConnection() as HttpURLConnection
-        connection.setRequestMethod("GET")
+        connection.requestMethod = "GET"
         runCatching {
             val json= Gson().fromJson<Map<String, String>>(header, Map::class.java)
             json.forEach{(k,v)->
-                connection.setRequestProperty(k,v);
+                connection.setRequestProperty(k,v)
             }
         }
-        connection.setConnectTimeout(20*1000);
-        connection.setReadTimeout(20*1000);
-        val responseCode = connection.getResponseCode();
+        connection.connectTimeout = 20*1000
+        connection.readTimeout = 20*1000
+        val responseCode = connection.responseCode
         //  读取响应
         if (responseCode == HttpURLConnection.HTTP_OK) { // 200表示请求成功
             ctx.contentType(connection.getHeaderField("Content-Type"))
-            val s= BookSource.fromJson(source!!.json).getOrNull()!!
+            val s= BookSource.fromJson(source.json).getOrNull()!!
             if(s.hasimageDecode()){
-                s.userid = user!!.id
+                s.userid = user.id
                 s.usertocken = accessToken
                 var book:Book?=null
-                if(!_book.isNullOrBlank()){
-                   runCatching { book= GSON.fromJson<Book>(_book, Book::class.java) }.onFailure {
+                if(!ibook.isNullOrBlank()){
+                   runCatching { book= GSON.fromJson(ibook, Book::class.java) }.onFailure {
                        App.log("格式化book失败:${it.message}",accessToken!!)
                    }
                 }
                runCatching {
-                    val bytes = s.DeimageDecode(src = url, inputStream = connection.getInputStream(),book=book)
+                    val bytes = s.DeimageDecode(src = url, inputStream = connection.inputStream,book=book)
                     ctx.outputStream().write(bytes)
                     ctx.flush()
                     //logger.info("解密成功")
@@ -646,17 +571,17 @@ open class ReadController : BaseController() {
                     JsonResponse(isSuccess = false,errorMsg ="解密失败")
                 }
             } else {
-                connection.getInputStream().use {
+                connection.inputStream.use { i->
                     val b = ByteArray(4096)
                     var len: Int
-                    while ((it.read(b).also { len = it }) != -1) {
+                    while ((i.read(b).also { len = it }) != -1) {
                         ctx.outputStream().write(b, 0, len)
                     }
                 }
             }
 
         } else {
-            logger.info("GET请求失败");
+            logger.info("GET请求失败")
             JsonResponse(isSuccess = false,errorMsg ="GET请求失败")
         }
 
@@ -664,12 +589,9 @@ open class ReadController : BaseController() {
 
     @Mapping("/getLoginInfo")
     open fun getLoginInfo(accessToken: String?, bookSourceUrl: String?) = run {
-        val (user,source,jp)=getsourceuser(accessToken,bookSourceUrl)
-        if(jp != null){
-            throw DataThrowable().data(jp)
-        }
-        val bookSource = BookSource.fromJson(source!!.json ?: "").getOrNull()!!
-        bookSource.userid = user!!.id
+        val (user,source)=getsourceuser(accessToken,bookSourceUrl)
+        val bookSource = BookSource.fromJson(source.json ).getOrNull()!!
+        bookSource.userid = user.id
         bookSource.usertocken = accessToken
         var info = bookSource.getLoginInfo()
         if (info.isNullOrBlank()) {
@@ -680,26 +602,20 @@ open class ReadController : BaseController() {
 
     @Mapping("/getVariable")
     open fun getVariable(accessToken: String?, bookSourceUrl: String?) = run {
-        val (user,source,jp)=getsourceuser(accessToken,bookSourceUrl)
-        if(jp != null){
-            throw DataThrowable().data(jp)
-        }
-        val bookSource = BookSource.fromJson(source!!.json ?: "").getOrNull()!!
-        bookSource.userid = user!!.id
+        val (user,source)=getsourceuser(accessToken,bookSourceUrl)
+        val bookSource = BookSource.fromJson(source.json ).getOrNull()!!
+        bookSource.userid = user.id
         bookSource.usertocken = accessToken
-        var info = bookSource.getVariable()
+        val info = bookSource.getVariable()
         JsonResponse(true).Data(info)
     }
 
      @CacheRemove(tags = "search\${accessToken}")
     @Mapping("/setVariable")
     open fun setVariable(accessToken: String?, bookSourceUrl: String?, info: String?) = run {
-         val (user,source,jp)=getsourceuser(accessToken,bookSourceUrl)
-         if(jp != null){
-             throw DataThrowable().data(jp)
-         }
-        val bookSource = BookSource.fromJson(source!!.json ?: "").getOrNull()!!
-        bookSource.userid = user!!.id
+        val (user,source)=getsourceuser(accessToken,bookSourceUrl)
+        val bookSource = BookSource.fromJson(source.json ).getOrNull()!!
+        bookSource.userid = user.id
         bookSource.usertocken = accessToken
         bookSource.setVariable(info)
         JsonResponse(true)
@@ -707,36 +623,29 @@ open class ReadController : BaseController() {
 
     @Mapping("/getbookVariable")
     open fun getbookVariable(accessToken: String?, bookurl: String?) = run {
-        val user = getuserbytocken(accessToken).also {
-            if (it == null) throw DataThrowable().data(JsonResponse(false, NEED_LOGIN))
-        }!!
-        val book =Book(bookUrl  =bookurl?:"");
+        val user = getuserbytocken(accessToken)
+        val book =Book(bookUrl  =bookurl?:"")
         book.userid = user.id?:""
-        val info = book.getCustomVariable();
+        val info = book.getCustomVariable()
         JsonResponse(true).Data(info)
     }
 
     @CacheRemove(tags = "search\${accessToken}")
     @Mapping("/setbookVariable")
     open fun setbookVariable(accessToken: String?, bookurl: String?, info: String?) = run {
-        val user = getuserbytocken(accessToken).also {
-            if (it == null) throw DataThrowable().data(JsonResponse(false, NEED_LOGIN))
-        }!!
-        val book =Book(bookUrl  =bookurl?:"");
+        val user = getuserbytocken(accessToken)
+        val book =Book(bookUrl  =bookurl?:"")
         book.userid = user.id?:""
-        book.putCustomVariable(info?:"");
+        book.putCustomVariable(info?:"")
         JsonResponse(true)
     }
 
      @CacheRemove(tags = "search\${accessToken}")
     @Mapping("/putLoginInfo")
     open fun putLoginInfo(accessToken: String?, bookSourceUrl: String?, info: String?) = run {
-         val (user,source,jp)=getsourceuser(accessToken,bookSourceUrl)
-         if(jp != null){
-             throw DataThrowable().data(jp)
-         }
-        val bookSource = BookSource.fromJson(source!!.json ?: "").getOrNull()!!
-        bookSource.userid = user!!.id
+        val (user,source)=getsourceuser(accessToken,bookSourceUrl)
+        val bookSource = BookSource.fromJson(source.json ).getOrNull()!!
+        bookSource.userid = user.id
         bookSource.usertocken = accessToken
         bookSource.putLoginInfo(info ?: "{}")
         kotlin.runCatching { bookSource.login() }
@@ -746,27 +655,22 @@ open class ReadController : BaseController() {
     @CacheRemove(tags = "search\${accessToken}")
     @Mapping("/action")
     open fun action(accessToken: String?, bookSourceUrl: String?, action: String?) = runBlocking {
-        val (user,source,jp)=getsourceuser(accessToken,bookSourceUrl)
-        if(jp != null){
-            throw DataThrowable().data(jp)
-        }
+        val (user,source)=getsourceuser(accessToken,bookSourceUrl)
         if(action == null) throw DataThrowable().data(JsonResponse(false, NOT_BANK))
-        val bookSource = BookSource.fromJson(source!!.json ?: "").getOrNull()!!
-        bookSource.userid = user!!.id
+        val bookSource = BookSource.fromJson(source.json).getOrNull()!!
+        bookSource.userid = user.id
         bookSource.usertocken = accessToken
         kotlin.runCatching {
-            bookSource.runaction(action);
+            bookSource.runaction(action)
         }.onFailure { e ->
-           logger.info("${action} JavaScript error", e)
+           logger.info("$action JavaScript error", e)
         }
         JsonResponse(true)
     }
 
     @Mapping("/payAction")
     open fun  payAction(accessToken: String?, url: String?, index: Int) = runBlocking {
-        val user = getuserbytocken(accessToken).also {
-            if (it == null) throw DataThrowable().data(JsonResponse(false, NEED_LOGIN))
-        }!!
+        val user = getuserbytocken(accessToken)
         val book=booklistMapper.getbook(user.id!!,url?:throw DataThrowable().data(JsonResponse(false, NOT_BANK)))?:
         throw DataThrowable().data(JsonResponse(false, NO_BOOK))
         if(book.origin ==  "loc_book") return@runBlocking JsonResponse(true)
@@ -803,23 +707,21 @@ open class ReadController : BaseController() {
 
     @Mapping("/changebooktype")
     open fun changebooktype(accessToken: String?, bookUrl: String?, type: Int?) = runBlocking {
-        val user = getuserbytocken(accessToken).also {
-            if (it == null) throw DataThrowable().data(JsonResponse(false, NEED_LOGIN))
-        }!!
+        val user = getuserbytocken(accessToken)
         val book = booklistMapper.getbook(user.id!!, bookUrl.also {
             if (it == null) throw DataThrowable().data(JsonResponse(false, NOT_BANK))
         }!!).also {
             if (it == null) throw DataThrowable().data(JsonResponse(false, NO_BOOK))
         }!!
-        var type: Int = type ?: 0
-        if (type != 0 && type != 1 && type != 2) {
-            type = 0
+        var type1: Int = type ?: 0
+        if (type1 != 0 && type1 != 1 && type1 != 2) {
+            type1 = 0
         }
-        booklistMapper.changetype(book.id!!,type)
+        booklistMapper.changetype(book.id!!,type1)
         JsonResponse(true)
     }
 
-    suspend fun  getbook(webBook:WBook, url:String):Book{
+    private suspend fun  getbook(webBook:WBook, url:String):Book{
         var book: Book?=null
         runCatching {
             book=webBook.getBookInfo(url,canReName = true)

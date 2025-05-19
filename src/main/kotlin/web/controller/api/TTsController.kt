@@ -1,6 +1,6 @@
 package web.controller.api
 
-import book.model.BookSource
+
 import book.util.FileUtils
 import book.util.GSON
 import book.util.MD5Utils
@@ -14,12 +14,10 @@ import org.noear.solon.annotation.Inject
 import org.noear.solon.annotation.Mapping
 import org.noear.solon.core.handle.Context
 import org.noear.solon.core.util.DataThrowable
-import org.noear.solon.data.annotation.CacheRemove
 import org.noear.solon.data.annotation.Tran
 import org.noear.solon.web.cors.annotation.CrossOrigin
 import web.mapper.HttpTTSMapper
 import web.model.HttpTts
-import web.model.ReplaceRule
 import web.model.Users
 import web.response.*
 import java.io.File
@@ -46,13 +44,11 @@ open class TTsController : BaseController() {
     @Tran
     @Mapping("/addtts")
     open fun addtts(accessToken:String?, @Body tts: HttpTts)=run{
-        val user = getuserbytocken(accessToken).also {
-            if (it == null) throw DataThrowable().data(JsonResponse(false, NEED_LOGIN))
-        }!!
-        if(tts.name.isBlank() || tts.url.isNullOrBlank()) throw DataThrowable().data(JsonResponse(false, NOT_BANK))
+        val user = getuserbytocken(accessToken)
+        if(tts.name.isBlank() || tts.url.isBlank()) throw DataThrowable().data(JsonResponse(false, NOT_BANK))
         if(tts.id.isNullOrBlank()){
             httpTTSMapper.getttsbyname(user.id!!,tts.name).also {
-                if(it.size > 0){
+                if(it.isNotEmpty()){
                     throw DataThrowable().data(JsonResponse(false, NAME_ERROR))
                 }
             }
@@ -73,9 +69,7 @@ open class TTsController : BaseController() {
 
     @Mapping("/deltts")
     fun deltts(accessToken:String?,id: String?) = run{
-        val user = getuserbytocken(accessToken).also {
-            if (it == null) throw DataThrowable().data(JsonResponse(false, NEED_LOGIN))
-        }!!
+        val user = getuserbytocken(accessToken)
         val tts= httpTTSMapper.gettts(id?:throw DataThrowable().data(JsonResponse(false, NOT_BANK)) ,user.id!!) ?:
         throw DataThrowable().data(JsonResponse(false, NOT_IS))
         httpTTSMapper.deleteById(tts.id)
@@ -84,13 +78,11 @@ open class TTsController : BaseController() {
 
     @Mapping("/delttss")
     fun delttss(accessToken:String?,@Body ids: List<String>?) = run{
-        val user = getuserbytocken(accessToken).also {
-            if (it == null) throw DataThrowable().data(JsonResponse(false, NEED_LOGIN))
-        }!!
+        val user = getuserbytocken(accessToken)
         ids?.forEach {id->
             if (id.isNotBlank()){
                 httpTTSMapper.gettts2(id,user.id!!)?.let {
-                    if(it.size > 0) httpTTSMapper.deleteById(id)
+                    if(it.isNotEmpty()) httpTTSMapper.deleteById(id)
                 }
             }
         }
@@ -99,13 +91,11 @@ open class TTsController : BaseController() {
 
     @Mapping("/getalltts")
     fun getalltts(accessToken:String?) = run{
-        val user = getuserbytocken(accessToken).also {
-            if (it == null) throw DataThrowable().data(JsonResponse(false, NEED_LOGIN))
-        }!!
-        var list:MutableList<HttpTts> = mutableListOf()
+        val user = getuserbytocken(accessToken)
+        val list:MutableList<HttpTts> = mutableListOf()
         httpTTSMapper.getalltts(user.id!!).forEach{
-            var loginUi=it.loginUi;
-            if(loginUi != null && loginUi.isNotEmpty()){
+            var loginUi=it.loginUi
+            if(!loginUi.isNullOrEmpty()){
                 kotlin.runCatching {
                     val r=GSON.fromJsonArray<Any>(loginUi).getOrNull()
                     loginUi= GSON.toJson(r)
@@ -119,9 +109,7 @@ open class TTsController : BaseController() {
 
     @Mapping("/savettss")
     fun savettss(accessToken:String?, @Body content:String)=run{
-        val user = getuserbytocken(accessToken).also {
-            if (it == null) throw DataThrowable().data(JsonResponse(false, NEED_LOGIN))
-        }!!
+        val user = getuserbytocken(accessToken)
         var insert = 0
         var update = 0
         val ttss= GSON.fromJsonArray<HttpTts>(content).getOrNull()
@@ -137,9 +125,7 @@ open class TTsController : BaseController() {
 
     @Mapping("/tts")
     fun tts(ctx: Context, accessToken:String?, id: String?, speakText:String?, speechRate:Double?)= runBlocking{
-        val user = getuserbytocken(accessToken).also {
-            if (it == null) throw Exception(NEED_LOGIN)
-        }!!
+        val user = getuserbytocken(accessToken)
         if(id.isNullOrBlank() || speakText.isNullOrBlank() ) throw Exception(NOT_BANK)
         var rate=speechRate?:5.0
         if (rate < 5) rate=5.0
@@ -153,10 +139,10 @@ open class TTsController : BaseController() {
             ctx.contentType(tts.contentType)
         }
         //ctx.headerSet("Content-Disposition","attachment;filename=tts.mp3");
-        WBook.getSpeakStream(tts,speakText,rate.toInt()).use {
+        WBook.getSpeakStream(tts,speakText,rate.toInt()).use { i->
             val b = ByteArray(4096)
             var len: Int
-            while ((it.read(b).also { len = it }) != -1) {
+            while ((i.read(b).also { len = it }) != -1) {
                 ctx.outputStream().write(b, 0, len)
             }
         }
@@ -165,9 +151,7 @@ open class TTsController : BaseController() {
 
     @Mapping("/getttsLoginInfo")
     open fun getLoginInfo(accessToken: String?, id: String?) = run {
-        val user = getuserbytocken(accessToken).also {
-            if (it == null) throw Exception(NEED_LOGIN)
-        }!!
+        val user = getuserbytocken(accessToken)
         val tts=(httpTTSMapper.selectById(id)?:throw DataThrowable().data(JsonResponse(false, NOT_IS) )).totts()
         tts.userid = user.id
         tts.usertocken = accessToken
@@ -181,9 +165,7 @@ open class TTsController : BaseController() {
 
     @Mapping("/putttsLoginInfo")
     open fun putLoginInfo(accessToken: String?, id: String?, info: String?) = run {
-        val user = getuserbytocken(accessToken).also {
-            if (it == null) throw Exception(NEED_LOGIN)
-        }!!
+        val user = getuserbytocken(accessToken)
         val tts=(httpTTSMapper.selectById(id)?:throw DataThrowable().data(JsonResponse(false, NOT_IS) )).totts()
         tts.userid = user.id
         tts.usertocken = accessToken
@@ -194,29 +176,25 @@ open class TTsController : BaseController() {
 
     @Mapping("/ttsaction")
     open fun action(accessToken: String?, id: String?, action: String?) = runBlocking {
-        val user = getuserbytocken(accessToken).also {
-            if (it == null) throw Exception(NEED_LOGIN)
-        }!!
+        val user = getuserbytocken(accessToken)
         if(action == null) throw DataThrowable().data(JsonResponse(false, NOT_BANK))
         val tts=(httpTTSMapper.selectById(id)?:throw DataThrowable().data(JsonResponse(false, NOT_IS) )).totts()
         tts.userid = user.id
         tts.usertocken = accessToken
         kotlin.runCatching {
-            tts.runaction(action);
+            tts.runaction(action)
         }.onFailure { e ->
-            logger.info("${action} JavaScript error", e)
+            logger.info("$action JavaScript error", e)
         }
         JsonResponse(true)
     }
 
     @Mapping("/upjson")
     fun upjson(accessToken:String?, @Body content:String)=run{
-        val user = getuserbytocken(accessToken).also {
-            if (it == null) throw DataThrowable().data(JsonResponse(false, NEED_LOGIN))
-        }!!
+        getuserbytocken(accessToken)
         val jsonFile = "${MD5Utils.md5Encode(content)}.json"
         val relativeCoverUrl = Paths.get("assets", "", "json", jsonFile).toString()
-        val  url="/" + relativeCoverUrl
+        val  url= "/$relativeCoverUrl"
         val jsonUrl = Paths.get("", "storage", relativeCoverUrl).toString()
         val file= File(jsonUrl)
         if (file.exists()) {
@@ -234,7 +212,7 @@ open class TTsController : BaseController() {
         }
         httpTTSMapper.getttsbyname(user.id!!,tts.name).let {
             if (it.isNotEmpty()){
-                var r=it[0]
+                val r=it[0]
                 tts.id=r.id
                 tts.userid=r.userid
                 tts.name = r.name

@@ -30,15 +30,11 @@ open class LocalBookController:BaseController() {
     @Mapping("/importBookPreview")
     open fun importBookPreview(accessToken:String?, file: UploadedFile?)=run{
         if(file == null) throw DataThrowable().data(JsonResponse(false, NOT_BANK))
-        if (file.isEmpty()) {
+        if (file.isEmpty) {
             throw DataThrowable().data(JsonResponse(false, NOT_BANK))
         }
-        val user=getuserbytocken(accessToken).also {
-            if(it == null){
-                throw DataThrowable().data(JsonResponse(false, NEED_LOGIN))
-            }
-        }!!
-        if(!(user.AllowUpTxt?:false)) {
+        val user=getuserbytocken(accessToken)
+        if(user.AllowUpTxt != true) {
             throw DataThrowable().data(JsonResponse(false,NOT_ALLOW_TXT))
         }
         if(!file.name.endsWith(".txt") && !file.name.endsWith(".epub")){
@@ -48,11 +44,11 @@ open class LocalBookController:BaseController() {
         kotlin.runCatching {
             f1= URLDecoder.decode( f1, "UTF-8" )
         }
-        var  uploadDir = getlocalpath(user.username?:"")
-        var ufile= File(uploadDir)
+        val  uploadDir = getlocalpath(user.username?:"")
+        val ufile= File(uploadDir)
         if(!ufile.exists()){ufile.mkdirs()}
-        var localpath=uploadDir+"/" + f1
-        var  uploadedFile =  File(localpath)
+        val localpath= "$uploadDir/$f1"
+        val  uploadedFile =  File(localpath)
         uploadedFile.writeBytes(file.contentAsBytes)
         val book = Book.initLocalBook(localpath, localpath, "")
         val chapters = LocalBook.getChapterList(book)

@@ -9,6 +9,9 @@ object App  {
     var webview =fun  (html: String?, url: String?, js: String?,tocken:String,header:String):StrResponse{
         return StrResponse(url?:"", "")
     }
+    var webviewbody =fun  (html: String?, url: String?, js: String?,tocken:String,header:String,body:String):StrResponse{
+        return StrResponse(url?:"", "")
+    }
     var toast =fun  (str: String,tocken:String){
 
     }

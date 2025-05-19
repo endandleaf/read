@@ -1,6 +1,6 @@
 package web.controller.api
 
-import book.model.BookSource
+
 import book.util.GSON
 import book.util.fromJsonArray
 import book.util.fromJsonObject
@@ -16,7 +16,6 @@ import web.mapper.ReplaceRuleMapper
 import web.model.ReplaceRule
 import web.model.Users
 import web.response.*
-import java.util.*
 
 @Controller
 @Mapping(routepath)
@@ -39,18 +38,16 @@ open class ReplaceRuleController:BaseController() {
     @Tran
     @Mapping("/addReplaceRule")
     open fun addReplaceRule(accessToken:String?, @Body rule: ReplaceRule)=run{
-        val user = getuserbytocken(accessToken).also {
-            if (it == null) throw DataThrowable().data(JsonResponse(false, NEED_LOGIN))
-        }!!
+        val user = getuserbytocken(accessToken)
         if(rule.name.isBlank()) throw DataThrowable().data(JsonResponse(false, NOT_BANK))
         if(rule.id.isNullOrBlank()){
             replaceRuleMapper.getrulebyname(user.id!!,rule.name).also {
-                if(it.size > 0){
+                if(it.isNotEmpty()){
                     throw DataThrowable().data(JsonResponse(false, NAME_ERROR))
                 }
             }
             rule.create(user.id!!,rule.name)
-            rule.isEnabled = true;
+            rule.isEnabled = true
             replaceRuleMapper.insert(rule)
         }else{
             replaceRuleMapper.getrulebyname(user.id!!,rule.name).forEach{
@@ -67,9 +64,7 @@ open class ReplaceRuleController:BaseController() {
 
     @Mapping("/topReplaceRule")
     fun topReplaceRule( accessToken:String?, id: String?)= run{
-        val user = getuserbytocken(accessToken).also {
-            if (it == null) throw DataThrowable().data(JsonResponse(false, NEED_LOGIN))
-        }!!
+        val user = getuserbytocken(accessToken)
         val rule= replaceRuleMapper.getrule(id?:throw DataThrowable().data(JsonResponse(false, NOT_BANK)) ,user.id!!) ?:
              throw DataThrowable().data(JsonResponse(false, NOT_IS))
         val rules=replaceRuleMapper.getallrule(user.id!!)
@@ -87,9 +82,7 @@ open class ReplaceRuleController:BaseController() {
 
     @Mapping("/delReplaceRule")
     fun delReplaceRule(accessToken:String?,id: String?) = run{
-        val user = getuserbytocken(accessToken).also {
-            if (it == null) throw DataThrowable().data(JsonResponse(false, NEED_LOGIN))
-        }!!
+        val user = getuserbytocken(accessToken)
         val rule= replaceRuleMapper.getrule(id?:throw DataThrowable().data(JsonResponse(false, NOT_BANK)) ,user.id!!) ?:
         throw DataThrowable().data(JsonResponse(false, NOT_IS))
         replaceRuleMapper.deleteById(rule.id)
@@ -98,13 +91,11 @@ open class ReplaceRuleController:BaseController() {
 
     @Mapping("/delReplaceRules")
     fun delReplaceRules(accessToken:String?,@Body ids: List<String>?) = run{
-        val user = getuserbytocken(accessToken).also {
-            if (it == null) throw DataThrowable().data(JsonResponse(false, NEED_LOGIN))
-        }!!
+        val user = getuserbytocken(accessToken)
         ids?.forEach {id->
             if (id.isNotBlank()){
                 replaceRuleMapper.getrule2(id,user.id!!)?.let {
-                    if(it.size > 0) replaceRuleMapper.deleteById(id)
+                    if(it.isNotEmpty()) replaceRuleMapper.deleteById(id)
                 }
             }
         }
@@ -113,18 +104,14 @@ open class ReplaceRuleController:BaseController() {
 
     @Mapping("/getReplaceRules")
     fun getReplaceRules(accessToken:String?) = run{
-        val user = getuserbytocken(accessToken).also {
-            if (it == null) throw DataThrowable().data(JsonResponse(false, NEED_LOGIN))
-        }!!
+        val user = getuserbytocken(accessToken)
         val rules=replaceRuleMapper.getallrule(user.id!!)
         JsonResponse(true).Data(rules)
     }
 
     @Mapping("/stopReplaceRules")
     fun stopReplaceRules(accessToken:String?,id: String? ,st: String?)= run{
-        val user = getuserbytocken(accessToken).also {
-            if (it == null) throw DataThrowable().data(JsonResponse(false, NEED_LOGIN))
-        }!!
+        val user = getuserbytocken(accessToken)
         if (id.isNullOrBlank()){
             throw DataThrowable().data(JsonResponse(false, NOT_BANK))
         }
@@ -143,9 +130,7 @@ open class ReplaceRuleController:BaseController() {
 
     @Mapping("/stopReplaceRulesbyIds")
     fun stopReplaceRulesbyIds(accessToken:String?,@Body ids: List<String>?)= run{
-        val user = getuserbytocken(accessToken).also {
-            if (it == null) throw DataThrowable().data(JsonResponse(false, NEED_LOGIN))
-        }!!
+        val user = getuserbytocken(accessToken)
         ids?.forEach {
             if (it.isNotBlank()){
                 val rule=
@@ -158,9 +143,7 @@ open class ReplaceRuleController:BaseController() {
 
     @Mapping("/startReplaceRulesbyIds")
     fun startReplaceRulesbyIds(accessToken:String?,@Body ids: List<String>?)= run{
-        val user = getuserbytocken(accessToken).also {
-            if (it == null) throw DataThrowable().data(JsonResponse(false, NEED_LOGIN))
-        }!!
+        val user = getuserbytocken(accessToken)
         ids?.forEach {
             if (it.isNotBlank()){
                 val rule=
@@ -173,9 +156,7 @@ open class ReplaceRuleController:BaseController() {
 
     @Mapping("/saverules")
     fun saverules(accessToken:String?, @Body content:String)=run{
-        val user = getuserbytocken(accessToken).also {
-            if (it == null) throw DataThrowable().data(JsonResponse(false, NEED_LOGIN))
-        }!!
+        val user = getuserbytocken(accessToken)
         var insert = 0
         var update = 0
         val rules= GSON.fromJsonArray<ReplaceRule>(content).getOrNull()
@@ -190,9 +171,7 @@ open class ReplaceRuleController:BaseController() {
 
     @Mapping("/saverule")
     fun saverule( accessToken:String?, @Body content:String)=run{
-        val user = getuserbytocken(accessToken).also {
-            if (it == null) throw DataThrowable().data(JsonResponse(false, NEED_LOGIN))
-        }!!
+        val user = getuserbytocken(accessToken)
         var insert = 0
         var update = 0
         val rule= GSON.fromJsonObject<ReplaceRule>(content).getOrNull()
@@ -212,7 +191,7 @@ open class ReplaceRuleController:BaseController() {
         }
         replaceRuleMapper.getrulebyname(user.id!!,rule.name).let {
             if (it.isNotEmpty()){
-                var r=it[0]
+                val r=it[0]
                 rule.id=r.id
                 rule.userid=r.userid
                 rule.name = r.name

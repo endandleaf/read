@@ -8,7 +8,7 @@ import org.apache.ibatis.annotations.Update
 import web.model.Users
 
 interface  UsersMapper : BaseMapper<Users> {
-    @Select("SELECT * FROM users WHERE id = #{id}")
+    @Select("SELECT * FROM users WHERE id = #{id} LIMIT 1")
     fun getUser(@Param("id") id: String): Users?
 
     @Select("SELECT * FROM users")

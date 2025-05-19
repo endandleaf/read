@@ -5,7 +5,6 @@ import com.google.gson.Gson
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.sync.Mutex
-import kotlinx.coroutines.sync.Semaphore
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withTimeoutOrNull
 import org.apache.ibatis.solon.annotation.Db
@@ -14,25 +13,20 @@ import org.noear.solon.annotation.Inject
 import org.noear.solon.net.annotation.ServerEndpoint
 import org.noear.solon.net.websocket.WebSocket
 import org.noear.solon.net.websocket.listener.SimpleWebSocketListener
+import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 import web.mapper.UsersMapper
 import web.mapper.UsertockenMapper
 import web.util.ResponseManager
 import java.io.IOException
-import kotlin.math.log
 
 
 @Controller
-@ServerEndpoint(routepath+"/ws")
+@ServerEndpoint("$routepath/ws")
 class ApiWebSocket : SimpleWebSocketListener() {
 
-    class WebMsg{
-        val semaphore = Semaphore(1)
-        var html=""
-    }
-
     companion object{
-        val logger = LoggerFactory.getLogger(ApiWebSocket::class.java)
+        val logger: Logger = LoggerFactory.getLogger(ApiWebSocket::class.java)
         private var ma:MutableMap<String,WebSocket> = mutableMapOf()
         private val mutex = Mutex()
 
@@ -85,12 +79,12 @@ class ApiWebSocket : SimpleWebSocketListener() {
     override fun onOpen(socket: WebSocket) {
         val accessToken: String = socket.param("id")
         logger.info("websocket Open $accessToken")
-        if (accessToken == null || accessToken.isBlank()) {
+        if (accessToken.isBlank()) {
             socket.close()
             return
         }
 
-        var tocken=usertockenMapper.selectById(accessToken)
+        val tocken=usertockenMapper.selectById(accessToken)
         if (tocken == null) {
             logger.info("websocket tocken is null")
             socket.send(Gson().toJson(ToastMessage(msg = "logout", str="logout" )))
@@ -98,7 +92,7 @@ class ApiWebSocket : SimpleWebSocketListener() {
             return
         }
 
-        var user=usersMapper.selectById(tocken.userid)
+        val user=usersMapper.selectById(tocken.userid)
         if (user == null) {
             logger.info("websocket user is null")
             socket.send(Gson().toJson(ToastMessage(msg = "logout", str="logout" )))

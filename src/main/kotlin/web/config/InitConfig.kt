@@ -52,6 +52,16 @@ class InitConfig {
             }
             return@runBlocking  StrResponse(url?:"","")
         }
+        App.webviewbody=fun (html: String?, url: String?, js: String?, tocken:String, header:String, body:String):StrResponse = runBlocking{
+            var socket=ApiWebSocket.get(tocken)
+            if(socket!=null){
+                var id= UUID.randomUUID().toString()
+                //logger.info("webview ,url: $url ,js: $js, html:$html, tocken: $tocken ")
+                socket.send(Gson().toJson(WebMessage(msg = "webview", url = url?:"",title=js?:"", html = html?:"" ,id=id ,header=header,body=body)))
+                return@runBlocking  StrResponse(url?:"",ApiWebSocket.WaitForResponse(id)?:"")
+            }
+            return@runBlocking  StrResponse(url?:"","")
+        }
         App.getVerificationCode= fun (url : String, tocken:String)  = runBlocking {
             var socket=ApiWebSocket.get(tocken)
             if(socket!=null){

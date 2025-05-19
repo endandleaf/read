@@ -50,6 +50,9 @@ interface BooklistMapper : BaseMapper<Booklist> {
     @Update("UPDATE booklist set bookgroup = #{newbookgroup} WHERE userid = #{id} and bookgroup = #{bookgroup}")
     fun upbookgroup(@Param("id") id: String,@Param("bookgroup") bookgroup: String,@Param("newbookgroup") newbookgroup: String):Int
 
+    @Update("UPDATE  booklist set custom_cover_url = #{custom_cover_url} ,name = #{name} ,author = #{author} ,custom_intro = #{custom_intro} WHERE id = #{id}")
+    fun upbookinfo(@Param("id") id: String,@Param("name") name: String,@Param("author") author: String,@Param("custom_cover_url") custom_cover_url: String,@Param("custom_intro") custom_intro: String):Int
+
     @Update("UPDATE booklist set use_replace_rule = #{useReplaceRule} WHERE id = #{id} ")
     fun uprule(@Param("id") id: String,@Param("useReplaceRule") useReplaceRule: Boolean):Int
 }

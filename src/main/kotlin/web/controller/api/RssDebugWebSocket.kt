@@ -2,37 +2,24 @@ package web.controller.api
 
 import book.WBook.Debugger
 import book.model.RssSource
-import book.webBook.WBook
 import com.google.gson.Gson
 import kotlinx.coroutines.runBlocking
 import org.apache.ibatis.solon.annotation.Db
 import org.noear.solon.annotation.Controller
 import org.noear.solon.annotation.Inject
-import org.noear.solon.core.util.DataThrowable
 import org.noear.solon.net.annotation.ServerEndpoint
 import org.noear.solon.net.websocket.WebSocket
-import org.noear.solon.net.websocket.listener.SimpleWebSocketListener
+import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 import web.mapper.RssSourceMapper
 import web.mapper.UserRssSourceMapper
-import web.mapper.UsersMapper
-import web.mapper.UsertockenMapper
-import web.model.BaseSource
-import web.model.Users
 import web.response.JsonResponse
-import web.response.NOT_IS
 import java.io.IOException
 
 @Controller
-@ServerEndpoint(routepath+"/rssdebug")
-class RssDebugWebSocket : SimpleWebSocketListener() {
-    @Db("db")
-    @Inject
-    lateinit var usersMapper: UsersMapper
+@ServerEndpoint("$routepath/rssdebug")
+class RssDebugWebSocket : BaseDebug() {
 
-    @Db("db")
-    @Inject
-    lateinit var usertockenMapper: UsertockenMapper
 
     @Db("db")
     @Inject
@@ -42,30 +29,9 @@ class RssDebugWebSocket : SimpleWebSocketListener() {
     @Inject
     lateinit var userRssSourceMapper: UserRssSourceMapper
 
-    private  val logger= LoggerFactory.getLogger(RssDebugWebSocket::class.java)
+    override  val logger:Logger= LoggerFactory.getLogger(RssDebugWebSocket::class.java)
 
-    override fun onOpen(socket: WebSocket) {
-        val accessToken: String = socket.param("id")
-        logger.info("websocket Open $accessToken")
-        if (accessToken.isBlank()) {
-            socket.close()
-            return
-        }
 
-        val tocken=usertockenMapper.selectById(accessToken)
-        if (tocken == null) {
-            logger.info("websocket tocken is null")
-            socket.close()
-            return
-        }
-
-        val user=usersMapper.selectById(tocken.userid)
-        if (user == null) {
-            logger.info("websocket user is null")
-            socket.close()
-            return
-        }
-    }
 
     @Throws(IOException::class)
     override fun onMessage(socket: WebSocket, text: String): Unit = runBlocking{
@@ -95,9 +61,9 @@ class RssDebugWebSocket : SimpleWebSocketListener() {
             socket.close()
             return@runBlocking
         }
-        val debugger = Debugger { msg ->
-            socket.send( Gson().toJson(mapOf("msg" to msg)) + "\n\n")
-            logger.info( Gson().toJson(mapOf("msg" to msg)) + "\n\n")
+        val debugger = Debugger { msg1 ->
+            socket.send( Gson().toJson(mapOf("msg" to msg1)) + "\n\n")
+            logger.info( Gson().toJson(mapOf("msg" to msg1)) + "\n\n")
         }
         runCatching {
             val rssSource= RssSource.fromJson(rss.json?:"")
@@ -109,18 +75,4 @@ class RssDebugWebSocket : SimpleWebSocketListener() {
     }
 
 
-    fun getuserbytocken(accessToken:String?): Users?{
-        if (accessToken == null || accessToken.isBlank()) {
-            return null
-        }
-        val tocken=usertockenMapper.selectById(accessToken)
-        if (tocken == null) {
-            return null
-        }
-        val user=usersMapper.selectById(tocken.userid)
-        if (user == null) {
-            return null
-        }
-        return user
-    }
 }

@@ -1,5 +1,6 @@
 package book.model
 
+import book.app.App
 import book.util.*
 import book.util.help.CacheManager
 import book.util.help.CookieStore
@@ -72,18 +73,22 @@ interface BaseSource : JsExtensions {
      */
     fun getHeaderMap(hasLoginHeader: Boolean = false) = HashMap<String, String>().apply {
         //this[AppConst.UA_NAME] = AppConst.userAgent
-        header?.let {
-            GSON.fromJsonObject<Map<String, String>>(
-                when {
-                    it.startsWith("@js:", true) ->
-                        evalJS(it.substring(4)).toString()
-                    it.startsWith("<js>", true) ->
-                        evalJS(it.substring(4, it.lastIndexOf("<"))).toString()
-                    else -> it
+        runCatching {
+            header?.let {
+                GSON.fromJsonObject<Map<String, String>>(
+                    when {
+                        it.startsWith("@js:", true) ->
+                            evalJS(it.substring(4)).toString()
+                        it.startsWith("<js>", true) ->
+                            evalJS(it.substring(4, it.lastIndexOf("<"))).toString()
+                        else -> it
+                    }
+                ).getOrNull()?.let { map ->
+                    putAll(map)
                 }
-            ).getOrNull()?.let { map ->
-                putAll(map)
             }
+        }.onFailure {
+            App.log("${getKey()}:格式化header错误:${it.message}",usertocken?:"")
         }
         if (!has(AppConst.UA_NAME, true) ) {
             put(AppConst.UA_NAME, AppConst.userAgent)

@@ -9,7 +9,7 @@ import web.model.ReplaceRule
 
 interface ReplaceRuleMapper: BaseMapper<ReplaceRule> {
 
-    @Select("SELECT * FROM replace_rule WHERE id = #{id} and userid = #{userid}")
+    @Select("SELECT * FROM replace_rule WHERE id = #{id} and userid = #{userid} LIMIT 1")
     fun getrule(@Param("id") id: String,@Param("userid") userid: String): ReplaceRule?
 
     @Select("SELECT * FROM replace_rule WHERE id = #{id} and userid = #{userid}")

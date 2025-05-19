@@ -1,14 +1,11 @@
 package web.controller.api
 
 import org.noear.solon.annotation.Controller
-import org.noear.solon.annotation.Inject
 import org.noear.solon.annotation.Mapping
 import org.noear.solon.annotation.Path
 import org.noear.solon.core.util.DataThrowable
 import org.noear.solon.data.annotation.Cache
 import org.noear.solon.web.cors.annotation.CrossOrigin
-import web.mapper.UsersMapper
-import web.mapper.UsertockenMapper
 import web.model.Users
 import web.model.Usertocken
 import web.response.*
@@ -26,7 +23,7 @@ open class UserController:BaseController() {
         if (username.isNullOrBlank() || password.isNullOrBlank() )  {
             throw DataThrowable().data(JsonResponse(false,NOT_BANK))
         }
-        var user: Users?=usersMapper.getUserByusername(username)
+        val user: Users?=usersMapper.getUserByusername(username)
         if (user == null || !user.password.equals(passsign( password))) {
             throw DataThrowable().data(JsonResponse(false,PASS_ERROR))
         }
@@ -36,12 +33,12 @@ open class UserController:BaseController() {
             throw DataThrowable().data(JsonResponse(false,"当前后端不支持您的app，请联系管理员更新后端"))
         }
 
-        var tockens=usertockenMapper.getUsertockens(user.id!!)
+        val tockens=usertockenMapper.getUsertockens(user.id!!)
         //登陆设备超过20个自动登出全部
         if(tockens != null && tockens.size >= 20){
             usertockenMapper.delUsertockens(user.id!!)
         }
-        var tocken=Usertocken().create()
+        val tocken=Usertocken().create()
         tocken.userid=user.id
         tocken.model=model?:""
         usertockenMapper.insert(tocken)
@@ -52,13 +49,9 @@ open class UserController:BaseController() {
     @Cache(key = "getUserInfo:\${accessToken}", tags = "getUserInfo", seconds = 600)
     @Mapping("/getUserInfo")
     open fun getUserInfo( accessToken:String?) = run {
-        var user=getuserbytocken(accessToken).also {
-            if(it == null){
-                throw DataThrowable().data(JsonResponse(false,NEED_LOGIN))
-            }
-        }
+        val user=getuserbytocken(accessToken)
         JsonResponse(true,"success").Data(mapOf("userInfo" to
-                mapOf("username" to user!!.username,"phone" to user.phone,"email" to user.email)
+                mapOf("username" to user.username,"phone" to user.phone,"email" to user.email)
         ))
     }
 
@@ -70,11 +63,7 @@ open class UserController:BaseController() {
         if(password.length <6 || password.length > 15){
             throw DataThrowable().data(JsonResponse(false,PASS_VAIL_ERROR))
         }
-        var user=getuserbytocken(accessToken).also {
-            if(it == null){
-                throw DataThrowable().data(JsonResponse(false,NOT_BANK))
-            }
-        }!!
+        val user=getuserbytocken(accessToken)
         if (!user.password.equals(passsign( oldpassword))) {
             throw DataThrowable().data(JsonResponse(false,PASS_ERROR))
         }
@@ -85,13 +74,9 @@ open class UserController:BaseController() {
 
     @Mapping("/getalltocken")
     fun getalltocken( accessToken:String?) = run {
-        var user=getuserbytocken(accessToken).also {
-            if(it == null){
-                throw DataThrowable().data(JsonResponse(false,NOT_BANK))
-            }
-        }!!
+        val user=getuserbytocken(accessToken)
 
-        var tockens=usertockenMapper.getUsertockens(user.id!!)
+        val tockens=usertockenMapper.getUsertockens(user.id!!)
 
         JsonResponse(true,"success").Data(tockens)
     }

@@ -1,7 +1,6 @@
 package web.controller.api
 
 import book.app.App
-import book.model.BookSource
 import book.model.RssArticle
 import book.model.RssSource
 import book.util.GSON
@@ -18,18 +17,15 @@ import org.noear.solon.annotation.Inject
 import org.noear.solon.annotation.Mapping
 import org.noear.solon.core.handle.Context
 import org.noear.solon.core.util.DataThrowable
-import org.noear.solon.data.annotation.CacheRemove
 import org.noear.solon.data.annotation.Tran
 import org.noear.solon.data.cache.CacheService
 import org.noear.solon.web.cors.annotation.CrossOrigin
 import web.mapper.RssSourceMapper
 import web.mapper.UserRssSourceMapper
 import web.model.BaseRssSource
-import web.model.BaseSource
 import web.model.UserRssSource
 import web.model.Users
 import web.response.*
-import java.net.URLEncoder
 import java.util.*
 
 @Controller
@@ -47,37 +43,28 @@ open class RssController :BaseController() {
 
     @Inject
     lateinit var cacheService: CacheService
-
-    private  fun getuser(accessToken:String?):Users{
-        val user=getuserbytocken(accessToken).also {
-            if(it == null){
-                throw DataThrowable().data(JsonResponse(false,NEED_LOGIN))
-            }
-        }!!
-        if(user.source == 0){
-            throw DataThrowable().data(JsonResponse(false, CAN_NOT))
-        }
-        return user
-    }
+    
 
 
     @Mapping("/getRssSourcess")
     fun  getRssSourcess(accessToken: String?) =run{
-        val user = getuserbytocken(accessToken).also {
-            if (it == null) throw DataThrowable().data(JsonResponse(false, NEED_LOGIN))
-        }!!
+        val user = getuserbytocken(accessToken)
         val sources: MutableList<BaseRssSource> = mutableListOf()
-        if( user.source == 0){
-            rssSourceMapper.getEnabledSourcelist()?.forEach{
-                sources.add(it.toBaseSource())
+        when (user.source) {
+            0 -> {
+                rssSourceMapper.getEnabledSourcelist()?.forEach{
+                    sources.add(it.toBaseSource())
+                }
             }
-        }else if( user.source == 1){
-            rssSourceMapper.getallSourcelist()?.forEach{
-                sources.add(it.toBaseSource())
+            1 -> {
+                rssSourceMapper.getallSourcelist()?.forEach{
+                    sources.add(it.toBaseSource())
+                }
             }
-        }else{
-            userRssSourceMapper.getallSourcelist(user.id!!)?.forEach{
-                sources.add(it.toBaseSource())
+            else -> {
+                userRssSourceMapper.getallSourcelist(user.id!!)?.forEach{
+                    sources.add(it.toBaseSource())
+                }
             }
         }
         JsonResponse(true).Data(mapOf("sources" to sources, "can" to (user.source != 0) ))
@@ -85,7 +72,7 @@ open class RssController :BaseController() {
 
     @Mapping("/getRssSources")
     fun getRssSources(accessToken:String?,id: String?) = run{
-        val user=getuser(accessToken)
+        val user=getsourceuser(accessToken)
         if (id.isNullOrBlank()){
             throw DataThrowable().data(JsonResponse(false, NOT_BANK))
         }
@@ -103,7 +90,7 @@ open class RssController :BaseController() {
     @Tran
     @Mapping("/editRssSources")
     open fun editRssSources(accessToken:String?, @Body content:EditMsg) = run{
-        val user=getuser(accessToken)
+        val user=getsourceuser(accessToken)
         lateinit var  source:RssSource
         runCatching {
             source= RssSource.fromJson(content.json?:"")
@@ -153,7 +140,7 @@ open class RssController :BaseController() {
 
     @Mapping("/topRssSource")
     fun topRssSource( accessToken:String?, id: String?)= run{
-        val user=getuser(accessToken)
+        val user=getsourceuser(accessToken)
         if (id.isNullOrBlank()){
             throw DataThrowable().data(JsonResponse(false, NOT_BANK))
         }
@@ -175,9 +162,9 @@ open class RssController :BaseController() {
             var order=1
             for( it in sources!!){
                 if(it.sourceUrl == rsssource.sourceUrl){
-                    rssSourceMapper.changeorder(it.sourceUrl?:"", 0)
+                    rssSourceMapper.changeorder(it.sourceUrl, 0)
                 }else{
-                    rssSourceMapper.changeorder(it.sourceUrl?:"", order)
+                    rssSourceMapper.changeorder(it.sourceUrl, order)
                     order++
                 }
             }
@@ -187,7 +174,7 @@ open class RssController :BaseController() {
 
     @Mapping("/delRssSource")
     fun delRssSource(accessToken:String?,id: String?) = run{
-        val user=getuser(accessToken)
+        val user=getsourceuser(accessToken)
         if (id.isNullOrBlank()){
             throw DataThrowable().data(JsonResponse(false, NOT_BANK))
         }
@@ -204,7 +191,7 @@ open class RssController :BaseController() {
 
     @Mapping("/stopRssSource")
     fun stopRssSource(accessToken:String?,id: String? ,st: String?)= run{
-        val user=getuser(accessToken)
+        val user=getsourceuser(accessToken)
         if (id.isNullOrBlank()){
             throw DataThrowable().data(JsonResponse(false, NOT_BANK))
         }
@@ -220,7 +207,7 @@ open class RssController :BaseController() {
                 else -> throw DataThrowable().data(JsonResponse(false, USE_ERROE))
             }
         }else{
-            val rss= rssSourceMapper.getRssSource(id) ?: throw DataThrowable().data(JsonResponse(false, NOT_IS))
+            rssSourceMapper.getRssSource(id) ?: throw DataThrowable().data(JsonResponse(false, NOT_IS))
             when(st){
                 "0"->{
                     rssSourceMapper.changeEnabled(id,false)
@@ -236,7 +223,7 @@ open class RssController :BaseController() {
 
     @Mapping("/startRssSources")
     fun startRssSources(accessToken:String?,@Body ids: List<String>?)= run{
-        val user=getuser(accessToken)
+        val user=getsourceuser(accessToken)
         if(user.source == 2){
             ids?.forEach {
                 if (it.isNotBlank()){
@@ -248,8 +235,7 @@ open class RssController :BaseController() {
         }else{
             ids?.forEach {
                 if (it.isNotBlank()){
-                    val rss=
-                        rssSourceMapper.getRssSource(it) ?: throw DataThrowable().data(JsonResponse(false, NOT_IS))
+                    rssSourceMapper.getRssSource(it) ?: throw DataThrowable().data(JsonResponse(false, NOT_IS))
                     rssSourceMapper.changeEnabled(it,true)
                 }
             }
@@ -259,7 +245,7 @@ open class RssController :BaseController() {
 
     @Mapping("/stopRssSources")
     fun stopRssSources(accessToken:String?,@Body ids: List<String>?)= run{
-        val user=getuser(accessToken)
+        val user=getsourceuser(accessToken)
         if(user.source == 2){
             ids?.forEach {
                 if (it.isNotBlank()){
@@ -271,8 +257,7 @@ open class RssController :BaseController() {
         }else{
             ids?.forEach {
                 if (it.isNotBlank()){
-                    val rss=
-                        rssSourceMapper.getRssSource(it) ?: throw DataThrowable().data(JsonResponse(false, NOT_IS))
+                    rssSourceMapper.getRssSource(it) ?: throw DataThrowable().data(JsonResponse(false, NOT_IS))
                     rssSourceMapper.changeEnabled(it,false)
                 }
             }
@@ -282,7 +267,7 @@ open class RssController :BaseController() {
 
     @Mapping("/delRssSources")
     fun delRssSources(accessToken:String?,@Body ids: List<String>?) = run{
-        val user=getuser(accessToken)
+        val user=getsourceuser(accessToken)
         ids?.forEach {id->
             if (id.isNotBlank()){
                 if(user.source == 2){
@@ -297,7 +282,7 @@ open class RssController :BaseController() {
 
     @Mapping("/getRssSourcejson")
     fun getRssSourcejson(accessToken:String?,@Body ids: List<String>?)= run{
-        val user=getuser(accessToken)
+        val user=getsourceuser(accessToken)
         var s="["
         ids?.forEach {
             if (it.isNotBlank()){
@@ -320,7 +305,7 @@ open class RssController :BaseController() {
     @Tran
     @Mapping("/saveRssSources")
     fun saveRssSources(accessToken:String?, source:String, urls:String)=run{
-        val user=getuser(accessToken)
+        val user=getsourceuser(accessToken)
         var insert = 0
         var update = 0
         var list= listOf<String>()
@@ -348,47 +333,55 @@ open class RssController :BaseController() {
 
     @Mapping("/getRssType")
     fun getRssType(accessToken:String?, id:String)= runBlocking{
-        val user = getuserbytocken(accessToken).also {
-            if (it == null) throw DataThrowable().data(JsonResponse(false, NEED_LOGIN))
-        }!!
+        val user = getuserbytocken(accessToken)
         val rss=if(user.source == 2){
             userRssSourceMapper.getRssSource(id,user.id!!)?.toBaseSource()
         }else{
             rssSourceMapper.getRssSource(id)?.toBaseSource()
         } ?: throw DataThrowable().data(JsonResponse(false, NOT_IS))
         val rssSource=RssSource.fromJson(rss.json?:"")
+        rssSource.userid=user.id
+        rssSource.usertocken=accessToken
         var type = 0
-        var url = ""
-        var name="";
+        var url: String
+        var name=""
         if(rssSource.singleUrl || rssSource.sortUrl.isNullOrBlank()){
             type=1
         }
-        url=rssSource.sortUrls()[0].second
-        name=rssSource.sortUrls()[0].first
-        val header=rssSource.getHeaderMap()
-        var loginUi=rssSource.loginUi;
-        if(loginUi != null && loginUi.isNotEmpty()){
-            kotlin.runCatching {
-                val r=GSON.fromJsonArray<Any>(loginUi).getOrNull()
-                loginUi= GSON.toJson(r)
+        kotlin.runCatching {
+            val sorts=rssSource.sortUrls()
+            if(sorts.isNotEmpty()){
+                url=rssSource.sortUrls()[0].second
+                name=rssSource.sortUrls()[0].first
+            }else{
+                url=rss.sourceUrl
             }
+            val header=rssSource.getHeaderMap()
+            var loginUi=rssSource.loginUi
+            if(!loginUi.isNullOrEmpty()){
+                kotlin.runCatching {
+                    val r=GSON.fromJsonArray<Any>(loginUi).getOrNull()
+                    loginUi= GSON.toJson(r)
+                }
+            }
+            JsonResponse(true).Data(mapOf("type" to type,
+                "url" to url,
+                "name" to name,
+                "enableJs" to rssSource.enableJs,
+                "js" to rssSource.injectJs,
+                "loginUi" to loginUi,
+                "loginUrl" to rssSource.loginUrl,
+                "header" to GSON.toJson(header),
+            ))
+        }.onFailure {
+            App.log("${rss.sourceName}sorts加载失败:${it.message}",accessToken?:"")
+            throw it
         }
-        JsonResponse(true).Data(mapOf("type" to type,
-            "url" to url,
-            "name" to name,
-            "enableJs" to rssSource.enableJs,
-            "js" to rssSource.injectJs,
-            "loginUi" to loginUi,
-            "loginUrl" to rssSource.loginUrl,
-            "header" to GSON.toJson(header),
-        ))
     }
 
     @Mapping("/getArticles")
     fun  getArticles(accessToken:String?, id:String,sortUrl :String ,sortName:String,page:Int)= runBlocking{
-        val user = getuserbytocken(accessToken).also {
-            if (it == null) throw DataThrowable().data(JsonResponse(false, NEED_LOGIN))
-        }!!
+        val user = getuserbytocken(accessToken)
         val rss=if(user.source == 2){
             userRssSourceMapper.getRssSource(id,user.id!!)?.toBaseSource()
         }else{
@@ -398,16 +391,16 @@ open class RssController :BaseController() {
         rssSource.userid=user.id
         rssSource.usertocken=accessToken
         var articles:Pair<MutableList<RssArticle>, String?>
-        var i=0;
+        var i=0
         while (true){
             try{
                 articles=Rss().getArticles(sortName, sortUrl,rssSource,page)
-                break;
+                break
             }catch (e:Exception){
-                i++;
+                i++
                 if(i> 3){
                     App.log("${rss.sourceName}列表加载失败:${e.message}",accessToken?:"")
-                    throw e;
+                    throw e
                 }
             }
         }
@@ -416,9 +409,7 @@ open class RssController :BaseController() {
 
     @Mapping("/getRsssortUrls")
     fun  getRsssortUrls(accessToken:String?, id:String)= runBlocking{
-        val user = getuserbytocken(accessToken).also {
-            if (it == null) throw DataThrowable().data(JsonResponse(false, NEED_LOGIN))
-        }!!
+        val user = getuserbytocken(accessToken)
         val rss=if(user.source == 2){
             userRssSourceMapper.getRssSource(id,user.id!!)?.toBaseSource()
         }else{
@@ -442,11 +433,9 @@ open class RssController :BaseController() {
 
     @Mapping("/getRssContent")
     fun  getRssContent(accessToken:String?, id:String,article : String)= runBlocking{
-        var myid=UUID.randomUUID().toString()
+        val myid=UUID.randomUUID().toString()
 
-        val user = getuserbytocken(accessToken).also {
-            if (it == null) throw DataThrowable().data(JsonResponse(false, NEED_LOGIN))
-        }!!
+        val user = getuserbytocken(accessToken)
         val rss=if(user.source == 2){
             userRssSourceMapper.getRssSource(id,user.id!!)?.toBaseSource()
         }else{
@@ -482,9 +471,7 @@ open class RssController :BaseController() {
 
     @Mapping("/getRssLoginInfo")
     open fun getRssLoginInfo(accessToken: String?, id: String) = run {
-        val user = getuserbytocken(accessToken).also {
-            if (it == null) throw DataThrowable().data(JsonResponse(false, NEED_LOGIN))
-        }!!
+        val user = getuserbytocken(accessToken)
         val rss=if(user.source == 2){
             userRssSourceMapper.getRssSource(id,user.id!!)?.toBaseSource()
         }else{
@@ -502,9 +489,7 @@ open class RssController :BaseController() {
 
     @Mapping("/putRssLoginInfo")
     open fun putRssLoginInfo(accessToken: String?, id: String, info: String?) = run {
-        val user = getuserbytocken(accessToken).also {
-            if (it == null) throw DataThrowable().data(JsonResponse(false, NEED_LOGIN))
-        }!!
+        val user = getuserbytocken(accessToken)
         val rss=if(user.source == 2){
             userRssSourceMapper.getRssSource(id,user.id!!)?.toBaseSource()
         }else{
@@ -520,9 +505,7 @@ open class RssController :BaseController() {
 
     @Mapping("/rssaction")
     open fun rssaction(accessToken: String?, id: String, action: String?) = runBlocking {
-        val user = getuserbytocken(accessToken).also {
-            if (it == null) throw DataThrowable().data(JsonResponse(false, NEED_LOGIN))
-        }!!
+        val user = getuserbytocken(accessToken)
         if(action == null) throw DataThrowable().data(JsonResponse(false, NOT_BANK))
         val rss=if(user.source == 2){
             userRssSourceMapper.getRssSource(id,user.id!!)?.toBaseSource()
@@ -533,18 +516,16 @@ open class RssController :BaseController() {
         rssSource.userid = user.id
         rssSource.usertocken = accessToken
         kotlin.runCatching {
-            rssSource.runaction(action);
+            rssSource.runaction(action)
         }.onFailure { e ->
-            logger.info("${action} JavaScript error", e)
+            logger.info("$action JavaScript error", e)
         }
         JsonResponse(true)
     }
 
     @Mapping("/getRssVariable")
     open fun getRssVariable(accessToken: String?, id: String) = run {
-        val user = getuserbytocken(accessToken).also {
-            if (it == null) throw DataThrowable().data(JsonResponse(false, NEED_LOGIN))
-        }!!
+        val user = getuserbytocken(accessToken)
         val rss=if(user.source == 2){
             userRssSourceMapper.getRssSource(id,user.id!!)?.toBaseSource()
         }else{
@@ -559,9 +540,7 @@ open class RssController :BaseController() {
 
     @Mapping("/setRssVariable")
     open fun setRssVariable(accessToken: String?, id: String, info: String?) = run {
-        val user = getuserbytocken(accessToken).also {
-            if (it == null) throw DataThrowable().data(JsonResponse(false, NEED_LOGIN))
-        }!!
+        val user = getuserbytocken(accessToken)
         val rss=if(user.source == 2){
             userRssSourceMapper.getRssSource(id,user.id!!)?.toBaseSource()
         }else{
@@ -576,7 +555,7 @@ open class RssController :BaseController() {
 
     @Mapping("/getRssContenthtml")
     fun  getRssContenthtml(ctx: Context, id:String)= runBlocking{
-        var html=cacheService.get(id,String::class.java)
+        val html=cacheService.get(id,String::class.java)
         ctx.outputAsHtml(html)
     }
 
@@ -588,17 +567,17 @@ open class RssController :BaseController() {
             return  Pair(insert, update)
         }
         if(user.source == 2){
-            val source= web.model.UserRssSource().jsontomodel(rss, userid = user.id!!)
+            val source=UserRssSource().jsontomodel(rss, userid = user.id!!)
             userRssSourceMapper.getRssSource(rss.sourceUrl, userid = user.id!!).let {
                 if (it != null){
                     source.enabled=it.enabled
                     if(it.createtime != null){
                         source.createtime=it.createtime
                     }
-                    update=update+userRssSourceMapper.updateById(source)
+                    update += userRssSourceMapper.updateById(source)
                 }else{
                     source.sourceorder=9999
-                    insert=insert+userRssSourceMapper.insert(source)
+                    insert += userRssSourceMapper.insert(source)
                 }
             }
         }else{
@@ -609,22 +588,22 @@ open class RssController :BaseController() {
                     if(it.createtime != null){
                         source.createtime=it.createtime
                     }
-                    update=update+rssSourceMapper.updateById(source)
+                    update += rssSourceMapper.updateById(source)
                 }else{
                     source.sourceorder=9999
-                    insert=insert+rssSourceMapper.insert(source)
+                    insert += rssSourceMapper.insert(source)
                 }
             }
         }
         Pair(insert, update)
     }
 
-    fun clHtml(content: String,rssSource :RssSource): String {
+   private fun clHtml(content: String,rssSource :RssSource): String {
         return when {
-            !rssSource?.style.isNullOrEmpty() -> {
+            !rssSource.style.isNullOrEmpty() -> {
                 """
                     <style>
-                        ${rssSource?.style}
+                        ${rssSource.style}
                     </style>
                     $content
                 """.trimIndent()

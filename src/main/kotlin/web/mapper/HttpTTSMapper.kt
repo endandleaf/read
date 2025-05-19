@@ -7,7 +7,7 @@ import web.model.HttpTts
 
 interface HttpTTSMapper: BaseMapper<HttpTts> {
 
-    @Select("SELECT * FROM http_tts WHERE id = #{id} and userid = #{userid}")
+    @Select("SELECT * FROM http_tts WHERE id = #{id} and userid = #{userid} LIMIT 1")
     fun gettts(@Param("id") id: String,@Param("userid") userid: String): HttpTts?
 
     @Select("SELECT * FROM http_tts WHERE id = #{id} and userid = #{userid}")

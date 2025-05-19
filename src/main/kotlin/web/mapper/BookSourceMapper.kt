@@ -7,7 +7,7 @@ import org.apache.ibatis.annotations.Update
 import web.model.BookSource
 
 interface BookSourceMapper : BaseMapper<BookSource> {
-    @Select("SELECT * FROM book_source WHERE book_source_url = #{bookSourceUrl}")
+    @Select("SELECT * FROM book_source WHERE book_source_url = #{bookSourceUrl}  LIMIT 1")
     fun getBookSource(@Param("bookSourceUrl") bookSourceUrl: String): BookSource?
 
     @Select("SELECT * FROM book_source WHERE enabled= #{enabled} order by sourceorder asc")
