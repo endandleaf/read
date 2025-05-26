@@ -103,6 +103,7 @@ object SourceAnalyzer {
                     jsLib=jsonItem.readString("jsLib")?:""
                     enabled = jsonItem.readBool("enable") ?: true
                     enabledCookieJar = jsonItem.readBool("enabledCookieJar") ?: true
+                    phonehttp = jsonItem.readBool("phonehttp") ?: true
                     if (exploreUrl.isNullOrBlank()) {
                         enabledExplore = false
                     }
@@ -181,6 +182,7 @@ object SourceAnalyzer {
                      sourceAny.loginUi?.toString()
                  }
                 source.enabledCookieJar=sourceAny.enabledCookieJar
+                source.phonehttp=sourceAny.phonehttp
                 source.loginCheckJs = sourceAny.loginCheckJs
                 source.bookSourceComment = sourceAny.bookSourceComment
                 source.lastUpdateTime = sourceAny.lastUpdateTime
@@ -255,6 +257,7 @@ object SourceAnalyzer {
         var ruleContent: Any? = null   ,                 // 正文页规则
         var jsLib:String?=null,
         var enabledCookieJar: Boolean?=false,
+        var phonehttp: Boolean?=null,
         var variableComment:String?=null,
     )
 

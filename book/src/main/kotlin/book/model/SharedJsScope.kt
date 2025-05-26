@@ -22,12 +22,12 @@ object SharedJsScope {
 
     private val scopeMap = hashMapOf<String, WeakReference<Scriptable>>()
 
-    fun getScope(jsLib: String?): Scriptable? {
+    fun getScope(jsLib: String?,userid:String ?): Scriptable? {
         //println("cacheFolder:$cacheFolder")
         if (jsLib.isNullOrBlank()) {
             return null
         }
-        val key = MD5Utils.md5Encode(jsLib)
+        val key = MD5Utils.md5Encode("$userid:$jsLib")
         var scope = scopeMap[key]?.get()
         if (scope == null) {
             scope = RhinoScriptEngine.run {
@@ -44,7 +44,7 @@ object SharedJsScope {
                 )
                 jsMap.values.forEach { value ->
                     if (value.isAbsUrl()) {
-                        val fileName = MD5Utils.md5Encode(value)
+                        val fileName = MD5Utils.md5Encode("$userid:$value")
                         var js = aCache.getAsString(fileName)
                         if (js == null) {
                             js = runBlocking {

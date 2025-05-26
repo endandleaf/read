@@ -12,7 +12,7 @@ import kotlinx.coroutines.withContext
 private val aCache by lazy { ACache.get("rssSortUrl") }
 
 private fun RssSource.getSortUrlsKey(): String {
-    return MD5Utils.md5Encode(sourceUrl + sortUrl)
+    return MD5Utils.md5Encode(userid + sourceUrl + sortUrl)
 }
 
 suspend fun RssSource.sortUrls(): List<Pair<String, String>> {

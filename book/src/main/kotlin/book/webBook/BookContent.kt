@@ -41,6 +41,7 @@ object BookContent {
         val contentRule = bookSource.getContentRule()
         val analyzeRule = AnalyzeRule(book,debugLog, bookSource).setContent(body, baseUrl)
         analyzeRule.setRedirectUrl(redirectUrl)
+        analyzeRule.chapter=bookChapter
         analyzeRule.nextChapterUrl = mNextChapterUrl
         val titleRule = contentRule.title
         if (!titleRule.isNullOrBlank()) {

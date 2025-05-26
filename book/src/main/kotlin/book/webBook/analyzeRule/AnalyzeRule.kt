@@ -731,8 +731,8 @@ class AnalyzeRule(
         }
         val bindings = buildScriptBindings { bindings ->
             bindings["java"] = this
-            bindings["cookie"] = source?.getCookieManger()
-            bindings["cache"] = CacheManager
+            bindings["cookie"] = source?.getCookieManger()!!
+            bindings["cache"] = source?.getCacheManger()!!
             bindings["source"] = source
             bindings["book"] = book
             bindings["result"] = result

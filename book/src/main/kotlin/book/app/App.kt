@@ -25,5 +25,12 @@ object App  {
     var log =fun  (str: String,tocken:String){
 
     }
+    var get =fun  (url: String?, header:String,tocken:String):StrResponse{
+        return StrResponse(url?:"", "")
+    }
+
+    var post =fun  (url: String?,body:String, header:String,tocken:String):StrResponse{
+        return StrResponse(url?:"", "")
+    }
 }
 

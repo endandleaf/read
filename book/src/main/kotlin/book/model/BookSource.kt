@@ -50,6 +50,7 @@ class BookSource(
     override var userid: String?="",
     override var usertocken: String?=null,
     var variableComment:String?=null,
+    override var phonehttp: Boolean?=false,
 ) : BaseSource {
     //    @Ignore
 //    @IgnoredOnParcel

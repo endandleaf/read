@@ -1,12 +1,10 @@
 package book.webBook.analyzeRule
 
 import book.app.App
-import book.appCtx
 import book.model.BaseSource
 import book.util.*
 import book.util.AppConst.dateFormat
 import book.util.Base64
-import book.util.help.CacheManager
 import book.util.help.cookieJarHeader
 import book.util.http.*
 import book.webBook.Debug
@@ -30,6 +28,7 @@ import java.text.SimpleDateFormat
 import cn.hutool.core.util.HexUtil
 import com.script.ScriptBindings
 import org.slf4j.Logger
+import java.io.FileOutputStream
 import java.nio.file.Paths
 import java.time.LocalDateTime
 import kotlin.concurrent.thread
@@ -68,7 +67,7 @@ interface JsExtensions: JsEncodeUtils  {
             }.onFailure {
                 it.printOnDebug()
             }.getOrElse {
-                it.message
+                ""
             }
         }
     }
@@ -151,6 +150,10 @@ interface JsExtensions: JsEncodeUtils  {
         return webview(html,url,js).body
     }
 
+    fun webViewhasheader(html: String?, url: String?, js: String?, headers: Map<String, String>): String? {
+        return App.webview(html,url,js,getSource()?.usertocken?:"",GSON.toJson(headers)).body
+    }
+
     fun getWebViewUA(): String {
         return  AppConst.defaultuserAgent;
     }
@@ -164,12 +167,14 @@ interface JsExtensions: JsEncodeUtils  {
      * 可从网络，本地文件(阅读私有缓存目录和书籍保存位置支持相对路径)导入JavaScript脚本
      */
     fun importScript(path: String): String {
+        logger.info("importScript:$path")
         val result = when {
             path.startsWith("http") -> cacheFile(path) ?: ""
             path.startsWith("/storage") -> FileUtils.readText(path)
             else -> readTxtFile(path)
         }
         if (result.isBlank()) throw NoStackTraceException("$path 内容获取失败或者为空")
+        logger.info("importScriptok:$path")
         return result
     }
 
@@ -182,21 +187,24 @@ interface JsExtensions: JsEncodeUtils  {
 
     /**
      * 缓存以文本方式保存的文件 如.js .txt等
-     * @param urlStr 网络文件的链接
      * @param saveTime 缓存时间，单位：秒
-     * @return 返回缓存后的文件内容
      */
-    fun cacheFile(urlStr: String, saveTime: Int = 0): String? {
+    fun cacheFile(urlStr: String, saveTime: Int): String {
         val key = md5Encode16(urlStr)
-        val cache = CacheManager.getFile(key)
-        if (cache.isNullOrBlank()) {
-            log("首次下载 $urlStr")
-            val value = ajax(urlStr) ?: return null
-            CacheManager.putFile(key, value, saveTime)
-            return value
+        val cachePath = getSource()!!.getCacheManger().get(key)
+        return if (
+            cachePath.isNullOrBlank() ||
+            !getFile(cachePath).exists()
+        ) {
+            val path = downloadFile(urlStr)
+            log("首次下载 $urlStr >> $path")
+            getSource()!!.getCacheManger().put(key, path, saveTime)
+            readTxtFile(path)
+        } else {
+            readTxtFile(cachePath)
         }
-        return cache
     }
+
 
     /**
      *js实现读取cookie
@@ -271,6 +279,26 @@ interface JsExtensions: JsEncodeUtils  {
     }
 
 
+    /**
+     * 下载文件
+     * @param url 下载地址:可带参数type
+     * @return 下载的文件相对路径
+     */
+    fun downloadFile(url: String): String {
+        val analyzeUrl = AnalyzeUrl(url, source = getSource(),debugLog = debugLog)
+        val type = UrlUtil.getSuffix(url, analyzeUrl.type)
+        val path = FileUtils.getPath(
+            FileUtils.downDir,getSource()?.userid?:"",
+            "${MD5Utils.md5Encode16(url)}.${type}"
+        )
+        val file = File(path).createFileReplace()
+        analyzeUrl.getInputStream().use { iStream ->
+            FileOutputStream(file).use { oStream ->
+                iStream.copyTo(oStream)
+            }
+        }
+        return path.substring(FileUtils.getCachePath().length).also { println(it) }
+    }
 
     /**
      * 实现16进制字符串转文件
@@ -279,29 +307,47 @@ interface JsExtensions: JsEncodeUtils  {
      * @return 相对路径
      */
     fun downloadFile(content: String, url: String): String {
-        val type = AnalyzeUrl(url,debugLog = null).type ?: return ""
-        val zipPath = FileUtils.getPath(
-            FileUtils.createFolderIfNotExist(FileUtils.getCachePath()),
+        val type = AnalyzeUrl(url, source = getSource(), debugLog = debugLog).type
+            ?: return ""
+        val path = FileUtils.getPath(
+            FileUtils.createFolderIfNotExist(FileUtils.getCachePath()),getSource()?.userid?:"",
             "${MD5Utils.md5Encode16(url)}.${type}"
         )
-        FileUtils.deleteFile(zipPath)
-        val zipFile = FileUtils.createFileIfNotExist(zipPath)
-        StringUtils.hexStringToByte(content).let {
+        val file = File(path)
+        file.createFileReplace()
+        HexUtil.decodeHex(content).let {
             if (it.isNotEmpty()) {
-                zipFile.writeBytes(it)
+                file.writeBytes(it)
             }
         }
-        return zipPath.substring(FileUtils.getCachePath().length)
+        return path.substring(FileUtils.getCachePath().length)
+    }
+
+
+    private fun  getrequestHeaders(urlStr: String, headers: Map<String, String>) : Map<String, String>{
+        val cookie = (getSource()?.getCookieManger()?.getCookie(urlStr))?:""
+        return if (cookie.isNotEmpty()) {
+            var key="Cookie"
+            headers.keys.forEach {
+                if(it.lowercase(Locale.getDefault()) == "Cookie".lowercase(Locale.getDefault())){
+                    key = it
+                }
+            }
+            val oldc=headers[key]?:""
+            headers.toMutableMap().apply {
+                getSource()?.getCookieManger()?.mergeCookies( oldc,cookie)?.also {
+                    remove(key)
+                    put("Cookie", it)
+                }
+            }
+        } else headers
     }
 
     /**
      * js实现重定向拦截,网络访问get
      */
     fun get(urlStr: String, headers: Map<String, String>): Connection.Response {
-
-        val requestHeaders = if (getSource()?.enabledCookieJar == true) {
-            headers.toMutableMap().apply { put(cookieJarHeader, (getSource()?.getcookieJarHeaderid())?:"") }
-        } else headers
+        val requestHeaders = getrequestHeaders(urlStr,headers)
         logger.info("get:$urlStr,headers:${GSON.toJson(requestHeaders)}")
         val rateLimiter = ConcurrentRateLimiter(getSource())
         val response = rateLimiter.withLimitBlocking {
@@ -327,10 +373,8 @@ interface JsExtensions: JsEncodeUtils  {
      * js实现重定向拦截,网络访问head,不返回Response Body更省流量
      */
     fun head(urlStr: String, headers: Map<String, String>): Connection.Response {
-        logger.info("head:$urlStr")
-        val requestHeaders = if (getSource()?.enabledCookieJar == true) {
-            headers.toMutableMap().apply { put(cookieJarHeader, (getSource()?.getcookieJarHeaderid())?:"") }
-        } else headers
+        val requestHeaders = getrequestHeaders(urlStr,headers)
+        logger.info("head:$urlStr,headers:${GSON.toJson(requestHeaders)}")
         val rateLimiter = ConcurrentRateLimiter(getSource())
         val response = rateLimiter.withLimitBlocking {
             Jsoup.connect(urlStr)
@@ -354,7 +398,6 @@ interface JsExtensions: JsEncodeUtils  {
      */
     fun getVerificationCode(imageUrl: String): String = runBlocking{
         logger.info("getVerificationCode:$imageUrl")
-
         if(imageUrl.startsWith("data:image")){
             val code=App.getVerificationCode(imageUrl,getSource()?.usertocken?:"").trim()
             logger.info("获取到code:$code")
@@ -383,10 +426,8 @@ interface JsExtensions: JsEncodeUtils  {
      * 网络访问post
      */
     fun post(urlStr: String, body: String, headers: Map<String, String>): Connection.Response {
-        logger.info("post:$urlStr,body:$body,headers:${GSON.toJson(headers)}")
-        val requestHeaders = if (getSource()?.enabledCookieJar == true) {
-            headers.toMutableMap().apply { put(cookieJarHeader, (getSource()?.getcookieJarHeaderid())?:"") }
-        } else headers
+        val requestHeaders = getrequestHeaders(urlStr,headers)
+        logger.info("post:$urlStr,body:$body,headers:${GSON.toJson(requestHeaders)}")
         val rateLimiter = ConcurrentRateLimiter(getSource())
         val response = rateLimiter.withLimitBlocking {
             Jsoup.connect(urlStr)
@@ -549,7 +590,7 @@ interface JsExtensions: JsEncodeUtils  {
      * @return File
      */
     fun getFile(path: String): File {
-        val cachePath = appCtx.cacheDir
+        val cachePath = FileUtils.getCachePath()
         val aPath: String = if (path.startsWith(File.separator)) {
             cachePath + path
         } else {
@@ -702,15 +743,15 @@ interface JsExtensions: JsEncodeUtils  {
     fun queryTTF(str: String?): QueryTTF? {
         str ?: return null
         val key = md5Encode16(str)
-        var qTTF = CacheManager.getQueryTTF(key)
+        var qTTF = getSource()!!.getCacheManger().getQueryTTF(key)
         if (qTTF != null) return qTTF
         val font: ByteArray? = when {
             str.isAbsUrl() -> runBlocking {
-                var x = CacheManager.getByteArray(key)
+                var x = getSource()!!.getCacheManger().getByteArray(key)
                 if (x == null) {
                     x = okHttpClient.newCall { url(str) }.bytes()
                     x.let {
-                        CacheManager.put(key, it)
+                        getSource()!!.getCacheManger().put(key, it)
                     }
                 }
                 return@runBlocking x
@@ -720,7 +761,7 @@ interface JsExtensions: JsEncodeUtils  {
         }
         font ?: return null
         qTTF = QueryTTF(font)
-        CacheManager.put(key, qTTF)
+        getSource()!!.getCacheManger().put(key, qTTF)
         return qTTF
     }
 
@@ -787,12 +828,13 @@ interface JsExtensions: JsEncodeUtils  {
     /**
      * 输出调试日志
      */
-    fun log(msg: String?): String? {
+    fun log(msg: Any?): Any? {
         logger.info("sourceUrl: {}, msg: {}", getSource()?. getKey(), msg)
-        debugLog?.log(getSource()?. getKey(), msg)
+        debugLog?.log(getSource()?. getKey(), "$msg")
         App.log("${getSource()?. getKey()}:$msg",getSource()?.usertocken?:"")
         return msg
     }
+
 
     /**
      * 输出对象类型

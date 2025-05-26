@@ -30,7 +30,7 @@ class ApiWebSocket : SimpleWebSocketListener() {
         private var ma:MutableMap<String,WebSocket> = mutableMapOf()
         private val mutex = Mutex()
 
-        suspend fun  WaitForResponse(correlationId :String,timeout: Long = 60000):String?= coroutineScope{
+        suspend fun  WaitForResponse(correlationId :String,timeout: Long = 120000):String?= coroutineScope{
             val deferredResult = ResponseManager.registerRequest(correlationId)
             try {
                 logger.info("Wait for $correlationId")

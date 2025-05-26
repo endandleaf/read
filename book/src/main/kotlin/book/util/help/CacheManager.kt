@@ -3,11 +3,9 @@ package book.util.help
 import book.appCtx
 import book.model.Cache
 import book.util.FileUtils
-import book.util.GSON
 import book.util.MyCache
 import book.webBook.analyzeRule.QueryTTF
 import com.google.gson.Gson
-import java.io.File
 import java.io.FileNotFoundException
 import java.security.MessageDigest
 
@@ -35,14 +33,13 @@ fun hash(algorithm: String, srcStr: String): String {
 }
 
 
-// TODO 处理缓存
 @Suppress("unused")
-object CacheManager {
+class CacheManager(val userid:String) {
 
     private val queryTTFMap = hashMapOf<String, Pair<Long, QueryTTF>>()
 
     private val ruleDataDir = FileUtils.createFolderIfNotExist(appCtx.externalFiles, "cache")
-    private val cahceData = FileUtils.createFolderIfNotExist(ruleDataDir, "cache")
+    private val cahceData = FileUtils.createFolderIfNotExist(ruleDataDir, "cache",userid)
 
     /**
      * 最多只缓存50M的数据,防止OOM
@@ -106,6 +103,7 @@ object CacheManager {
     }
 
     fun get(key: String): String? {
+       // println("getkey: $key")
         var v=getcache(key)
         var re:String?= null
         runCatching {

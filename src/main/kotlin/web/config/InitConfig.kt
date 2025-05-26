@@ -100,5 +100,30 @@ class InitConfig {
             }
             AppConst.defaultuserAgent;
         }
+
+        App.get=fun (url: String?, header:String,tocken:String) = runBlocking{
+            var socket=ApiWebSocket.get(tocken)
+            if(socket!=null){
+                val id= UUID.randomUUID().toString()
+                //logger.info("webview ,url: $url ,js: $js, html:$html, tocken: $tocken ")
+                socket.send(Gson().toJson(WebMessage(
+                    msg = "get", url = url ?: "", id = id, header = header,
+                    title =""
+                )))
+                return@runBlocking  StrResponse(url?:"",ApiWebSocket.WaitForResponse(id)?:"")
+            }
+            return@runBlocking  StrResponse(url?:"","")
+        }
+
+        App.post=fun (url: String?,body:String, header:String,tocken:String) = runBlocking{
+            var socket=ApiWebSocket.get(tocken)
+            if(socket!=null){
+                val id= UUID.randomUUID().toString()
+                //logger.info("webview ,url: $url ,js: $js, html:$html, tocken: $tocken ")
+                socket.send(Gson().toJson(WebMessage(msg = "post", url = url?:"",id=id ,header=header,body=body,title ="")))
+                return@runBlocking  StrResponse(url?:"",ApiWebSocket.WaitForResponse(id)?:"")
+            }
+            return@runBlocking  StrResponse(url?:"","")
+        }
     }
 }

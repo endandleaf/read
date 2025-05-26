@@ -30,7 +30,7 @@ data class ReplaceRule(
     //超时时间
     var timeoutMillisecond: Long = 3000L,
     //排序
-    var order: Int = Int.MIN_VALUE
+    var order: Int = Int.MIN_VALUE,
 )  {
 
     override fun equals(other: Any?): Boolean {

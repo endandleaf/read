@@ -25,6 +25,8 @@ object AppPattern {
     //本地书籍支持类型
     val bookFileRegex = Regex(".*\\.(txt|epub|umd)", RegexOption.IGNORE_CASE)
 
+    val semicolonRegex = ";".toRegex()
+
     /**
      * 所有标点
      */

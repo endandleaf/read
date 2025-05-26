@@ -501,6 +501,7 @@ open class ReadController : BaseController() {
 
             list.add(
                 mapOf(
+                    "variableComment" to s?.variableComment,
                     "bookSourceGroup" to s?.bookSourceGroup,
                     "loginUrl" to s?.loginUrl,
                     "loginUi" to loginUi,
@@ -564,7 +565,6 @@ open class ReadController : BaseController() {
                     val bytes = s.DeimageDecode(src = url, inputStream = connection.inputStream,book=book)
                     ctx.outputStream().write(bytes)
                     ctx.flush()
-                    //logger.info("解密成功")
                 }.onFailure {
                     it.printStackTrace()
                     App.log("图片解密失败:${it.message}",accessToken!!)

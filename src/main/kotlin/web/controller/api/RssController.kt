@@ -1,6 +1,7 @@
 package web.controller.api
 
 import book.app.App
+import book.model.BookSource
 import book.model.RssArticle
 import book.model.RssSource
 import book.util.GSON
@@ -9,6 +10,7 @@ import book.util.fromJsonArray
 import book.util.fromJsonObject
 import book.webBook.rss.Rss
 import book.webBook.sortUrls
+import jdk.internal.org.jline.utils.Colors.s
 import kotlinx.coroutines.runBlocking
 import org.apache.ibatis.solon.annotation.Db
 import org.noear.solon.annotation.Body
@@ -67,7 +69,36 @@ open class RssController :BaseController() {
                 }
             }
         }
-        JsonResponse(true).Data(mapOf("sources" to sources, "can" to (user.source != 0) ))
+        val list: MutableList<Map<String, Any?>> = mutableListOf()
+        sources.forEach {
+            var rssSource: RssSource? = null
+            var loginUi:String?=null
+            kotlin.runCatching {
+                rssSource=RssSource.fromJson(it.json?:"")
+                rssSource!!.userid=user.id
+                rssSource!!.usertocken=accessToken
+                loginUi=rssSource!!.loginUi
+                if(!loginUi.isNullOrEmpty()){
+                    kotlin.runCatching {
+                        val r=GSON.fromJsonArray<Any>(loginUi).getOrNull()
+                        loginUi= GSON.toJson(r)
+                    }
+                }
+            }
+            list.add(
+                mapOf(
+                    "variableComment" to rssSource?.variableComment,
+                    "loginUrl" to rssSource?.loginUrl,
+                    "loginUi" to loginUi,
+                    "sourceUrl" to it.sourceUrl,
+                    "sourceName" to it.sourceName,
+                    "sourceIcon" to it.sourceIcon,
+                    "sourceGroup" to it.sourceGroup,
+                    "enabled" to it.enabled
+                )
+            )
+        }
+        JsonResponse(true).Data(mapOf("sources" to list, "can" to (user.source != 0) ))
     }
 
     @Mapping("/getRssSources")
@@ -375,6 +406,7 @@ open class RssController :BaseController() {
             ))
         }.onFailure {
             App.log("${rss.sourceName}sorts加载失败:${it.message}",accessToken?:"")
+            App.toast("${rss.sourceName}sorts加载失败:${it.message}",accessToken?:"")
             throw it
         }
     }
@@ -399,6 +431,7 @@ open class RssController :BaseController() {
             }catch (e:Exception){
                 i++
                 if(i> 3){
+                    App.toast("${rss.sourceName}列表加载失败:${e.message}",accessToken?:"")
                     App.log("${rss.sourceName}列表加载失败:${e.message}",accessToken?:"")
                     throw e
                 }
@@ -426,6 +459,7 @@ open class RssController :BaseController() {
             return@runBlocking JsonResponse(true).Data(list)
         }.onFailure {
             App.log("${rss.sourceName}tabs加载失败:${it.message}",accessToken?:"")
+            App.toast("${rss.sourceName}tabs加载失败:${it.message}",accessToken?:"")
             return@runBlocking JsonResponse(false,it.message?:"")
         }
 
@@ -448,7 +482,12 @@ open class RssController :BaseController() {
             val rssSource=RssSource.fromJson(rss.json?:"")
             rssSource.userid=user.id
             rssSource.usertocken=accessToken
-            var body=Rss().getContent(rssArticle, rssSource.ruleContent?:"",rssSource)
+            var body=""
+            if (rssSource.ruleDescription.isNullOrBlank()) {
+                body=Rss().getContent(rssArticle, rssSource.ruleContent?:"",rssSource)
+            }else{
+                body=rssArticle.description?:""
+            }
             val header=rssSource.getHeaderMap()
             if(body.isNotEmpty()){
                 body=clHtml(body,rssSource)
@@ -464,6 +503,7 @@ open class RssController :BaseController() {
                 ))
         }.onFailure {
             App.log("${rss.sourceName}正文加载失败:${it.message}",accessToken?:"")
+            App.toast("${rss.sourceName}正文加载失败:${it.message}",accessToken?:"")
             return@runBlocking  JsonResponse(false,it.message?:"")
         }
     }
@@ -519,6 +559,8 @@ open class RssController :BaseController() {
             rssSource.runaction(action)
         }.onFailure { e ->
             logger.info("$action JavaScript error", e)
+            App.log("$action JavaScript error:$e",accessToken?:"")
+            App.toast("JavaScript error:$e",accessToken?:"")
         }
         JsonResponse(true)
     }

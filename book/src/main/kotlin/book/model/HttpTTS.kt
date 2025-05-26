@@ -23,7 +23,8 @@ class HttpTTS(
     var loginCheckJs: String? = null,
     var lastUpdateTime: Long = System.currentTimeMillis(),
     override var userid: String? = null,
-    override var usertocken: String? = null
+    override var usertocken: String? = null,
+    override var phonehttp: Boolean?=false,
 ) : BaseSource {
     var sqlid: String = ""
 

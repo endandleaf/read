@@ -85,6 +85,7 @@ data class RssSource(
     override var usertocken: String?="",
 
     override var debugLog: DebugLog?=null,
+    override var phonehttp: Boolean?=false,
 ) : BaseSource {
 
     override val logger: Logger

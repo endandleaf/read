@@ -127,7 +127,7 @@ class CookieStore(val userid:String) : CookieManager {
     }
 
     override fun setCookie(url: String, cookie: String?) {
-        logger.info("setCookie url:$url")
+        logger.info("setCookie url:$url，cookie:$cookie")
         val key=getkey(url)
         File("$mycookiepath/$key").writeText(cookie?:"")
     }
@@ -241,7 +241,7 @@ class CookieStore(val userid:String) : CookieManager {
             val value =if (pos != -1 && pos+1 != pair.length ) pair.substring(pos+1, pair.length) else ""
             val key = if (pos != -1 && pos != 0 ) pair.substring(0, pos) else ""
             if (value.isNotBlank() || value.trim { it <= ' ' } == "null") {
-                cookieMap[key] = value.trim { it <= ' ' }
+                cookieMap[key.trim()] = value.trim { it <= ' ' }
             }
         }
         return cookieMap

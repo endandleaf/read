@@ -1,5 +1,6 @@
 package book.util
 
+import book.appCtx
 import java.io.*
 import java.nio.charset.Charset
 import java.text.SimpleDateFormat
@@ -101,10 +102,10 @@ object FileUtils {
         file.delete()
     }
 
+    val downDir = createFolderIfNotExist(appCtx.externalFiles, "down")
+
     fun getCachePath(): String {
-        // TODO
-        throw Exception("Not implemented")
-        return ""
+        return downDir.path
     }
 
     const val BY_NAME_ASC = 0

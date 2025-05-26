@@ -33,6 +33,8 @@ interface BaseSource : JsExtensions {
      */
     var enabledCookieJar: Boolean?
 
+    var phonehttp: Boolean?
+
 
     fun getTag(): String
 
@@ -191,7 +193,7 @@ interface BaseSource : JsExtensions {
             bindings["source"] = this
             bindings["baseUrl"] = getKey()
             bindings["cookie"] =  getCookieManger()
-            bindings["cache"] = CacheManager
+            bindings["cache"] = getCacheManger()
             binding(bindings)
         }
         val scope = RhinoScriptEngine.getRuntimeScope(bindings)
@@ -202,7 +204,7 @@ interface BaseSource : JsExtensions {
     }
 
     fun getShareScope(): Scriptable? {
-        return SharedJsScope.getScope(if(jsLib != null )getjs(jsLib?:"") else jsLib)
+        return SharedJsScope.getScope(if(jsLib != null )getjs(jsLib?:"") else jsLib,userid?:"")
     }
 
 
@@ -226,6 +228,13 @@ interface BaseSource : JsExtensions {
     fun getcookieJarHeaderid():String{
         return MD5Utils.md5Encode(userid!!)
     }
+
+
+    fun  getCacheManger() :CacheManager{
+        val store=CacheManager(userid!!)
+        return store
+    }
+
 
     fun  getCookieManger() :CookieStore{
         val store=CookieStore(userid!!)

@@ -8,6 +8,7 @@ import book.util.*
 import book.util.AppConst.UA_NAME
 import book.util.AppPattern.JS_PATTERN
 import book.util.AppPattern.dataUriRegex
+import book.util.Base64
 import book.util.help.CacheManager
 import book.util.help.cookieJarHeader
 import book.util.http.*
@@ -25,7 +26,10 @@ import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 import java.io.ByteArrayInputStream
 import java.io.InputStream
+import java.util.*
 import java.util.concurrent.TimeUnit
+import kotlin.collections.HashMap
+import kotlin.collections.LinkedHashMap
 import kotlin.coroutines.ContinuationInterceptor
 import kotlin.coroutines.CoroutineContext
 import kotlin.coroutines.EmptyCoroutineContext
@@ -76,6 +80,7 @@ class AnalyzeUrl(
     private var proxy: String? = null
     private var retry: Int = 0
     private var useWebView: Boolean = false
+    private var usePhone: Boolean = false
     private var webJs: String? = null
     private val enabledCookieJar = source?.enabledCookieJar ?: false
     private val concurrentRateLimiter = ConcurrentRateLimiter(source)
@@ -205,6 +210,7 @@ class AnalyzeUrl(
                     charset = option.getCharset()
                     retry = option.getRetry()
                     useWebView = option.useWebView()
+                    usePhone = option.usePhone()
                     webJs = option.getWebJs()
                     option.getJs()?.let { jsStr ->
                         //println(jsStr)
@@ -268,8 +274,8 @@ class AnalyzeUrl(
         val bindings = buildScriptBindings { bindings ->
             bindings["java"] = this
             bindings["baseUrl"] = baseUrl
-            bindings["cookie"] =source?.getCookieManger()
-            bindings["cache"] = CacheManager
+            bindings["cookie"] =source?.getCookieManger()!!
+            bindings["cache"] = source?.getCacheManger()!!
             bindings["page"] = page
             bindings["key"] = key
             bindings["speakText"] = speakText
@@ -302,7 +308,15 @@ class AnalyzeUrl(
         val store=source?.getCookieManger()
         val cookie = (store?.getCookie(urlNoQuery))?:""
         if (cookie.isNotEmpty()) {
-            store?.mergeCookies(cookie, headerMap["Cookie"])?.let {
+            var key="Cookie"
+            headerMap.keys.forEach {
+                if(it.lowercase(Locale.getDefault()) == "Cookie".lowercase(Locale.getDefault())){
+                    key = it
+                }
+            }
+            val oldc=headerMap[key]
+            headerMap.remove(key)
+            store?.mergeCookies( oldc,cookie)?.let {
                 headerMap.put("Cookie", it)
             }
         }
@@ -324,6 +338,7 @@ class AnalyzeUrl(
         if (type != null) {
             return StrResponse(url, StringUtils.byteToHexString(getByteArrayAwait()))
         }
+        logger.info("ajaxurl:$urlNoQuery")
         var strResponse: StrResponse
         concurrentRateLimiter.withLimit{
             setCookie()
@@ -347,7 +362,26 @@ class AnalyzeUrl(
                     }
                 }
                 //return  webview("",url,"")
-            } else {
+            } else  if(source?.phonehttp == true || this.usePhone){
+                when (method) {
+                    RequestMethod.POST -> {
+                        if(headerMap["Content-Type"].isNullOrBlank()){
+                            if (fieldMap.isNotEmpty() || body.isNullOrBlank()) {
+                                headerMap["Content-Type"]="application/x-www-form-urlencoded"
+                                body = fieldMap.entries.joinToString("&") {
+                                    "${it.key}=${it.value}"
+                                }
+                            } else {
+                                headerMap["Content-Type"]="application/json; charset=UTF-8"
+                            }
+                        }
+                        return  App.post(url,body?:"" ,GSON.toJson(headerMap),getSource()?.usertocken?:"")
+                    }
+                    else -> {
+                        return  App.get(url,GSON.toJson(headerMap),getSource()?.usertocken?:"")
+                    }
+                }
+            }else {
                 strResponse = getClient().newCallStrResponse(retry) {
                    // println(GSON.toJson(headerMap))
                     addHeaders(headerMap)
@@ -402,6 +436,7 @@ class AnalyzeUrl(
                 addHeaders(headerMap)
                 when (method) {
                     RequestMethod.POST -> {
+                        println("urlNoQuery:$urlNoQuery")
                         url(urlNoQuery)
                         val contentType = headerMap["Content-Type"]
                         val body = body
@@ -527,6 +562,7 @@ class AnalyzeUrl(
         private var webView: Any? = null,
         private var webJs: String? = null,
         private var js: String? = null,
+        private var usePhone: Any? = null,
     ) {
         fun setMethod(value: String?) {
             method = if (value.isNullOrBlank()) null else value
@@ -565,6 +601,17 @@ class AnalyzeUrl(
                 null, "", false, "false" -> false
                 else -> true
             }
+        }
+
+        fun usePhone(): Boolean {
+            return when (usePhone) {
+                null, "", false, "false" -> false
+                else -> true
+            }
+        }
+
+        fun usePhone(boolean: Boolean) {
+            usePhone = if (boolean) true else null
         }
 
         fun useWebView(boolean: Boolean) {
